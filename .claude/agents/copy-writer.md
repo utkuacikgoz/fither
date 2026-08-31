@@ -19,7 +19,9 @@ the forbidden list and pricing).
   hardcoded in a component, report it as a bug for the ui-engineer rather
   than editing the component yourself.
 - App Store listing, screenshots copy, and notification copy in
-  `docs/store/` when that phase arrives.
+  `docs/store/` when that phase arrives — plus transactional email
+  templates (receipts, trial ending, data requests) and store
+  review-response templates, per the surface notes in fither-voice.
 - Movement names and cues live in `data/movements.json` and belong to the
   movement-author — review them against the voice rules and report
   violations, don't edit them.

@@ -34,12 +34,14 @@ no-equipment options are structural requirements, not edge cases.
 
 - Exactly three session lengths: **10, 20, 30 minutes**. Never more, never
   fewer options. The session must fit its budget — running over is a bug.
-- One short **daily prompt** before each session. Current questions
-  (DECIDE: confirm against Brief 3 before building the prompt UI):
+- One short **daily prompt** before each session (decided, ADR-0003):
   1. How much time do you have? → 10 / 20 / 30
   2. How is your energy? → low / okay / strong
   3. Do you need to be quiet right now? → yes / no
-  4. Anything sore or off-limits today? → optional body-area picks
+  4. Anything sore or off-limits today? → one-tap "All good" default,
+     optional body-area picks
+  Four taps, ~10–15 seconds. Do not add questions — Gate 3 (open to
+  first movement in under 60s) spends this budget.
 - The answers plus history feed the engine. The engine runs **on device**;
   a paying user in airplane mode gets a full session, always.
 
@@ -79,11 +81,12 @@ analytics, not in settings, not "optional":
 If a feature idea needs one of these to work, the feature is wrong for this
 product. Flag it; do not build it.
 
-## Pricing
+## Pricing (decided, ADR-0002)
 
-Subscription via RevenueCat, free trial then paywall.
-DECIDE: exact price points and trial length — confirm against Brief 8
-before building the paywall. Entitlements must work offline once granted.
+Subscription via RevenueCat: **£5.99/month or £39.99/year, 7-day free
+trial** (GBP reference prices; other storefronts via Apple's price tiers).
+Annual is the plan we lead with on the paywall. Entitlements must work
+offline once granted — a paying user in airplane mode is never locked out.
 
 ## Movement library
 

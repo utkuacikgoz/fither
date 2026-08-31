@@ -67,6 +67,28 @@ possible; one sneaky dependency breaks the whole validation story.
   report the printed gate numbers.
 - Never skip, weaken or delete a failing test to get green.
 
+## Ops stack (decided, ADR-0002)
+
+- **Error monitoring: Sentry** (`sentry-expo`). Wired and verified with a
+  deliberate test crash BEFORE the first TestFlight build. Source maps
+  uploaded in the build profile; alerts reach the owner's phone.
+- **Analytics: PostHog.** Events are few and deliberate — the ones that
+  test the retention thesis (session started/completed by length, tier
+  advanced, skill unlocked, paywall seen/converted, D1/D7 activity).
+  Event names and payloads live in one typed module
+  (`app/src/analytics/events.ts`); nothing logs outside it. Payloads obey
+  the forbidden list — no weight, calories, streaks or body data can even
+  be represented. Events queue offline and flush later; analytics must
+  never block or gate anything (airplane-mode rule).
+- **Transactional email: Resend**, from our own domain (SPF/DKIM
+  verified). Receipts/trial-ending/data-request mails only — no marketing
+  drip. Templates are copy-writer surface and pass the fither-voice
+  filter.
+- **Feedback board: Canny**, linked from the settings screen, live from
+  the first TestFlight build.
+- API keys via app config/env — never committed. The app must behave
+  perfectly with every ops SDK unreachable.
+
 ## Commits and attribution
 
 - No AI attribution, ever: no "Generated with Claude Code" / Codex

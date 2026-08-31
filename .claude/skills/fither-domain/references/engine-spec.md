@@ -52,12 +52,14 @@ applySessionResult(profile, history, result) -> { profile, history }
 
 ## Progression rules
 
-- **Advance:** a pattern's tier increases after **PROPOSED: 3** clean
-  sessions at the current tier (clean = all blocks for that pattern
+- **Advance (decided, ADR-0002):** a pattern's tier increases after **3**
+  clean sessions at the current tier (clean = all blocks for that pattern
   completed without "struggled"). Counter resets on a struggled block.
-- **Regress:** only on repeated in-session failure — PROPOSED: 2
-  consecutive sessions with the pattern's blocks marked struggled/skipped
-  drops volume first; a third drops one tier. **Absence never regresses.**
+- **Regress (decided, ADR-0003):** only on repeated in-session failure —
+  2 consecutive sessions with the pattern's blocks marked
+  struggled/skipped reduce volume at the same tier; a 3rd consecutive one
+  drops one tier. Any clean session resets the counter.
+  **Absence never regresses.**
   A 2×/week user who keeps showing up must never lose a tier — this is a
   simulation gate, not a preference.
 - Tier 6 is terminal; continued progress there is volume and density.

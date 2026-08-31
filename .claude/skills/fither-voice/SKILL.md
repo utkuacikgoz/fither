@@ -62,6 +62,12 @@ Never, in any surface, including notifications, store listing and scripts:
   the body.
 - **Errors**: plain and actionable. "Couldn't restore your purchase.
   Try again in a minute." Never blame the user.
+- **Transactional email** (receipts, trial ending, data requests): same
+  coach, shorter. Subject says exactly what the email is; body under 100
+  words; no marketing footer, no upsell in a receipt.
+- **Store review responses**: reply within 24 hours, professional and
+  specific, never defensive. Thank, address the actual issue, say what
+  changes and when. Never argue with a one-star review.
 
 ## Examples
 
@@ -70,7 +76,7 @@ Never, in any surface, including notifications, store listing and scripts:
 | Unlock | "You crushed it! 🔥" | "That's your first full push-up. It counts." |
 | Low energy day | "No excuses — push harder!" | "Short and steady today. Ten minutes, all yours." |
 | Return after 2 weeks | "We missed you! Your streak reset." | "Ready when you are. Today: 10 minutes, push and core." |
-| Paywall | "Unlock your dream body!" | "Every session, adapted daily. £X/month after your trial." |
+| Paywall | "Unlock your dream body!" | "Every session, adapted daily. £5.99/month or £39.99/year after your free week." |
 
 Every string lives in `app/src/copy/strings.ts` — if you find user-facing
 text hardcoded in a component, that placement is itself a bug to report.
