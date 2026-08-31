@@ -1,0 +1,12 @@
+#!/bin/sh
+# Reject AI attribution in commit messages (Claude, Codex, or any other tool).
+# Filenames like CLAUDE.md are fine — only attribution patterns are blocked.
+# Enabled by: git config core.hooksPath .githooks  (re-run on fresh clones)
+
+msg_file="$1"
+
+if grep -Eiq 'co-authored-by:.*(claude|codex|copilot|gpt|openai|anthropic)|generated (with|by).*(claude|codex|copilot|gpt|ai)|claude\.ai/code|noreply@anthropic\.com|claude-session|chatgpt\.com/codex|🤖' "$msg_file"; then
+  echo "commit-msg hook: AI attribution found in the commit message. Remove it (see CLAUDE.md hard rules)." >&2
+  exit 1
+fi
+exit 0

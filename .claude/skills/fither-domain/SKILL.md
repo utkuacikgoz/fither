@@ -1,0 +1,99 @@
+---
+name: fither-domain
+description: >-
+  FITHER product truth: the promise, the audience, the 10/20/30 session format,
+  the daily prompt, the progression engine rules, gamification, the forbidden
+  list and pricing. Read this before ANY work on this repo — movements, engine,
+  UI, copy, tests, store listing, anything. If a task touches what the product
+  does or says, this file decides it, not conversation memory.
+---
+
+# FITHER domain — product truth
+
+This file is the single source of product truth. When the product changes,
+this file changes first, and every future session inherits the change. If an
+instruction elsewhere contradicts this file, stop and flag it.
+
+## The promise
+
+Strength you can actually keep. Equipment-free calisthenics for time-poor
+women, in sessions that fit the day you are actually having — 10, 20 or
+30 minutes — adapted daily to your time, energy and environment. You get
+measurably stronger without a gym, without gear, and without the app ever
+talking about your weight.
+
+## The audience
+
+Women with almost no discretionary time: careers, kids, caring
+responsibilities. English-speaking market, iOS first. They are not
+"beginners" as an identity — they are busy. Many train at home while
+someone sleeps in the next room, which is why quiet, small-space,
+no-equipment options are structural requirements, not edge cases.
+
+## The format
+
+- Exactly three session lengths: **10, 20, 30 minutes**. Never more, never
+  fewer options. The session must fit its budget — running over is a bug.
+- One short **daily prompt** before each session. Current questions
+  (DECIDE: confirm against Brief 3 before building the prompt UI):
+  1. How much time do you have? → 10 / 20 / 30
+  2. How is your energy? → low / okay / strong
+  3. Do you need to be quiet right now? → yes / no
+  4. Anything sore or off-limits today? → optional body-area picks
+- The answers plus history feed the engine. The engine runs **on device**;
+  a paying user in airplane mode gets a full session, always.
+
+## The engine (summary — spec is law)
+
+Full algorithm, thresholds and simulation gates:
+`references/engine-spec.md`. That file holds Brief 2 verbatim; when a
+question like "does tier advance after 2 or 3 clean sessions?" comes up,
+the answer is there, not in a conversation.
+
+Non-negotiables the spec enforces:
+
+- Six tiers per movement pattern. Progression is per-pattern, not global.
+- A 2×/week user must never regress. Absence alone never causes regression.
+- No pattern disappears for more than 7 days of training.
+- The silent + chair-only + no-gear constraint set must still produce a
+  complete session at tiers 1–4 for every pattern.
+
+## Gamification
+
+Points ledger and named skill unlocks — capability milestones, never body
+metrics. Full rules and the forbidden-mechanics rationale:
+`references/gamification.md`.
+
+## The forbidden list (absolute)
+
+These never appear in the product — not in copy, not in data models, not in
+analytics, not in settings, not "optional":
+
+- **No weight.** No weigh-ins, no weight goals, no weight-loss framing.
+- **No calories.** No burn estimates, no food anything.
+- **No streaks.** No streak counters, no "don't break the chain", no loss
+  framing. Missing a day costs the user nothing and we never mention it.
+- **No body-shape language.** No "tone", "sculpt", "bikini", "problem
+  areas", no before/after. Progress is what your body can DO.
+
+If a feature idea needs one of these to work, the feature is wrong for this
+product. Flag it; do not build it.
+
+## Pricing
+
+Subscription via RevenueCat, free trial then paywall.
+DECIDE: exact price points and trial length — confirm against Brief 8
+before building the paywall. Entitlements must work offline once granted.
+
+## Movement library
+
+`data/movements.json` is the source of truth for the 60 movements. Schema
+and integrity rules: `references/movement-schema.md`. Only the
+movement-author agent edits it, and every edit must pass
+`node scripts/validate-movements.mjs`.
+
+## Reference files
+
+- `references/engine-spec.md` — algorithm, thresholds, simulation gates (Brief 2)
+- `references/gamification.md` — points, skills, forbidden mechanics
+- `references/movement-schema.md` — movement data shape and integrity rules
