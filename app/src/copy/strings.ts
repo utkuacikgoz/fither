@@ -53,6 +53,7 @@ export const strings = {
     holdLabel: "seconds",
     rest: "Rest",
     restNote: "Breathe.",
+    restDone: "I'm ready",
     setCounter: (current: number, total: number) => `Set ${current} of ${total}`,
     blockPlan: (sets: number, amount: number, isHold: boolean) =>
       isHold
@@ -62,6 +63,22 @@ export const strings = {
       question: "How was that?",
       completed: "Good",
       struggled: "That was hard",
+    },
+  },
+  preview: {
+    eyebrow: "Made for today",
+    headline: "Your session is ready",
+    summary: (minutes: SessionMinutes, movements: number) =>
+      `${minutes} minutes · ${movements} movements`,
+    defaultFit: "Built around your time and current level.",
+    start: "Start session",
+    adaptations: {
+      soreness: (areas: string) => `Works around ${areas}.`,
+      quiet: "Every movement stays quiet.",
+      lowEnergy: "Less volume. Same level.",
+      softLanding: "A little less volume where you need it.",
+      staleFocus: "Brings a movement pattern back into focus.",
+      tasteBlock: "Ends with one optional look at what comes next.",
     },
   },
   finish: {
@@ -79,6 +96,9 @@ export const strings = {
     // Shown while the session engine or movement library is unavailable
     // on this build. Reviewed by copy-writer (2026-08-31).
     sessionUnavailable: "Couldn't build today's session. Try again in a minute.",
+    noSession: "Couldn't build a session around today's answers.",
+    preparing: "Getting your progress ready…",
+    storageUnavailable: "Couldn't load your progress. Please reopen the app.",
     saveUnavailable: "Couldn't save this session. Try again in a minute.",
     tryAgain: "Try again",
   },

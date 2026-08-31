@@ -24,7 +24,10 @@ export interface CreatedSession {
 
 export type CreateSessionResult =
   | { ok: true; value: CreatedSession }
-  | { ok: false; reason: "noLibrary" | "engineUnavailable" };
+  | {
+      ok: false;
+      reason: "notReady" | "noLibrary" | "noSession" | "engineUnavailable";
+    };
 
 /** Join generated blocks with movement display data. Display only — no rules. */
 export function toPlayerBlocks(
@@ -56,6 +59,9 @@ export function createSession(
   const seed = deriveSeed(prompt.date, salt);
   try {
     const session = generateSession(library, profile, history, prompt, seed);
+    if (session.blocks.length === 0) {
+      return { ok: false, reason: "noSession" };
+    }
     return {
       ok: true,
       value: { session, playerBlocks: toPlayerBlocks(session, library) },

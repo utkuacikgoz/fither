@@ -8,6 +8,7 @@ import { useLedgerStore } from "../../../state/ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../../../state/profile-store";
 import { useSessionStore } from "../../../state/session-store";
+import { useSettingsStore } from "../../../state/settings-store";
 import {
   fixtureApplyResult,
   fixturePlayerBlocks,
@@ -31,8 +32,14 @@ function seedFinishedSession() {
 }
 
 beforeEach(() => {
-  useLedgerStore.setState({ events: [] });
-  useProfileStore.setState({ profile: createInitialProfile(), history: { entries: [] } });
+  useLedgerStore.setState({ events: [], hydrated: true, hydrationFailed: false });
+  useProfileStore.setState({
+    profile: createInitialProfile(),
+    history: { entries: [] },
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
   seedFinishedSession();
   mockedApply.mockReturnValue({ ok: true, value: fixtureApplyResult() });
 });
@@ -58,6 +65,16 @@ describe("FinishScreen", () => {
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(screen.getByText(strings.errors.saveUnavailable)).toBeTruthy();
     expect(screen.queryByTestId("finish-points")).toBeNull();
+    expect(screen.getByTestId("finish-retry")).toBeTruthy();
+  });
+
+  it("retries saving from the recovery action", () => {
+    mockedApply
+      .mockReturnValueOnce({ ok: false, reason: "engineUnavailable" })
+      .mockReturnValueOnce({ ok: true, value: fixtureApplyResult() });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("finish-retry"));
+    expect(mockedApply).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId("finish-continue")).toBeTruthy();
   });
 });

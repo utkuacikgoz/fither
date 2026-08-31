@@ -4,6 +4,7 @@ import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
 import { useSessionStore } from "../session-store";
+import { useSettingsStore } from "../settings-store";
 import {
   fixtureApplyResult,
   fixturePlayerBlocks,
@@ -20,8 +21,14 @@ const mockedCreate = jest.mocked(createSession);
 const mockedApply = jest.mocked(applyResult);
 
 beforeEach(() => {
-  useLedgerStore.setState({ events: [] });
-  useProfileStore.setState({ profile: createInitialProfile(), history: { entries: [] } });
+  useLedgerStore.setState({ events: [], hydrated: true, hydrationFailed: false });
+  useProfileStore.setState({
+    profile: createInitialProfile(),
+    history: { entries: [] },
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
   useSessionStore.getState().resetSession();
   mockedCreate.mockReturnValue({
     ok: true,
@@ -31,9 +38,15 @@ beforeEach(() => {
 });
 
 function playWholeSession() {
-  const { dispatchPlayer } = useSessionStore.getState();
-  dispatchPlayer({ type: "skipBlock" });
-  dispatchPlayer({ type: "skipBlock" });
+  const player = useSessionStore.getState().player;
+  if (!player) throw new Error("missing fixture player");
+  useSessionStore.setState({
+    player: {
+      ...player,
+      phase: { kind: "done" },
+      outcomes: ["completed", "completed"],
+    },
+  });
 }
 
 describe("session store", () => {
@@ -60,15 +73,15 @@ describe("session store", () => {
     expect(mockedApply).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      { session: fixtureSession, outcomes: ["skipped", "skipped"] },
+      { session: fixtureSession, outcomes: ["completed", "completed"] },
     );
     const { finish } = useSessionStore.getState();
     expect(finish?.pointsEarned).toBe(35);
     expect(finish?.unlockedSkills).toEqual([
-      { pattern: "push", tier: 2, movementName: "Incline Push-Up" },
+      { pattern: "push", tier: 4, movementName: "Full Push-Up" },
     ]);
     // Profile/history/ledger updated only from the ApplyResult.
-    expect(useProfileStore.getState().profile.patterns.push.tier).toBe(2);
+    expect(useProfileStore.getState().profile.patterns.push.tier).toBe(4);
     expect(totalPoints(useLedgerStore.getState().events)).toBe(35);
   });
 
@@ -96,5 +109,29 @@ describe("session store", () => {
     expect(state.saveFailed).toBe(true);
     expect(state.finish).toBeNull();
     expect(useLedgerStore.getState().events).toHaveLength(0);
+  });
+
+  it("retries a failed save without double-applying", () => {
+    mockedApply
+      .mockReturnValueOnce({ ok: false, reason: "engineUnavailable" })
+      .mockReturnValueOnce({ ok: true, value: fixtureApplyResult() });
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+
+    useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().saveFailed).toBe(true);
+    useSessionStore.getState().completeSession();
+
+    expect(mockedApply).toHaveBeenCalledTimes(2);
+    expect(useSessionStore.getState().saveFailed).toBe(false);
+    expect(useSessionStore.getState().finish?.pointsEarned).toBe(35);
+    expect(useLedgerStore.getState().events).toHaveLength(2);
+  });
+
+  it("refuses to start before persisted state is hydrated", () => {
+    useProfileStore.setState({ hydrated: false });
+    const result = useSessionStore.getState().startSession(fixturePrompt);
+    expect(result).toEqual({ ok: false, reason: "notReady" });
+    expect(mockedCreate).not.toHaveBeenCalled();
   });
 });

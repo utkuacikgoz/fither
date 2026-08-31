@@ -45,9 +45,9 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
       </View>
       <View style={styles.bottom}>
         <PrimaryButton
-          testID="finish-continue"
-          label={strings.finish.continueLabel}
-          onPress={onContinue}
+          testID={saveFailed ? "finish-retry" : "finish-continue"}
+          label={saveFailed ? strings.errors.tryAgain : strings.finish.continueLabel}
+          onPress={saveFailed ? completeSession : onContinue}
         />
       </View>
     </Screen>

@@ -75,8 +75,19 @@ export interface PatternState {
   volumeReduced: boolean;
 }
 
+/** A skill milestone reached at least once during the user's lifetime. */
+export interface SkillMilestone {
+  pattern: Pattern;
+  tier: Tier;
+}
+
 export interface Profile {
   patterns: Record<Pattern, PatternState>;
+  /**
+   * Lifetime unlock memory (ADR-0007). Absence is accepted from profiles
+   * persisted before this field existed and is treated as an empty list.
+   */
+  unlockedMilestones?: SkillMilestone[];
 }
 
 export type BlockOutcome = "completed" | "struggled" | "skipped";
@@ -144,11 +155,10 @@ export interface Session {
   /**
    * Why today's session fits the prompt, ordered by importance:
    * soreness, quiet, energy, softLanding, staleFocus, taste.
-   * Always present on engine-generated sessions; optional only so
-   * pre-adaptations Session values (test fixtures) remain valid.
-   * Consumers treat absence as an empty list.
+   * Required (ADR-0007). An empty list means today's answers did not alter
+   * the generated prescription.
    */
-  adaptations?: Adaptation[];
+  adaptations: Adaptation[];
 }
 
 // ---------- Applying results ----------

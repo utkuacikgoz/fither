@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 interface SettingsState {
+  hydrated: boolean;
+  hydrationFailed: boolean;
   /** Equipment available to the user. Feeds the daily prompt as-is. */
   equipment: Equipment[];
   /**
@@ -25,11 +27,25 @@ export const useSettingsStore = create<SettingsState>()(
       // A wall and a chair exist in almost every home; bodyweight always.
       equipment: ["none", "chair", "wall"],
       sessionSalt: generateSalt(),
+      hydrated: false,
+      hydrationFailed: false,
       setEquipment: (equipment) => set({ equipment }),
     }),
     {
       name: "fither/settings-v1",
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        equipment: state.equipment,
+        sessionSalt: state.sessionSalt,
+      }),
+      onRehydrateStorage: () => (_state, error) => {
+        Promise.resolve().then(() =>
+          useSettingsStore.setState({
+            hydrated: !error,
+            hydrationFailed: Boolean(error),
+          }),
+        );
+      },
     },
   ),
 );

@@ -19,7 +19,7 @@ import {
 } from "./helpers.js";
 
 function kinds(session: Session): string[] {
-  return (session.adaptations ?? []).map((a) => a.kind);
+  return session.adaptations.map((a) => a.kind);
 }
 
 function volumeReducedProfile(patterns: readonly string[]): Profile {
@@ -109,6 +109,37 @@ describe("adaptations — energy and soft landing", () => {
       21,
     );
     expect(session.adaptations).toContainEqual({ kind: "lowEnergy" });
+  });
+
+  it("does not emit lowEnergy when the time budget already forces two sets", () => {
+    const constrained = syntheticLibrary();
+    for (const movement of constrained.movements) {
+      movement.timing = {
+        type: "seconds",
+        defaultValue: 245,
+      };
+    }
+    const okay = generateSession(
+      constrained,
+      createInitialProfile(),
+      emptyHistory,
+      prompt({ energy: "okay", minutes: 10 }),
+      21,
+    );
+    const low = generateSession(
+      constrained,
+      createInitialProfile(),
+      emptyHistory,
+      prompt({ energy: "low", minutes: 10 }),
+      21,
+    );
+
+    expect(okay.blocks).toHaveLength(1);
+    expect(okay.blocks[0]?.sets).toBe(2);
+    expect(low.blocks.map(({ movementId, sets }) => ({ movementId, sets }))).toEqual(
+      okay.blocks.map(({ movementId, sets }) => ({ movementId, sets })),
+    );
+    expect(kinds(low)).not.toContain("lowEnergy");
   });
 
   it("does not emit lowEnergy when every block was already volume-reduced", () => {

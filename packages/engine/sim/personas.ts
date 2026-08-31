@@ -15,6 +15,7 @@ import type {
 export type PersonaId =
   | "consistent4"
   | "consistent2"
+  | "lowCapability2"
   | "erratic"
   | "quiet"
   | "tenMin";
@@ -59,6 +60,14 @@ export function weekPlan(persona: PersonaId, rng: Rng): PersonaDay[] {
         avoid: [],
       }));
     case "consistent2":
+      return [1, 4].map((day) => ({
+        day,
+        minutes: rng() < 0.7 ? 20 : 30,
+        energy: pickEnergy(rng),
+        quiet: rng() < 0.2,
+        avoid: [],
+      }));
+    case "lowCapability2":
       return [1, 4].map((day) => ({
         day,
         minutes: rng() < 0.7 ? 20 : 30,
@@ -114,15 +123,40 @@ export const CAPABILITY_START_SPREAD = 0.5;
 // gap is 0.1 x (tier - 1) <= 0.5, inside VOLUME_REDUCED_RELIEF.
 export const CAPABILITY_GAIN_COMPLETED = 0.3;
 export const CAPABILITY_GAIN_STRUGGLED = 0.15;
+export const LOW_CAPABILITY_START_BASE = 0.65;
+export const LOW_CAPABILITY_START_SPREAD = 0.2;
+export const LOW_CAPABILITY_GAIN_COMPLETED = 0.28;
+export const LOW_CAPABILITY_GAIN_STRUGGLED = 0.12;
 export const VOLUME_REDUCED_RELIEF = 0.6;
 export const STRUGGLE_FLOOR = 0.01;
 export const SKIP_PROB = 0.005;
 
 export type Capability = Record<Pattern, number>;
 
-export function initialCapability(rng: Rng): Capability {
-  const one = () => CAPABILITY_START_BASE + rng() * CAPABILITY_START_SPREAD;
+export function initialCapability(rng: Rng, persona: PersonaId): Capability {
+  const lowCapability = persona === "lowCapability2";
+  const base = lowCapability
+    ? LOW_CAPABILITY_START_BASE
+    : CAPABILITY_START_BASE;
+  const spread = lowCapability
+    ? LOW_CAPABILITY_START_SPREAD
+    : CAPABILITY_START_SPREAD;
+  const one = () => base + rng() * spread;
   return { push: one(), pull: one(), squat: one(), hinge: one(), core: one() };
+}
+
+export function capabilityGain(
+  persona: PersonaId,
+  outcome: "completed" | "struggled",
+): number {
+  if (persona === "lowCapability2") {
+    return outcome === "completed"
+      ? LOW_CAPABILITY_GAIN_COMPLETED
+      : LOW_CAPABILITY_GAIN_STRUGGLED;
+  }
+  return outcome === "completed"
+    ? CAPABILITY_GAIN_COMPLETED
+    : CAPABILITY_GAIN_STRUGGLED;
 }
 
 export function blockOutcome(

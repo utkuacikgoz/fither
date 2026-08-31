@@ -200,7 +200,7 @@ describe("generateSession — energy", () => {
     );
     expect(tastes.length).toBe(1);
     const taste = tastes[0];
-    expect(taste?.atNewTier).toBe(true);
+    expect(taste?.atNewTier).toBe(false);
     expect(taste?.sets).toBe(1);
     expect(movementById.get(taste?.movementId ?? "")?.tier).toBe(3);
     // Late in the session: it is the final block.

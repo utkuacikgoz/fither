@@ -105,12 +105,13 @@ export function fixtureApplyResult(): ApplyResult {
   return {
     profile: {
       patterns: {
-        push: { tier: 2, cleanStreak: 0, struggledStreak: 0, volumeReduced: false },
+        push: { tier: 4, cleanStreak: 0, struggledStreak: 0, volumeReduced: false },
         pull: { tier: 1, cleanStreak: 1, struggledStreak: 0, volumeReduced: false },
         squat: { tier: 1, cleanStreak: 0, struggledStreak: 0, volumeReduced: false },
         hinge: { tier: 1, cleanStreak: 0, struggledStreak: 0, volumeReduced: false },
         core: { tier: 1, cleanStreak: 2, struggledStreak: 0, volumeReduced: false },
       },
+      unlockedMilestones: [{ pattern: "push", tier: 4 }],
     },
     history: {
       entries: [
@@ -131,9 +132,9 @@ export function fixtureApplyResult(): ApplyResult {
         points: 25,
         date: "2026-08-31",
         pattern: "push",
-        movementId: "incline-push-up",
+        movementId: "full-push-up",
       },
     ],
-    unlockedSkills: [{ pattern: "push", tier: 2, movementName: "Incline Push-Up" }],
+    unlockedSkills: [{ pattern: "push", tier: 4, movementName: "Full Push-Up" }],
   };
 }

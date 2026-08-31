@@ -220,9 +220,15 @@ export function generateSession(
         blocksPerPattern.set(pattern, (blocksPerPattern.get(pattern) ?? 0) + 1);
         total += cost;
         // Attribute the reduction honestly: soft landing per pattern; low
-        // energy only where it (not the soft landing) cut the sets.
+        // energy only where it (not the budget) cut a block from 3 sets to 2.
         if (state.volumeReduced) softLandingPatterns.add(pattern);
-        else if (prompt.energy === "low") energyReducedABlock = true;
+        else if (
+          prompt.energy === "low" &&
+          total - cost + blockSeconds(m, BASE_SETS, DEFAULT_REST_SECONDS) <=
+            mainBudget
+        ) {
+          energyReducedABlock = true;
+        }
         return true;
       }
     }
@@ -254,7 +260,9 @@ export function generateSession(
       if (!m) continue;
       const cost = blockSeconds(m, 1, DEFAULT_REST_SECONDS);
       if (total + cost <= budget) {
-        blocks.push(makeBlock(m, 1, true));
+        // A next-tier preview is not a tier the user has reached. It is
+        // progression- and points-neutral in either outcome (ADR-0007).
+        blocks.push(makeBlock(m, 1, false));
         total += cost;
         tasteAdded = { pattern, movementId: m.id };
       }

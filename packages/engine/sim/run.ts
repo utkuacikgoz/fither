@@ -21,10 +21,9 @@ import {
 } from "../src/index.js";
 import {
   blockOutcome,
+  capabilityGain,
   initialCapability,
   weekPlan,
-  CAPABILITY_GAIN_COMPLETED,
-  CAPABILITY_GAIN_STRUGGLED,
   type PersonaId,
 } from "./personas.js";
 
@@ -44,6 +43,7 @@ const movementById = new Map(library.movements.map((m) => [m.id, m]));
 const PERSONAS: PersonaId[] = [
   "consistent4",
   "consistent2",
+  "lowCapability2",
   "erratic",
   "quiet",
   "tenMin",
@@ -64,7 +64,10 @@ let maxUtilization = 0;
 let minUtilization = 1;
 const g1WeekReached: number[] = []; // per consistent4 user; Infinity if never
 let g2Regressions = 0;
+let lowCapabilityBlocks = 0;
+let lowCapabilityDifficultBlocks = 0;
 let g4MaxAbsence = 0;
+const personaCounts = new Map<PersonaId, number>();
 
 // ---------- Run ----------
 
@@ -72,8 +75,9 @@ const rootRng = createRng(SEED);
 
 for (let u = 0; u < USERS; u++) {
   const persona = PERSONAS[u % PERSONAS.length] as PersonaId;
+  personaCounts.set(persona, (personaCounts.get(persona) ?? 0) + 1);
   const rng = createRng(Math.floor(rootRng() * 0xffffffff) ^ u);
-  const capability = initialCapability(rng);
+  const capability = initialCapability(rng, persona);
 
   let profile: Profile = createInitialProfile();
   let history: History = { entries: [] };
@@ -137,6 +141,12 @@ for (let u = 0; u < USERS; u++) {
           capability[block.pattern],
         );
       });
+      if (persona === "lowCapability2") {
+        lowCapabilityBlocks += outcomes.length;
+        lowCapabilityDifficultBlocks += outcomes.filter(
+          (outcome) => outcome !== "completed",
+        ).length;
+      }
 
       // Training grows capability (once per pattern per session).
       const trained = new Map<Pattern, "completed" | "struggled">();
@@ -148,10 +158,7 @@ for (let u = 0; u < USERS; u++) {
         }
       });
       for (const [p, kind] of trained) {
-        capability[p] +=
-          kind === "completed"
-            ? CAPABILITY_GAIN_COMPLETED
-            : CAPABILITY_GAIN_STRUGGLED;
+        capability[p] += capabilityGain(persona, kind);
       }
 
       const before = profile;
@@ -163,7 +170,7 @@ for (let u = 0; u < USERS; u++) {
       history = applied.history;
 
       // Gate 2: 2×/week users never lose a tier.
-      if (persona === "consistent2") {
+      if (persona === "consistent2" || persona === "lowCapability2") {
         for (const p of PATTERNS) {
           if (profile.patterns[p].tier < before.patterns[p].tier) {
             g2Regressions++;
@@ -206,14 +213,18 @@ const pct = (x: number) => `${(100 * x).toFixed(1)}%`;
 const mark = (ok: boolean) => (ok ? "PASS" : "FAIL");
 
 console.log(
-  `FITHER sim — seed ${SEED}, ${USERS} users (${USERS / PERSONAS.length} per persona), ${WEEKS} weeks, ${sessionsGenerated} sessions`,
+  `FITHER sim — seed ${SEED}, ${USERS} users, ${WEEKS} weeks, ${sessionsGenerated} sessions`,
+);
+console.log(
+  `Personas: ${PERSONAS.map((persona) => `${persona}=${personaCounts.get(persona) ?? 0}`).join(", ")}`,
 );
 console.log(
   `G1 ${mark(g1Pass)}  4x/week push tier >= ${G1_TIER} by week ${G1_WEEK_LIMIT}: ` +
     `${g1ByWeek12}/${g1Total} users (${g1Pct.toFixed(1)}%), median week ${g1Median}`,
 );
 console.log(
-  `G2 ${mark(g2Pass)}  2x/week tier regressions: ${g2Regressions}`,
+  `G2 ${mark(g2Pass)}  2x/week tier regressions: ${g2Regressions}; ` +
+    `low-capability difficult blocks: ${lowCapabilityDifficultBlocks}/${lowCapabilityBlocks}`,
 );
 console.log(
   `G3 ${mark(g3Pass)}  sessions over time budget: ${overBudgetCount} of ${sessionsGenerated}, ` +

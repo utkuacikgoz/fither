@@ -46,15 +46,26 @@ export function applySessionResult(
   const { session, outcomes } = result;
   const byId = new Map(library.movements.map((m) => [m.id, m]));
 
-  // Per-pattern session verdict at the CURRENT tier. Taste blocks (movement
-  // tier above the pattern's tier) are previews: they never count for or
-  // against progression.
+  // Zero-block generation is a first-class "couldn't build" outcome.
+  // It changes no profile state, earns nothing, and never inflates history
+  // or pattern staleness (ADR-0007).
+  if (session.blocks.length === 0) {
+    return {
+      profile,
+      history,
+      ledgerEvents: [],
+      unlockedSkills: [],
+    };
+  }
+
+  // Per-pattern verdict at the CURRENT tier. Taste blocks above it and
+  // constraint fallbacks below it are both neutral (ADR-0007).
   const seen = new Set<Pattern>();
   const struggled = new Set<Pattern>();
   session.blocks.forEach((block, i) => {
     const movement = byId.get(block.movementId);
     const state = profile.patterns[block.pattern];
-    if (movement && movement.tier > state.tier) return; // taste block
+    if (!movement || movement.tier !== state.tier) return;
     seen.add(block.pattern);
     if (outcomes[i] !== "completed") struggled.add(block.pattern);
   });
@@ -73,9 +84,16 @@ export function applySessionResult(
     });
   }
 
-  // New-tier block bonuses: +5 per completed block flagged atNewTier.
+  // New-tier block bonuses: +5 per completed, current-tier block flagged
+  // atNewTier. The tier check makes the points rule robust to malformed or
+  // legacy taste/fallback flags.
   session.blocks.forEach((block, i) => {
-    if (block.atNewTier && outcomes[i] === "completed") {
+    const movement = byId.get(block.movementId);
+    if (
+      block.atNewTier &&
+      outcomes[i] === "completed" &&
+      movement?.tier === profile.patterns[block.pattern].tier
+    ) {
       ledgerEvents.push({
         type: "newTierBlock",
         points: POINTS.perNewTierBlock,
@@ -89,6 +107,7 @@ export function applySessionResult(
   // Progression state machine (ADR-0002/0003). Absence NEVER regresses:
   // patterns not in this session keep their state untouched.
   const nextPatterns = { ...profile.patterns };
+  const unlockedMilestones = [...(profile.unlockedMilestones ?? [])];
   for (const pattern of PATTERNS) {
     if (!seen.has(pattern)) continue;
     const prev = nextPatterns[pattern];
@@ -115,9 +134,14 @@ export function applySessionResult(
       if (next.cleanStreak >= CLEAN_SESSIONS_TO_ADVANCE && prev.tier < 6) {
         next.tier = (prev.tier + 1) as Tier;
         next.cleanStreak = 0;
-        if (SKILL_MILESTONE_TIERS.includes(next.tier)) {
+        const alreadyUnlocked = unlockedMilestones.some(
+          (milestone) =>
+            milestone.pattern === pattern && milestone.tier === next.tier,
+        );
+        if (SKILL_MILESTONE_TIERS.includes(next.tier) && !alreadyUnlocked) {
           const movement = milestoneMovement(library, pattern, next.tier);
           if (movement) {
+            unlockedMilestones.push({ pattern, tier: next.tier });
             unlockedSkills.push({
               pattern,
               tier: next.tier,
@@ -150,7 +174,7 @@ export function applySessionResult(
   };
 
   return {
-    profile: { patterns: nextPatterns },
+    profile: { patterns: nextPatterns, unlockedMilestones },
     history: { entries: [...history.entries, entry] },
     ledgerEvents,
     unlockedSkills,

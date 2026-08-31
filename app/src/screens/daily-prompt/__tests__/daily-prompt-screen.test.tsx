@@ -4,6 +4,9 @@ import React from "react";
 import { strings } from "../../../copy/strings";
 import { createSession } from "../../../session/create-session";
 import { useSessionStore } from "../../../state/session-store";
+import { useLedgerStore } from "../../../state/ledger-store";
+import { useProfileStore } from "../../../state/profile-store";
+import { useSettingsStore } from "../../../state/settings-store";
 import {
   fixturePlayerBlocks,
   fixtureSession,
@@ -14,6 +17,9 @@ jest.mock("../../../session/create-session", () => ({ createSession: jest.fn() }
 const mockedCreate = jest.mocked(createSession);
 
 beforeEach(() => {
+  useLedgerStore.setState({ hydrated: true, hydrationFailed: false });
+  useProfileStore.setState({ hydrated: true, hydrationFailed: false });
+  useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
   useSessionStore.getState().resetSession();
   mockedCreate.mockReturnValue({
     ok: true,
@@ -102,5 +108,20 @@ describe("DailyPromptScreen", () => {
 
     fireEvent.press(screen.getByTestId("prompt-try-again"));
     expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+  });
+
+  it("keeps an impossible set of answers out of the player flow", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    const onSessionReady = jest.fn();
+    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+
+    expect(onSessionReady).not.toHaveBeenCalled();
+    expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
+    expect(screen.getByTestId("prompt-adjust-answers")).toBeTruthy();
   });
 });

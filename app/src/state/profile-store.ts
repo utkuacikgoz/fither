@@ -13,6 +13,8 @@ import { useLedgerStore } from "./ledger-store";
 interface ProfileState {
   profile: Profile;
   history: History;
+  hydrated: boolean;
+  hydrationFailed: boolean;
   /**
    * The ONLY way profile/history/ledger change: the engine's ApplyResult.
    * The app never computes progression itself.
@@ -26,6 +28,8 @@ export const useProfileStore = create<ProfileState>()(
       // The zero-state comes from the engine, not the app.
       profile: createInitialProfile(),
       history: { entries: [] },
+      hydrated: false,
+      hydrationFailed: false,
       applyEngineResult: (result) => {
         set({ profile: result.profile, history: result.history });
         useLedgerStore.getState().append(result.ledgerEvents);
@@ -35,6 +39,14 @@ export const useProfileStore = create<ProfileState>()(
       name: "fither/profile-v1",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ profile: state.profile, history: state.history }),
+      onRehydrateStorage: () => (_state, error) => {
+        Promise.resolve().then(() =>
+          useProfileStore.setState({
+            hydrated: !error,
+            hydrationFailed: Boolean(error),
+          }),
+        );
+      },
     },
   ),
 );
