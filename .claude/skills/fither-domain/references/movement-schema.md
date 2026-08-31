@@ -38,9 +38,13 @@ Top level: `{ "version": 1, "movements": [Movement, ...] }` — 60 movements.
 }
 ```
 
-## Patterns (PROPOSED, pending Brief 1)
+## Patterns (decided, ADR-0002)
 
-`push`, `pull`, `squat`, `hinge`, `core`.
+`push`, `pull`, `squat`, `hinge`, `core`. Five ladders of six tiers = 30
+of the 60 movement slots; the rest buy variety within patterns. Hinge
+stays separate from squat on purpose — posterior-chain work is what this
+audience most lacks, and merging would let the engine prescribe all-quad
+weeks.
 
 Pull with no equipment is the hard one — expect towel rows, table rows,
 prone pulls. That difficulty is exactly why the ladder rules below are

@@ -14,8 +14,12 @@ permanently.
   silently take points away.
 - Points buy nothing and gate nothing. They are a visible record of work
   done, not a currency.
-- DECIDE: exact point values per event — confirm against Brief 5.
-  Keep the table in one place in the engine so tuning is a data change.
+- Values (decided, ADR-0003): **1 point per minute** — 10/20/30 points
+  per completed session by length; **+5** per block completed at a
+  newly-reached tier; **+25** per skill unlock. Simple mental math,
+  longer sessions visibly count more, nothing gameable. The values live
+  in one table in the engine so tuning is a data change, not a logic
+  change.
 
 ## Skills (named unlocks)
 

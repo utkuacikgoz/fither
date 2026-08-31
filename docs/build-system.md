@@ -52,6 +52,7 @@ fither/
   docs/
     adr/                       # one file per architecture decision
     briefs/                    # the nine briefs, unchanged, as reference
+    launch-checklist.md        # pre-launch through week 3, worked before ship
 ```
 
 `packages/engine` being a separate package with no dependencies is not tidiness. It is what makes the simulation gate possible.
@@ -142,10 +143,19 @@ If Gate 1 fails, fix the engine or the movement ladders. Do not proceed. Everyth
 **Phase 4, money and ship**
 
 14. `ui-engineer`: RevenueCat, paywall, entitlements, offline handling.
-15. `copy-writer`: App Store listing, screenshots, all remaining strings.
-16. `reviewer`: full pass across everything.
-17. TestFlight, 20 users, two weeks.
-18. Ship.
+15. `ui-engineer`: launch ops in app — error monitoring (crash reporting wired
+    and verified BEFORE the first TestFlight build goes out), analytics events
+    (forbidden-list clean, offline-queued), rating prompt at the right moment.
+    Stack decisions in `fither-code` → Ops stack.
+16. Outside Claude Code: create the ops accounts — error monitoring project,
+    analytics project, transactional email provider and sending domain
+    (DNS records), feedback board. Keys land in app config, never in git.
+17. `copy-writer`: App Store listing, screenshots, transactional email
+    templates, review-response templates, all remaining strings.
+18. `reviewer`: full pass across everything.
+19. TestFlight, 20 users, two weeks. Crash reports and the feedback board are
+    live from the first build — that is half the point of TestFlight.
+20. Work through `docs/launch-checklist.md`, then ship.
 
 ---
 
@@ -168,6 +178,7 @@ Gate 1 is the cheapest way to kill this idea if it deserves killing. It costs tw
 * **Scheduled task, weekly:** reviewer agent runs a full pass on the diff since last week and writes findings to `docs/review/`. Catches drift while you sleep.
 * **Hook on commit:** run `pnpm test` and, if `packages/engine` changed, `pnpm sim`. An agent cannot merge a silent regression in progression.
 * **Plugin:** once the three skills stabilise, bundle them so the app repo and the content repo load identical brand rules instead of two copies that diverge.
+* **Ops loop, from first TestFlight build:** error monitoring (crash reports reach you before users tell you, or worse, silently leave), analytics on the few events that test the retention thesis, a feedback board so TestFlight and launch feedback lands in one triageable place instead of scattered DMs, and transactional email (receipts, trial-ending, account/data requests) on a proper provider with your own domain. Details and stack choices: `fither-code` → Ops stack; launch sequencing: `docs/launch-checklist.md`.
 
 ---
 
@@ -194,6 +205,7 @@ Be honest about this up front so it does not surprise you in week 6.
 | Player, audio, gamification | 3 |
 | Onboarding, Gate 3 | 1 |
 | Paywall, store, review | 2 |
+| Launch ops: monitoring, analytics, email, feedback board | in parallel with paywall/store |
 | TestFlight | 2 |
 
 Roughly 13 weeks to ship, with animations as the binding constraint. The TikTok channel starts in week 1 and has 90 days of history by launch. That timing is the whole plan, not a coincidence.
@@ -207,5 +219,8 @@ Roughly 13 weeks to ship, with animations as the binding constraint. The TikTok 
 - [ ] Start `movement-author` on the 60 movements
 - [ ] Commission the 6 reference animations, Brief 6
 - [ ] Start the TikTok channel with environment and text formats
+- [ ] Landing page with email capture, linked from the channel bio
+  (waitlist = day-one downloads; see docs/launch-checklist.md)
+- [ ] Enroll in the Apple Developer Program
 
 Gate 1 is reachable in two weeks and tells you whether any of the rest is worth building.
