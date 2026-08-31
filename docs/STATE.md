@@ -68,23 +68,27 @@ failures.
 
 ## Next, in order
 
-1. **Onboarding + dev-mode monetization (ADR-0009)** — being built now:
-   three drafted onboarding screens, trial-from-first-completed-session,
-   paywall gating only new-session generation after expiry, billing
-   behind a typed port with a local dev implementation (no third-party
-   SDKs; everything clickable; RevenueCat later = implement the adapter).
-2. **GATE 2 — owner's physical test.** `pnpm install && pnpm ios` from a
+1. **GATE 2 — owner's physical test.** `pnpm install && pnpm ios` from a
    normal checkout, then a real 10-minute workout. Still never launched
    on an iOS simulator in the build environment.
-3. **GATE 3 prep** — onboarding exists after item 1; five real users,
+2. **GATE 3 prep** — onboarding exists after item 1; five real users,
    under 60 seconds to first movement.
-4. **Exercise instruction media** — after Gate 2 confirms pacing.
+3. **Exercise instruction media** — after Gate 2 confirms pacing.
    Authored Rive/3D clips, reduced-motion fallbacks, never a network
    fetch on the workout path.
-5. Then share card, ops SDKs (with the offline-lockout re-review),
+4. Then share card, ops SDKs (with the offline-lockout re-review),
    and store preparation per `docs/build-system.md`.
 
-Recently closed: ADR-0008 ladder pacing (time floors 7/14/28/42/56 days;
+Recently closed: ADR-0009 onboarding + dev-mode monetization (three
+onboarding screens; billing behind a typed port with a dev-only
+implementation; trial stamps at first completed session, 7 full free
+days; expired trial gates only new-session generation; paywall is the
+drafted honest letter; app tests 132). Open flags from that build, for
+copy/product: expired-state paywall copy still says "Start my free
+week"; no "nothing to restore" string; "Just me and the floor" maps to
+none+wall (confirm); persistent avoid areas merge silently into the
+daily prompt; restore/dev-reset live on the paywall until a settings
+screen exists. Also closed: ADR-0008 ladder pacing (time floors 7/14/28/42/56 days;
 exhaustion moved from week 8-12 to 22-23, first unlock week 8, G5
 ceiling gate added) and points parity (20/25/30 by length, base 15 + 5
 per ten minutes; tenMin users now earn 74% of consistent4 at equal

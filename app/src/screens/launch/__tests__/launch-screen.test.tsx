@@ -5,6 +5,7 @@ import { strings } from "../../../copy/strings";
 import { todayIso } from "../../../lib/dates";
 import { createPlayer, reduce } from "../../../session/player-machine";
 import { useActiveSessionStore } from "../../../state/active-session-store";
+import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../../../state/profile-store";
@@ -43,9 +44,22 @@ beforeEach(() => {
     hydrated: true,
     hydrationFailed: false,
   });
-  useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
+  // onboardingCompleted keeps the pre-existing suites on the returning-user
+  // path; the onboarding/paywall gating suite covers the fresh-install one.
+  useSettingsStore.setState({
+    hydrated: true,
+    hydrationFailed: false,
+    onboardingCompleted: true,
+    alwaysAvoid: [],
+  });
   useActiveSessionStore.setState({
     snapshot: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useEntitlementStore.setState({
+    trialStartDate: null,
+    purchase: null,
     hydrated: true,
     hydrationFailed: false,
   });

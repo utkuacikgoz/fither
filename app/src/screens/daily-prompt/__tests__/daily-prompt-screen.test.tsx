@@ -5,6 +5,7 @@ import { strings } from "../../../copy/strings";
 import { createSession } from "../../../session/create-session";
 import { useSessionStore } from "../../../state/session-store";
 import { useActiveSessionStore } from "../../../state/active-session-store";
+import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { useSettingsStore } from "../../../state/settings-store";
@@ -20,9 +21,19 @@ const mockedCreate = jest.mocked(createSession);
 beforeEach(() => {
   useLedgerStore.setState({ hydrated: true, hydrationFailed: false });
   useProfileStore.setState({ hydrated: true, hydrationFailed: false });
-  useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
+  useSettingsStore.setState({
+    hydrated: true,
+    hydrationFailed: false,
+    alwaysAvoid: [],
+  });
   useActiveSessionStore.setState({
     snapshot: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useEntitlementStore.setState({
+    trialStartDate: null,
+    purchase: null,
     hydrated: true,
     hydrationFailed: false,
   });
@@ -129,5 +140,56 @@ describe("DailyPromptScreen", () => {
     expect(onSessionReady).not.toHaveBeenCalled();
     expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
     expect(screen.getByTestId("prompt-adjust-answers")).toBeTruthy();
+  });
+
+  it("merges the persistent avoid-list into every prompt, even on 'All good'", () => {
+    useSettingsStore.setState({ alwaysAvoid: ["knees"] });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-okay"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+
+    expect(mockedCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ avoid: ["knees"] }),
+      expect.anything(),
+      expect.anything(),
+      expect.any(Number),
+    );
+  });
+
+  it("deduplicates persistent and daily picks into one avoid list", () => {
+    useSettingsStore.setState({ alwaysAvoid: ["knees", "back"] });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-okay"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-knees"));
+    fireEvent.press(screen.getByTestId("soreness-wrists"));
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+
+    expect(mockedCreate).toHaveBeenCalledWith(
+      // Stable presentation order, each area once.
+      expect.objectContaining({ avoid: ["wrists", "back", "knees"] }),
+      expect.anything(),
+      expect.anything(),
+      expect.any(Number),
+    );
+  });
+
+  it("shows the onboarding handoff atop the first question only", () => {
+    const screen = render(
+      <DailyPromptScreen onSessionReady={jest.fn()} showHandoff />,
+    );
+    expect(screen.getByText(strings.onboarding.handoff.eyebrow)).toBeTruthy();
+    expect(screen.getByText(strings.onboarding.handoff.line)).toBeTruthy();
+    expect(screen.queryByText(strings.prompt.dayLabel)).toBeNull();
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    expect(screen.queryByText(strings.onboarding.handoff.eyebrow)).toBeNull();
+    expect(screen.queryByText(strings.onboarding.handoff.line)).toBeNull();
+    expect(screen.getByText(strings.prompt.dayLabel)).toBeTruthy();
   });
 });

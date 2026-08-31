@@ -1,0 +1,92 @@
+import { fireEvent, render } from "@testing-library/react-native";
+import React from "react";
+
+import { strings } from "../../../copy/strings";
+import { useSettingsStore } from "../../../state/settings-store";
+import {
+  collectStringValues,
+  renderedTextLeaves,
+} from "../../../test-utils/copy-audit";
+import { OnboardingScreen } from "../onboarding-screen";
+
+beforeEach(() => {
+  useSettingsStore.setState({
+    hydrated: true,
+    hydrationFailed: false,
+    onboardingCompleted: false,
+    alwaysAvoid: [],
+    equipment: ["none", "chair", "wall"],
+  });
+});
+
+describe("OnboardingScreen", () => {
+  it("walks the three drafted screens, one decision each, auto-advancing", () => {
+    const onDone = jest.fn();
+    const screen = render(<OnboardingScreen onDone={onDone} />);
+
+    expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
+    expect(screen.getByText(strings.onboarding.welcome.body)).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("onboarding-begin"));
+    expect(screen.getByText(strings.onboarding.equipment.question)).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("onboarding-chair"));
+    expect(screen.getByText(strings.onboarding.avoid.question)).toBeTruthy();
+    expect(onDone).not.toHaveBeenCalled();
+
+    // "Nothing" is the one-tap default path.
+    fireEvent.press(screen.getByTestId("onboarding-avoid-nothing"));
+    expect(onDone).toHaveBeenCalledTimes(1);
+
+    const settings = useSettingsStore.getState();
+    expect(settings.onboardingCompleted).toBe(true);
+    expect(settings.alwaysAvoid).toEqual([]);
+    expect(settings.equipment).toContain("chair");
+  });
+
+  it("floor-only keeps the chair out of her equipment", () => {
+    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("onboarding-begin"));
+    fireEvent.press(screen.getByTestId("onboarding-floor-only"));
+    fireEvent.press(screen.getByTestId("onboarding-avoid-nothing"));
+
+    const { equipment } = useSettingsStore.getState();
+    expect(equipment).not.toContain("chair");
+    expect(equipment).toContain("none");
+  });
+
+  it("persists picked avoid areas as the permanent work-around list", () => {
+    const onDone = jest.fn();
+    const screen = render(<OnboardingScreen onDone={onDone} />);
+    fireEvent.press(screen.getByTestId("onboarding-begin"));
+    fireEvent.press(screen.getByTestId("onboarding-chair"));
+
+    fireEvent.press(screen.getByTestId("onboarding-avoid-knees"));
+    fireEvent.press(screen.getByTestId("onboarding-avoid-back"));
+    // Deselecting works before confirming.
+    fireEvent.press(screen.getByTestId("onboarding-avoid-back"));
+    fireEvent.press(screen.getByTestId("onboarding-avoid-confirm"));
+
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(useSettingsStore.getState().alwaysAvoid).toEqual(["knees"]);
+    expect(useSettingsStore.getState().onboardingCompleted).toBe(true);
+  });
+
+  it("renders no user-facing text outside strings.ts on any step", () => {
+    const allowed = collectStringValues(strings);
+    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
+
+    const auditStep = () => {
+      for (const leaf of renderedTextLeaves(screen.toJSON())) {
+        expect(allowed.has(leaf)).toBe(true);
+      }
+    };
+
+    auditStep();
+    fireEvent.press(screen.getByTestId("onboarding-begin"));
+    auditStep();
+    fireEvent.press(screen.getByTestId("onboarding-chair"));
+    fireEvent.press(screen.getByTestId("onboarding-avoid-hips"));
+    auditStep();
+  });
+});

@@ -9,9 +9,11 @@ import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
 import { spacing } from "../../design/tokens";
+import { BODY_AREAS } from "../../lib/body-areas";
 import { todayIso } from "../../lib/dates";
 import { useSessionStore } from "../../state/session-store";
 import { useActiveSessionStore } from "../../state/active-session-store";
+import { useEntitlementStore } from "../../state/entitlement-store";
 import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useSettingsStore } from "../../state/settings-store";
@@ -21,27 +23,27 @@ import { useSettingsStore } from "../../state/settings-store";
 
 const MINUTES: SessionMinutes[] = [10, 20, 30];
 const ENERGY: Energy[] = ["low", "okay", "strong"];
-const AREAS: BodyArea[] = [
-  "shoulders",
-  "wrists",
-  "elbows",
-  "back",
-  "hips",
-  "knees",
-  "ankles",
-  "core",
-];
 
 type Step = "time" | "energy" | "quiet" | "soreness" | "noSession" | "error";
 
 interface DailyPromptScreenProps {
   /** Called when the session is generated and ready to play. */
   onSessionReady: () => void;
+  /**
+   * True only on the prompt straight after onboarding: renders the
+   * drafted handoff eyebrow atop the first question (ADR-0009 §1) —
+   * zero extra taps, zero extra screens.
+   */
+  showHandoff?: boolean;
 }
 
-export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
+export function DailyPromptScreen({
+  onSessionReady,
+  showHandoff = false,
+}: DailyPromptScreenProps) {
   const startSession = useSessionStore((s) => s.startSession);
   const equipment = useSettingsStore((s) => s.equipment);
+  const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
   const settingsHydrated = useSettingsStore((s) => s.hydrated);
   const settingsFailed = useSettingsStore((s) => s.hydrationFailed);
   const profileHydrated = useProfileStore((s) => s.hydrated);
@@ -50,6 +52,8 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
   const ledgerFailed = useLedgerStore((s) => s.hydrationFailed);
   const activeHydrated = useActiveSessionStore((s) => s.hydrated);
   const activeFailed = useActiveSessionStore((s) => s.hydrationFailed);
+  const entitlementHydrated = useEntitlementStore((s) => s.hydrated);
+  const entitlementFailed = useEntitlementStore((s) => s.hydrationFailed);
 
   const [step, setStep] = useState<Step>("time");
   const [minutes, setMinutes] = useState<SessionMinutes | null>(null);
@@ -59,11 +63,17 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
 
   const finish = (avoidAreas: BodyArea[]) => {
     if (minutes === null || energy === null || quiet === null) return;
+    // The persistent avoid-list (onboarding) joins today's soreness picks
+    // before the prompt reaches the engine — input assembly, not policy:
+    // what "avoid" means to the session is decided entirely engine-side.
+    const mergedAvoid = BODY_AREAS.filter(
+      (area) => alwaysAvoid.includes(area) || avoidAreas.includes(area),
+    );
     const prompt: DailyPrompt = {
       minutes,
       energy,
       quiet,
-      avoid: avoidAreas,
+      avoid: mergedAvoid,
       date: todayIso(),
       equipment,
     };
@@ -94,9 +104,17 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
   };
 
   const hydrated =
-    settingsHydrated && profileHydrated && ledgerHydrated && activeHydrated;
+    settingsHydrated &&
+    profileHydrated &&
+    ledgerHydrated &&
+    activeHydrated &&
+    entitlementHydrated;
   const hydrationFailed =
-    settingsFailed || profileFailed || ledgerFailed || activeFailed;
+    settingsFailed ||
+    profileFailed ||
+    ledgerFailed ||
+    activeFailed ||
+    entitlementFailed;
 
   if (!hydrated) {
     return (
@@ -112,11 +130,20 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
     );
   }
 
+  const handoffVisible = showHandoff && step === "time";
+
   return (
     <Screen>
       <AppText variant="caption" style={styles.dayLabel}>
-        {strings.prompt.dayLabel}
+        {handoffVisible
+          ? strings.onboarding.handoff.eyebrow
+          : strings.prompt.dayLabel}
       </AppText>
+      {handoffVisible && (
+        <AppText variant="bodySoft" style={styles.handoffLine}>
+          {strings.onboarding.handoff.line}
+        </AppText>
+      )}
 
       {step === "time" && (
         <View style={styles.question}>
@@ -194,7 +221,7 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
             label={strings.prompt.soreness.allGood}
             onPress={() => finish([])}
           />
-          {AREAS.map((area) => (
+          {BODY_AREAS.map((area) => (
             <RowButton
               key={area}
               testID={`soreness-${area}`}
@@ -247,6 +274,9 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
 const styles = StyleSheet.create({
   dayLabel: {
     marginTop: spacing.md,
+  },
+  handoffLine: {
+    marginTop: spacing.xs,
   },
   question: {
     marginTop: spacing.xl,

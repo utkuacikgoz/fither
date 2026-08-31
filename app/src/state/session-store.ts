@@ -13,6 +13,7 @@ import {
   type PlayerState,
 } from "../session/player-machine";
 import { useActiveSessionStore } from "./active-session-store";
+import { useEntitlementStore } from "./entitlement-store";
 import { useProfileStore } from "./profile-store";
 import { useLedgerStore } from "./ledger-store";
 import { useSettingsStore } from "./settings-store";
@@ -22,7 +23,8 @@ function persistentStoresReady(): boolean {
     useProfileStore.getState().hydrated &&
     useLedgerStore.getState().hydrated &&
     useSettingsStore.getState().hydrated &&
-    useActiveSessionStore.getState().hydrated
+    useActiveSessionStore.getState().hydrated &&
+    useEntitlementStore.getState().hydrated
   );
 }
 
@@ -141,6 +143,13 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       // and all three writes are issued in one JS turn, so the window is
       // a hard kill mid-flush. Revisit before any sync/backup story.
       applyEngineResult(outcome.value);
+      // Trial policy stamp (ADR-0009 §2): the 7-day trial starts at the
+      // first COMPLETED session. Stamped from the session's own date —
+      // the same local-date source the daily prompt used — and only when
+      // the apply actually landed (a failed save spends no trial).
+      // Idempotent inside the entitlement store; joins the accepted S3
+      // dual-write window above.
+      useEntitlementStore.getState().markSessionCompleted(session.date);
       useActiveSessionStore.getState().clear();
       set({
         finish: {
