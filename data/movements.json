@@ -152,7 +152,7 @@
         "Chair against a wall, hands on the seat",
         "Walk feet back and lift your hips high",
         "Bend your elbows, head toward the chair",
-        "Press back to hips high"
+        "Press back until your hips are high"
       ]
     },
     {
@@ -187,7 +187,7 @@
       "cues": [
         "Hips high, hands and feet on the floor",
         "Bend your elbows, head toward the floor",
-        "Press back up to hips high"
+        "Press back up until your hips are high"
       ]
     },
     {
@@ -360,7 +360,7 @@
       "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
       "cues": [
         "Feet far forward, body at a strong lean",
-        "Grip firm, dry hands",
+        "Dry your hands, grip firm",
         "Pull your chest to the frame, elbows back",
         "Lower slowly"
       ]
@@ -653,7 +653,7 @@
       "timing": { "type": "seconds", "defaultValue": 20 },
       "cues": [
         "Lift your hips and hold them high",
-        "Squeeze at the top the whole time",
+        "Keep squeezing the whole time",
         "Ribs down, breathe steadily"
       ]
     },
@@ -934,7 +934,7 @@
       "cues": [
         "On your back, knees above your hips",
         "Lower one heel to tap the floor",
-        "Lower back stays settled",
+        "Keep your lower back settled",
         "Switch sides"
       ]
     },
@@ -1035,7 +1035,7 @@
       "unilateral": false,
       "timing": { "type": "reps", "defaultValue": 5, "secondsPerRep": 8 },
       "cues": [
-        "Stand, hinge, hands to the floor",
+        "Stand tall, hinge down, hands to the floor",
         "Walk your hands out to a plank",
         "Pause, then walk back and stand",
         "Keep your hips steady"
