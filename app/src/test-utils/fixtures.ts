@@ -77,6 +77,7 @@ export const fixtureSession: Session = {
   ],
   estimatedTotalSeconds: 98,
   seed: 42,
+  adaptations: [],
 };
 
 export const fixturePlayerBlocks: PlayerBlock[] = [
