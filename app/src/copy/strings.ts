@@ -1,7 +1,7 @@
 // Every user-facing string in the app lives here — components never hold
 // literal user text. Written to fither-voice: calm coach, second person,
-// short sentences, no guilt, forbidden list respected. All keys below are
-// first-draft copy awaiting copy-writer polish (flagged: whole file).
+// short sentences, no guilt, forbidden list respected. Polished by
+// copy-writer (2026-08-31); flag any new keys for review before release.
 
 import type { BodyArea, Energy, SessionMinutes } from "@fither/engine";
 
@@ -26,13 +26,13 @@ export const strings = {
     },
     quiet: {
       question: "Do you need to be quiet right now?",
-      yes: "Yes, keep it quiet",
-      no: "No, sound is fine",
+      yes: "Keep it quiet",
+      no: "Sound is fine",
     },
     soreness: {
       question: "Anything sore or off-limits today?",
       allGood: "All good",
-      confirm: "That's noted",
+      confirm: "Noted. We'll work around it.",
       areas: {
         shoulders: "Shoulders",
         wrists: "Wrists",
@@ -56,11 +56,11 @@ export const strings = {
     setCounter: (current: number, total: number) => `Set ${current} of ${total}`,
     blockPlan: (sets: number, amount: number, isHold: boolean) =>
       isHold
-        ? `${sets} × ${amount} second hold`
+        ? `${sets} × ${amount}-second hold`
         : `${sets} × ${amount} reps`,
     feedback: {
       question: "How was that?",
-      completed: "Done",
+      completed: "Good",
       struggled: "That was hard",
     },
   },
@@ -76,10 +76,10 @@ export const strings = {
     continueLabel: "Continue",
   },
   errors: {
-    // PLACEHOLDER-COPY: shown while the session engine or movement library
-    // is unavailable on this build. Copy-writer to review.
+    // Shown while the session engine or movement library is unavailable
+    // on this build. Reviewed by copy-writer (2026-08-31).
     sessionUnavailable: "Couldn't build today's session. Try again in a minute.",
-    saveUnavailable: "Couldn't save this session just now. Try again in a minute.",
+    saveUnavailable: "Couldn't save this session. Try again in a minute.",
     tryAgain: "Try again",
   },
 } as const;
