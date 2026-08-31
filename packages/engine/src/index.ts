@@ -14,6 +14,7 @@ export {
   MIN_SETS,
   TARGET_UTILIZATION,
   TASTE_RESERVE_SECONDS,
+  STALE_FOCUS_MIN_TRAINING_DAYS,
 } from "./generate.js";
 export {
   applySessionResult,

@@ -96,6 +96,30 @@ export interface History {
   entries: HistoryEntry[];
 }
 
+// ---------- Adaptations (ADR-0006 — show the adaptation) ----------
+
+/**
+ * Why today's session looks the way it does. The engine emits a reason
+ * only when the condition actually changed the generated session; the UI
+ * maps kinds to plain-language lines in strings.ts and never re-derives.
+ *
+ * Deliberately absent: a "shortSession" kind. Ten minutes is complete
+ * (ADR-0006) — session length is never framed as an adaptation.
+ */
+export type Adaptation =
+  /** Avoid areas excluded at least one otherwise-eligible movement. */
+  | { kind: "soreness"; areas: BodyArea[] }
+  /** Quiet mode excluded at least one otherwise-eligible movement. */
+  | { kind: "quiet" }
+  /** Low energy reduced sets (same tier — never a tier drop). */
+  | { kind: "lowEnergy" }
+  /** Pattern is in the reduced-volume soft landing after regression. */
+  | { kind: "softLanding"; pattern: Pattern }
+  /** Session leads with this pattern because it has gone stale. */
+  | { kind: "staleFocus"; pattern: Pattern }
+  /** Strong energy earned a one-set taste of the next tier. */
+  | { kind: "tasteBlock"; pattern: Pattern; movementId: string };
+
 // ---------- Generated session ----------
 
 export interface SessionBlock {
@@ -117,6 +141,14 @@ export interface Session {
   /** Must be <= minutes * 60. The sim gates on this. */
   estimatedTotalSeconds: number;
   seed: number;
+  /**
+   * Why today's session fits the prompt, ordered by importance:
+   * soreness, quiet, energy, softLanding, staleFocus, taste.
+   * Always present on engine-generated sessions; optional only so
+   * pre-adaptations Session values (test fixtures) remain valid.
+   * Consumers treat absence as an empty list.
+   */
+  adaptations?: Adaptation[];
 }
 
 // ---------- Applying results ----------

@@ -75,14 +75,33 @@ what ratifies them. They live in `packages/engine/src/generate.ts`.
   days — calendar measurement would punish time off, contradicting
   "absence never regresses".
 
-## Show the adaptation (ADR-0006 — next contract addition)
+## Show the adaptation (ADR-0006 — implemented)
 
-The session preview must explain, in one plain-language line, why today's
-session fits the prompt answers ("Quiet mode: everything floor-based
-today"). The reason comes from the engine: `Session` gains a typed
-`adaptations` field (reason keys + params; UI maps keys to strings.ts).
-Not yet in `types.ts` — implement as the first post-Gate-1 engine change,
-additive only.
+The session preview explains, in plain language, why today's session fits
+the prompt answers. The reason comes from the engine: `Session` carries a
+typed `adaptations: Adaptation[]` (reason keys + params in `types.ts`;
+the UI maps keys to strings.ts and never re-derives). The field is
+optional in the type only so pre-existing `Session` values (app test
+fixtures) stay valid — `generateSession` always populates it; consumers
+treat absence as empty.
+
+Kinds, in emission order (importance): `soreness {areas}`, `quiet`,
+`lowEnergy`, `softLanding {pattern}` (one per volume-reduced pattern that
+got a block), `staleFocus {pattern}`, `tasteBlock {pattern, movementId}`.
+There is deliberately no `shortSession` kind — ten minutes is complete,
+never an adaptation.
+
+**Honesty rule:** a reason is emitted only when it actually changed
+today's session. Soreness/quiet fire only when the filter excluded at
+least one movement every other constraint would have allowed (an empty
+avoid list, or a quiet request over an already-all-silent pool, says
+nothing — note the current library is entirely silent, so `quiet` never
+fires against it today). `lowEnergy` fires only when energy — not a soft
+landing — cut a block's sets. `staleFocus` fires for the top-priority
+pattern when its absence (in training days, capped at history length so
+new users aren't "stale") reaches `STALE_FOCUS_MIN_TRAINING_DAYS` = 3
+(**PROPOSED**) and it received a block. `tasteBlock` mirrors an actually
+appended taste block.
 
 ## Progression rules
 

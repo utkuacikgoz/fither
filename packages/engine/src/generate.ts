@@ -1,4 +1,5 @@
 import type {
+  Adaptation,
   DailyPrompt,
   History,
   Movement,
@@ -28,6 +29,13 @@ export const MIN_SETS = 2;
 export const TARGET_UTILIZATION = 0.9;
 /** Seconds held back for the optional strong-energy taste block. */
 export const TASTE_RESERVE_SECONDS = 60;
+/**
+ * A staleFocus adaptation is emitted when the session's top-priority
+ * pattern has been absent for at least this many training days.
+ * PROPOSED default (ADR-0006 follow-up): below 3 the ordinary rotation of
+ * short sessions would announce "focus" almost every day, which is noise.
+ */
+export const STALE_FOCUS_MIN_TRAINING_DAYS = 3;
 
 /**
  * Variety cap: with all five patterns available a pattern appears at most
@@ -42,18 +50,25 @@ function maxBlocksPerPattern(availablePatterns: number): number {
 
 // ---------- Constraint filter ----------
 
+function quietOk(m: Movement, prompt: DailyPrompt): boolean {
+  return !prompt.quiet || m.silent;
+}
+
 /** Wall (and bodyweight) is always available — every home has one. */
+function equipmentOk(m: Movement, prompt: DailyPrompt): boolean {
+  return (
+    m.equipment === "none" ||
+    m.equipment === "wall" ||
+    prompt.equipment.includes(m.equipment)
+  );
+}
+
+function avoidOk(m: Movement, prompt: DailyPrompt): boolean {
+  return !m.loads.some((area) => prompt.avoid.includes(area));
+}
+
 function movementEligible(m: Movement, prompt: DailyPrompt): boolean {
-  if (prompt.quiet && !m.silent) return false;
-  if (
-    m.equipment !== "none" &&
-    m.equipment !== "wall" &&
-    !prompt.equipment.includes(m.equipment)
-  ) {
-    return false;
-  }
-  if (m.loads.some((area) => prompt.avoid.includes(area))) return false;
-  return true;
+  return quietOk(m, prompt) && equipmentOk(m, prompt) && avoidOk(m, prompt);
 }
 
 // ---------- Staleness (pattern coverage, gate 4) ----------
@@ -118,6 +133,22 @@ export function generateSession(
 
   const pool = library.movements.filter((m) => movementEligible(m, prompt));
 
+  // Adaptation honesty (ADR-0006): a constraint is reported only when it
+  // actually changed today's session — here, when it excluded at least one
+  // movement that every other constraint would have allowed. A quiet
+  // request over an already-silent remainder, or an avoid area nothing
+  // loads, changed nothing and therefore says nothing.
+  const sorenessChanged =
+    prompt.avoid.length > 0 &&
+    library.movements.some(
+      (m) => quietOk(m, prompt) && equipmentOk(m, prompt) && !avoidOk(m, prompt),
+    );
+  const quietChanged =
+    prompt.quiet &&
+    library.movements.some(
+      (m) => !quietOk(m, prompt) && equipmentOk(m, prompt) && avoidOk(m, prompt),
+    );
+
   // Pattern priority: stalest first. Ties broken by a seeded shuffle so
   // brand-new users still get varied-but-deterministic sessions.
   const order = [...PATTERNS];
@@ -135,6 +166,11 @@ export function generateSession(
   const blocksPerPattern = new Map<Pattern, number>();
   const blocks: SessionBlock[] = [];
   let total = 0;
+
+  // Adaptation tracking — set only by what actually lands in the session.
+  let energyReducedABlock = false;
+  const softLandingPatterns = new Set<Pattern>();
+  let tasteAdded: { pattern: Pattern; movementId: string } | null = null;
 
   const pickMovement = (pattern: Pattern, tier: number): Movement | null => {
     // Prescribe at current tier; if constraints removed every movement at
@@ -183,6 +219,10 @@ export function generateSession(
         usedIds.add(m.id);
         blocksPerPattern.set(pattern, (blocksPerPattern.get(pattern) ?? 0) + 1);
         total += cost;
+        // Attribute the reduction honestly: soft landing per pattern; low
+        // energy only where it (not the soft landing) cut the sets.
+        if (state.volumeReduced) softLandingPatterns.add(pattern);
+        else if (prompt.energy === "low") energyReducedABlock = true;
         return true;
       }
     }
@@ -216,6 +256,7 @@ export function generateSession(
       if (total + cost <= budget) {
         blocks.push(makeBlock(m, 1, true));
         total += cost;
+        tasteAdded = { pattern, movementId: m.id };
       }
       break;
     }
@@ -240,11 +281,50 @@ export function generateSession(
     }
   }
 
+  // Assemble adaptations, ordered by importance (ADR-0006):
+  // soreness, quiet, energy, softLanding, staleFocus, taste.
+  const adaptations: Adaptation[] = [];
+  if (sorenessChanged) {
+    adaptations.push({ kind: "soreness", areas: [...prompt.avoid] });
+  }
+  if (quietChanged) adaptations.push({ kind: "quiet" });
+  if (energyReducedABlock) adaptations.push({ kind: "lowEnergy" });
+  for (const p of PATTERNS) {
+    if (softLandingPatterns.has(p)) {
+      adaptations.push({ kind: "softLanding", pattern: p });
+    }
+  }
+  // Stale focus: the top-priority pattern led the session because it had
+  // gone genuinely stale. Staleness is capped at the history length — a
+  // brand-new user has nothing to be stale against — and reported only
+  // when the pattern actually received a block today.
+  const stalest = order[0];
+  if (stalest) {
+    const staleness = Math.min(
+      stale.get(stalest) ?? 0,
+      history.entries.length,
+    );
+    if (
+      staleness >= STALE_FOCUS_MIN_TRAINING_DAYS &&
+      blocksPerPattern.has(stalest)
+    ) {
+      adaptations.push({ kind: "staleFocus", pattern: stalest });
+    }
+  }
+  if (tasteAdded) {
+    adaptations.push({
+      kind: "tasteBlock",
+      pattern: tasteAdded.pattern,
+      movementId: tasteAdded.movementId,
+    });
+  }
+
   return {
     date: prompt.date,
     minutes: prompt.minutes,
     blocks,
     estimatedTotalSeconds: total,
     seed,
+    adaptations,
   };
 }
