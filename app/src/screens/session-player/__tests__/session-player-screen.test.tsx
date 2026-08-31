@@ -66,6 +66,14 @@ describe("SessionPlayerScreen", () => {
     expect(screen.getByText(strings.player.setCounter(2, 2))).toBeTruthy();
   });
 
+  it("lets her end rest early", () => {
+    const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("player-begin"));
+    fireEvent.press(screen.getByTestId("player-set-done"));
+    fireEvent.press(screen.getByTestId("player-end-rest"));
+    expect(screen.getByText(strings.player.setCounter(2, 2))).toBeTruthy();
+  });
+
   it("asks the one calm question after the block and moves on", () => {
     const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
     fireEvent.press(screen.getByTestId("player-begin"));

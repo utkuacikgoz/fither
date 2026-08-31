@@ -122,13 +122,27 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       )}
 
       {phase.kind === "rest" && (
-        <View style={styles.center}>
-          <AppText variant="title">{strings.player.rest}</AppText>
-          <AppText variant="numeral" testID="player-numeral" style={styles.restNumeral}>
-            {phase.remainingSeconds}
-          </AppText>
-          <AppText variant="caption">{strings.player.restNote}</AppText>
-        </View>
+        <>
+          <View style={styles.center}>
+            <AppText variant="title">{strings.player.rest}</AppText>
+            <AppText variant="numeral" testID="player-numeral" style={styles.restNumeral}>
+              {phase.remainingSeconds}
+            </AppText>
+            <AppText variant="caption">{strings.player.restNote}</AppText>
+          </View>
+          <View style={styles.bottom}>
+            <PrimaryButton
+              testID="player-end-rest"
+              label={strings.player.restDone}
+              onPress={() => dispatchPlayer({ type: "advance" })}
+            />
+            <QuietButton
+              testID="player-skip"
+              label={strings.player.skipBlock}
+              onPress={() => dispatchPlayer({ type: "skipBlock" })}
+            />
+          </View>
+        </>
       )}
 
       {phase.kind === "feedback" && (

@@ -10,7 +10,7 @@ ADR.
 
 ```
 generateSession(library, profile, history, prompt, seed) -> Session
-applySessionResult(profile, history, result) -> { profile, history }
+applySessionResult(library, profile, history, result) -> ApplyResult
 ```
 
 - Pure functions. No IO, no clock reads, no `Math.random` — the caller
@@ -79,11 +79,9 @@ what ratifies them. They live in `packages/engine/src/generate.ts`.
 
 The session preview explains, in plain language, why today's session fits
 the prompt answers. The reason comes from the engine: `Session` carries a
-typed `adaptations: Adaptation[]` (reason keys + params in `types.ts`;
-the UI maps keys to strings.ts and never re-derives). The field is
-optional in the type only so pre-existing `Session` values (app test
-fixtures) stay valid — `generateSession` always populates it; consumers
-treat absence as empty.
+required, typed `adaptations: Adaptation[]` (reason keys + params in
+`types.ts`; the UI maps keys to strings.ts and never re-derives). An empty
+list means today's answers did not alter the prescription.
 
 Kinds, in emission order (importance): `soreness {areas}`, `quiet`,
 `lowEnergy`, `softLanding {pattern}` (one per volume-reduced pattern that

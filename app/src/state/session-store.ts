@@ -11,7 +11,16 @@ import {
   type PlayerState,
 } from "../session/player-machine";
 import { useProfileStore } from "./profile-store";
+import { useLedgerStore } from "./ledger-store";
 import { useSettingsStore } from "./settings-store";
+
+function persistentStoresReady(): boolean {
+  return (
+    useProfileStore.getState().hydrated &&
+    useLedgerStore.getState().hydrated &&
+    useSettingsStore.getState().hydrated
+  );
+}
 
 interface FinishSummary {
   pointsEarned: number;
@@ -40,6 +49,9 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   saveFailed: false,
 
   startSession: (prompt) => {
+    if (!persistentStoresReady()) {
+      return { ok: false, reason: "notReady" };
+    }
     const { profile, history } = useProfileStore.getState();
     const { sessionSalt } = useSettingsStore.getState();
     const result = createSession(prompt, profile, history, sessionSalt);
@@ -62,9 +74,14 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   },
 
   completeSession: () => {
-    const { session, player, finish, saveFailed } = get();
+    const { session, player, finish } = get();
     if (!session || !player || !isFinished(player)) return;
-    if (finish || saveFailed) return; // already applied
+    if (finish) return; // already applied
+    if (!persistentStoresReady()) {
+      set({ saveFailed: true });
+      return;
+    }
+    set({ saveFailed: false });
     const { profile, history, applyEngineResult } = useProfileStore.getState();
     const outcome = applyResult(profile, history, {
       session,
@@ -77,6 +94,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           pointsEarned: outcome.value.ledgerEvents.reduce((s, e) => s + e.points, 0),
           unlockedSkills: outcome.value.unlockedSkills,
         },
+        saveFailed: false,
       });
     } else {
       set({ saveFailed: true });

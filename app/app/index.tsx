@@ -6,5 +6,5 @@ import { DailyPromptScreen } from "../src/screens/daily-prompt/daily-prompt-scre
 // under 60 seconds.
 export default function Index() {
   const router = useRouter();
-  return <DailyPromptScreen onSessionReady={() => router.replace("/session")} />;
+  return <DailyPromptScreen onSessionReady={() => router.replace("/preview")} />;
 }

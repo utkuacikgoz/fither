@@ -13,7 +13,7 @@ function freshPatternState(): PatternState {
   return { tier: 1, cleanStreak: 0, struggledStreak: 0, volumeReduced: false };
 }
 
-/** A brand-new user: tier 1 everywhere, no streaks. */
+/** A brand-new user: tier 1 everywhere, no streaks, nothing unlocked. */
 export function createInitialProfile(): Profile {
   return {
     patterns: {
@@ -23,5 +23,6 @@ export function createInitialProfile(): Profile {
       hinge: freshPatternState(),
       core: freshPatternState(),
     },
+    unlockedMilestones: [],
   };
 }

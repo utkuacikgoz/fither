@@ -11,6 +11,8 @@ import { Screen } from "../../design/primitives/screen";
 import { spacing } from "../../design/tokens";
 import { todayIso } from "../../lib/dates";
 import { useSessionStore } from "../../state/session-store";
+import { useLedgerStore } from "../../state/ledger-store";
+import { useProfileStore } from "../../state/profile-store";
 import { useSettingsStore } from "../../state/settings-store";
 
 // The four decided questions (ADR-0003), one at a time. Four taps, no
@@ -29,7 +31,7 @@ const AREAS: BodyArea[] = [
   "core",
 ];
 
-type Step = "time" | "energy" | "quiet" | "soreness" | "error";
+type Step = "time" | "energy" | "quiet" | "soreness" | "noSession" | "error";
 
 interface DailyPromptScreenProps {
   /** Called when the session is generated and ready to play. */
@@ -39,6 +41,12 @@ interface DailyPromptScreenProps {
 export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
   const startSession = useSessionStore((s) => s.startSession);
   const equipment = useSettingsStore((s) => s.equipment);
+  const settingsHydrated = useSettingsStore((s) => s.hydrated);
+  const settingsFailed = useSettingsStore((s) => s.hydrationFailed);
+  const profileHydrated = useProfileStore((s) => s.hydrated);
+  const profileFailed = useProfileStore((s) => s.hydrationFailed);
+  const ledgerHydrated = useLedgerStore((s) => s.hydrated);
+  const ledgerFailed = useLedgerStore((s) => s.hydrationFailed);
 
   const [step, setStep] = useState<Step>("time");
   const [minutes, setMinutes] = useState<SessionMinutes | null>(null);
@@ -59,6 +67,8 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
     const result = startSession(prompt);
     if (result.ok) {
       onSessionReady();
+    } else if (result.reason === "noSession") {
+      setStep("noSession");
     } else {
       setStep("error");
     }
@@ -79,6 +89,23 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
     setQuiet(null);
     setAvoid([]);
   };
+
+  const hydrated = settingsHydrated && profileHydrated && ledgerHydrated;
+  const hydrationFailed = settingsFailed || profileFailed || ledgerFailed;
+
+  if (!hydrated) {
+    return (
+      <Screen>
+        <View style={styles.loading}>
+          <AppText variant="bodySoft">
+            {hydrationFailed
+              ? strings.errors.storageUnavailable
+              : strings.errors.preparing}
+          </AppText>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -195,6 +222,19 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
           />
         </View>
       )}
+
+      {step === "noSession" && (
+        <View style={styles.question}>
+          <AppText variant="body" style={styles.title}>
+            {strings.errors.noSession}
+          </AppText>
+          <QuietButton
+            testID="prompt-adjust-answers"
+            label={strings.errors.tryAgain}
+            onPress={restart}
+          />
+        </View>
+      )}
     </Screen>
   );
 }
@@ -214,5 +254,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing.xl,
+  },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

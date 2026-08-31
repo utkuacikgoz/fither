@@ -39,6 +39,7 @@ function session(blocks: SessionBlock[], minutes: 10 | 20 | 30 = 20): Session {
     blocks,
     estimatedTotalSeconds: blocks.reduce((a, b) => a + b.estimatedSeconds, 0),
     seed: 1,
+    adaptations: [],
   };
 }
 
@@ -183,6 +184,33 @@ describe("applySessionResult — struggle and regression", () => {
     expect(result.profile.patterns.push.tier).toBe(3);
     expect(result.profile.patterns.push.struggledStreak).toBe(0);
   });
+
+  it("fallback work below the current tier is progression-neutral", () => {
+    const profile = profileAtTier(3);
+    profile.patterns.push.cleanStreak = 2;
+    profile.patterns.push.struggledStreak = 1;
+
+    const completed = apply(
+      profile,
+      session([block("wall-push-up", "push", true)]),
+      ["completed"],
+    );
+    const struggled = apply(
+      profile,
+      session([block("wall-push-up", "push")]),
+      ["struggled"],
+    );
+
+    expect(completed.profile.patterns.push).toStrictEqual(
+      profile.patterns.push,
+    );
+    expect(struggled.profile.patterns.push).toStrictEqual(
+      profile.patterns.push,
+    );
+    expect(
+      completed.ledgerEvents.filter((event) => event.type === "newTierBlock"),
+    ).toHaveLength(0);
+  });
 });
 
 describe("applySessionResult — tier 6 is terminal", () => {
@@ -224,6 +252,18 @@ describe("applySessionResult — ledger", () => {
     expect(bonus[0]?.points).toBe(POINTS.perNewTierBlock);
   });
 
+  it("does not award a new-tier bonus for a completed taste block", () => {
+    const profile = profileAtTier(2);
+    // The true engine output has atNewTier=false. Keeping true here verifies
+    // apply remains safe when handed a stale pre-ADR-0007 session.
+    const s = session([block("kneeling-push-up", "push", true)]);
+    const result = apply(profile, s, ["completed"]);
+    expect(
+      result.ledgerEvents.filter((event) => event.type === "newTierBlock"),
+    ).toHaveLength(0);
+    expect(result.profile.patterns.push).toStrictEqual(profile.patterns.push);
+  });
+
   it("a fully skipped session earns nothing — and loses nothing", () => {
     const profile = createInitialProfile();
     const result = apply(profile, pushSession(profile), ["skipped"]);
@@ -259,5 +299,65 @@ describe("applySessionResult — ledger", () => {
     expect(history).toStrictEqual(historySnapshot);
     expect(result.history.entries).toHaveLength(2);
     expect(result.history.entries[0]).toStrictEqual(history.entries[0]);
+  });
+
+  it("treats an empty generated session as a complete no-op", () => {
+    const profile = profileAtTier(3);
+    const history = {
+      entries: [
+        {
+          date: "2026-01-01",
+          minutes: 20 as const,
+          blocks: [],
+        },
+      ],
+    };
+    const result = applySessionResult(realLibrary, profile, history, {
+      session: session([]),
+      outcomes: [],
+    });
+
+    expect(result.profile).toBe(profile);
+    expect(result.history).toBe(history);
+    expect(result.ledgerEvents).toEqual([]);
+    expect(result.unlockedSkills).toEqual([]);
+  });
+});
+
+describe("applySessionResult — lifetime unlock memory", () => {
+  it("unlocks each pattern milestone only once across regress and re-advance", () => {
+    let profile = profileAtTier(3);
+    profile.patterns.push.cleanStreak = 2;
+
+    const first = apply(profile, pushSession(profile), ["completed"]);
+    profile = first.profile;
+    expect(first.unlockedSkills).toHaveLength(1);
+    expect(profile.unlockedMilestones).toContainEqual({
+      pattern: "push",
+      tier: 4,
+    });
+
+    for (let i = 0; i < 3; i++) {
+      profile = apply(profile, pushSession(profile), ["struggled"]).profile;
+    }
+    expect(profile.patterns.push.tier).toBe(3);
+
+    let final = apply(profile, pushSession(profile), ["completed"]);
+    profile = final.profile;
+    final = apply(profile, pushSession(profile), ["completed"]);
+    profile = final.profile;
+    final = apply(profile, pushSession(profile), ["completed"]);
+
+    expect(final.profile.patterns.push.tier).toBe(4);
+    expect(final.unlockedSkills).toEqual([]);
+    expect(
+      final.ledgerEvents.filter((event) => event.type === "skillUnlock"),
+    ).toHaveLength(0);
+    expect(
+      final.profile.unlockedMilestones?.filter(
+        (milestone) =>
+          milestone.pattern === "push" && milestone.tier === 4,
+      ),
+    ).toHaveLength(1);
   });
 });

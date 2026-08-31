@@ -56,6 +56,16 @@ describe("createSession boundary (integration)", () => {
       expect(block.timingType).toBe(movement!.timing.type);
     }
   });
+
+  it("returns a first-class noSession result when constraints empty the pool", () => {
+    const result = createSession(
+      { ...fixturePrompt, avoid: ["shoulders", "hips", "core"] },
+      createInitialProfile(),
+      { entries: [] },
+      7,
+    );
+    expect(result).toEqual({ ok: false, reason: "noSession" });
+  });
 });
 
 describe("toPlayerBlocks", () => {
