@@ -1,0 +1,228 @@
+/// <reference types="node" />
+// FITHER simulation harness — 500 users, 26 weeks, one seed.
+// Prints the Gate 1 numbers and exits non-zero if any gate fails.
+// The engine stays pure; all IO and behaviour modelling happens here.
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import {
+  applySessionResult,
+  createInitialProfile,
+  createRng,
+  generateSession,
+  PATTERNS,
+  type BlockOutcome,
+  type DailyPrompt,
+  type History,
+  type MovementLibrary,
+  type Pattern,
+  type Profile,
+} from "../src/index.js";
+import {
+  blockOutcome,
+  initialCapability,
+  weekPlan,
+  CAPABILITY_GAIN_COMPLETED,
+  CAPABILITY_GAIN_STRUGGLED,
+  type PersonaId,
+} from "./personas.js";
+
+const SEED = 20260831;
+const USERS = 500;
+const WEEKS = 26;
+const G1_WEEK_LIMIT = 12;
+const G1_TIER = 4;
+const G4_LIMIT = 7; // training days (sessions), per engine-spec.md gate 4
+
+const here = dirname(fileURLToPath(import.meta.url));
+const library: MovementLibrary = JSON.parse(
+  readFileSync(join(here, "../../../data/movements.json"), "utf8"),
+);
+const movementById = new Map(library.movements.map((m) => [m.id, m]));
+
+const PERSONAS: PersonaId[] = [
+  "consistent4",
+  "consistent2",
+  "erratic",
+  "quiet",
+  "tenMin",
+];
+
+// Deterministic calendar: week 1 day 0 = Monday 2026-01-05.
+const BASE_UTC = Date.UTC(2026, 0, 5);
+function isoDate(week: number, day: number): string {
+  const d = new Date(BASE_UTC + ((week - 1) * 7 + day) * 86_400_000);
+  return d.toISOString().slice(0, 10);
+}
+
+// ---------- Gate accumulators ----------
+
+let sessionsGenerated = 0;
+let overBudgetCount = 0;
+let maxUtilization = 0;
+let minUtilization = 1;
+const g1WeekReached: number[] = []; // per consistent4 user; Infinity if never
+let g2Regressions = 0;
+let g4MaxAbsence = 0;
+
+// ---------- Run ----------
+
+const rootRng = createRng(SEED);
+
+for (let u = 0; u < USERS; u++) {
+  const persona = PERSONAS[u % PERSONAS.length] as PersonaId;
+  const rng = createRng(Math.floor(rootRng() * 0xffffffff) ^ u);
+  const capability = initialCapability(rng);
+
+  let profile: Profile = createInitialProfile();
+  let history: History = { entries: [] };
+  const absence: Record<Pattern, number> = {
+    push: 0,
+    pull: 0,
+    squat: 0,
+    hinge: 0,
+    core: 0,
+  };
+  let pushTier4Week = Infinity;
+
+  for (let week = 1; week <= WEEKS; week++) {
+    for (const plan of weekPlan(persona, rng)) {
+      const prompt: DailyPrompt = {
+        minutes: plan.minutes,
+        energy: plan.energy,
+        quiet: plan.quiet,
+        avoid: plan.avoid,
+        date: isoDate(week, plan.day),
+        equipment: ["chair"],
+      };
+      const sessionSeed = Math.floor(rng() * 0xffffffff);
+      const session = generateSession(
+        library,
+        profile,
+        history,
+        prompt,
+        sessionSeed,
+      );
+      sessionsGenerated++;
+
+      // Gate 3: hard time budget.
+      const budget = plan.minutes * 60;
+      const utilization = session.estimatedTotalSeconds / budget;
+      if (session.estimatedTotalSeconds > budget) overBudgetCount++;
+      if (utilization > maxUtilization) maxUtilization = utilization;
+      if (session.blocks.length > 0 && utilization < minUtilization) {
+        minUtilization = utilization;
+      }
+
+      // Gate 4: pattern absence in training days.
+      const covered = new Set(session.blocks.map((b) => b.pattern));
+      for (const p of PATTERNS) {
+        if (covered.has(p)) {
+          absence[p] = 0;
+        } else {
+          absence[p] += 1;
+          if (absence[p] > g4MaxAbsence) g4MaxAbsence = absence[p];
+        }
+      }
+
+      // Behave: hidden capability decides struggle, never Math.random.
+      const outcomes: BlockOutcome[] = session.blocks.map((block) => {
+        const movement = movementById.get(block.movementId);
+        if (!movement) return "skipped";
+        return blockOutcome(
+          rng,
+          movement,
+          profile.patterns[block.pattern],
+          capability[block.pattern],
+        );
+      });
+
+      // Training grows capability (once per pattern per session).
+      const trained = new Map<Pattern, "completed" | "struggled">();
+      session.blocks.forEach((block, i) => {
+        const o = outcomes[i];
+        if (o === "completed") trained.set(block.pattern, "completed");
+        else if (o === "struggled" && !trained.has(block.pattern)) {
+          trained.set(block.pattern, "struggled");
+        }
+      });
+      for (const [p, kind] of trained) {
+        capability[p] +=
+          kind === "completed"
+            ? CAPABILITY_GAIN_COMPLETED
+            : CAPABILITY_GAIN_STRUGGLED;
+      }
+
+      const before = profile;
+      const applied = applySessionResult(library, profile, history, {
+        session,
+        outcomes,
+      });
+      profile = applied.profile;
+      history = applied.history;
+
+      // Gate 2: 2×/week users never lose a tier.
+      if (persona === "consistent2") {
+        for (const p of PATTERNS) {
+          if (profile.patterns[p].tier < before.patterns[p].tier) {
+            g2Regressions++;
+          }
+        }
+      }
+
+      // Gate 1: week the 4×/week persona reaches push tier >= 4.
+      if (
+        persona === "consistent4" &&
+        pushTier4Week === Infinity &&
+        profile.patterns.push.tier >= G1_TIER
+      ) {
+        pushTier4Week = week;
+      }
+    }
+  }
+
+  if (persona === "consistent4") g1WeekReached.push(pushTier4Week);
+}
+
+// ---------- Report ----------
+
+const g1Total = g1WeekReached.length;
+const g1ByWeek12 = g1WeekReached.filter((w) => w <= G1_WEEK_LIMIT).length;
+const g1Pct = (100 * g1ByWeek12) / g1Total;
+const sorted = [...g1WeekReached].sort((a, b) => a - b);
+const mid = Math.floor(sorted.length / 2);
+const g1Median =
+  sorted.length % 2 === 1
+    ? sorted[mid]
+    : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
+
+const g1Pass = g1ByWeek12 === g1Total;
+const g2Pass = g2Regressions === 0;
+const g3Pass = overBudgetCount === 0;
+const g4Pass = g4MaxAbsence <= G4_LIMIT;
+
+const pct = (x: number) => `${(100 * x).toFixed(1)}%`;
+const mark = (ok: boolean) => (ok ? "PASS" : "FAIL");
+
+console.log(
+  `FITHER sim — seed ${SEED}, ${USERS} users (${USERS / PERSONAS.length} per persona), ${WEEKS} weeks, ${sessionsGenerated} sessions`,
+);
+console.log(
+  `G1 ${mark(g1Pass)}  4x/week push tier >= ${G1_TIER} by week ${G1_WEEK_LIMIT}: ` +
+    `${g1ByWeek12}/${g1Total} users (${g1Pct.toFixed(1)}%), median week ${g1Median}`,
+);
+console.log(
+  `G2 ${mark(g2Pass)}  2x/week tier regressions: ${g2Regressions}`,
+);
+console.log(
+  `G3 ${mark(g3Pass)}  sessions over time budget: ${overBudgetCount} of ${sessionsGenerated}, ` +
+    `max utilization ${pct(maxUtilization)}, min ${pct(minUtilization)}`,
+);
+console.log(
+  `G4 ${mark(g4Pass)}  max pattern absence: ${g4MaxAbsence} training days (limit ${G4_LIMIT})`,
+);
+
+if (!(g1Pass && g2Pass && g3Pass && g4Pass)) {
+  process.exit(1);
+}
