@@ -14,12 +14,19 @@ permanently.
   silently take points away.
 - Points buy nothing and gate nothing. They are a visible record of work
   done, not a currency.
-- Values (decided, ADR-0003): **1 point per minute** — 10/20/30 points
-  per completed session by length; **+5** per block completed at a
-  newly-reached tier; **+25** per skill unlock. Simple mental math,
-  longer sessions visibly count more, nothing gameable. The values live
-  in one table in the engine so tuning is a data change, not a logic
+- Values (decided, ADR-0008, superseding ADR-0003's per-minute rule):
+  **20 / 25 / 30 points per completed session** for 10/20/30 minutes —
+  a 15-point base for showing up plus 5 per ten minutes. Ten minutes is
+  complete, so the base dominates (the spread is 1.5x, not 3x), while
+  longer sessions still visibly earn more. **+5** per block completed
+  at a newly-reached tier; **+25** per skill unlock. The values live in
+  one table in the engine so tuning is a data change, not a logic
   change.
+- Skill unlocks are paced honestly (ADR-0008): tier advancement requires
+  both clean sessions AND minimum calendar time at the tier, so the
+  first named skill lands around week 7 of consistent training and the
+  ladder lasts beyond six months. Never add a mechanic that lets someone
+  buy speed with extra volume — the time floor is also an overuse guard.
 
 ## Skills (named unlocks)
 
