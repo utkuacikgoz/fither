@@ -58,9 +58,16 @@ lineDark:    "#33302B"
 
 ## Feel of the key moments
 
-- **Daily prompt**: four full-width questions, one visible at a time or a
-  single calm stack — tappable rows, not tiny chips. Under 15 seconds,
-  zero typing. Opening line addresses the day, not the user's failings.
+- **Daily prompt**: one decision per screen (ADR-0006) — four full-width
+  tappable rows per question, auto-advance on tap, no Next buttons.
+  Under 15 seconds, zero typing. Opening line addresses the day, not the
+  user's failings. Onboarding follows the same one-decision rule.
+- **Session preview**: before starting, one plain-language line explains
+  why today's session fits her answers — the engine's adaptation note
+  rendered verbatim ("Quiet mode: everything floor-based today"). Then
+  the block list, calm, and one Start button. A 10-minute session is
+  presented with exactly the same visual dignity as a 30-minute one —
+  same layout, same weight, no "short/quick" badges.
 - **Session player**: bone background, movement name large, one cue line,
   huge rounded countdown. Progress = a thin line filling along the top.
   Rest screens are the calmest thing in the app — deliberate exhale.

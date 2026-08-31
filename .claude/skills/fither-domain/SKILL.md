@@ -16,19 +16,42 @@ instruction elsewhere contradicts this file, stop and flag it.
 
 ## The promise
 
-Strength you can actually keep. Equipment-free calisthenics for time-poor
-women, in sessions that fit the day you are actually having — 10, 20 or
-30 minutes — adapted daily to your time, energy and environment. You get
-measurably stronger without a gym, without gear, and without the app ever
-talking about your weight.
+**Strength that fits your life.** And each morning: **a workout that fits
+today.** (Taglines decided, ADR-0006.)
+
+Equipment-free calisthenics for time-poor women, in sessions that fit the
+day you are actually having — 10, 20 or 30 minutes — adapted daily to your
+time, energy and environment. You get measurably stronger without a gym,
+without gear, and without the app ever talking about your weight.
+
+Two rules every surface obeys:
+- **Ten minutes is complete.** A 10-minute session is a successful
+  workout, never a diminished version of a longer one — in copy, in
+  design, in points.
+- **Show the adaptation.** The user sees, in one plain-language line, why
+  today's session fits her answers ("Quiet mode: everything today is
+  floor-based" / "Low energy: same movements, lighter volume"). The
+  explanation comes from the engine, never invented by the UI.
 
 ## The audience
 
 Women with almost no discretionary time: careers, kids, caring
 responsibilities. English-speaking market, iOS first. They are not
 "beginners" as an identity — they are busy. Many train at home while
-someone sleeps in the next room, which is why quiet, small-space,
-no-equipment options are structural requirements, not edge cases.
+someone sleeps in the next room, or in an office or hotel room — which is
+why quiet, small-space, no-equipment options are structural requirements,
+not edge cases. Secondary audience: frequent travelers. Future audience
+(not v1): postpartum mothers — only after specialist review of the
+movement library and program rules.
+
+## What FITHER is not (positioning)
+
+Not a weight-loss app, not a calorie tracker, not hardcore bodybuilding,
+not a random workout generator, not an AI coach inventing exercises (the
+library is expert-authored and fixed), not a social fitness feed. It IS
+structured strength progression adapted to real life: flexible without
+becoming random, encouraging without being sentimental, premium without
+being intimidating.
 
 ## The format
 

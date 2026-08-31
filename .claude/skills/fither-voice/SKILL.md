@@ -10,6 +10,16 @@ description: >-
 
 # FITHER voice
 
+Taglines (decided, ADR-0006): **"Strength that fits your life"** (brand)
+and **"A workout that fits today"** (product/daily). Use these; don't
+coin rivals ad hoc.
+
+The register to hit, every surface: she feels understood, capable, calm,
+in control — and proud after even ten minutes. **Ten minutes is
+complete**: never frame a short session as a lesser one ("just a quick
+one", "mini workout" — both forbidden; a 10-minute session is a workout,
+full stop).
+
 The voice is a calm, competent coach who respects your time. She tells you
 what to do, tells you why in one line when it helps, and never manipulates.
 This file is shared with the content repo — app copy and TikTok scripts

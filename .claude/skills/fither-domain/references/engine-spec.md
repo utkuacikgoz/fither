@@ -47,10 +47,42 @@ applySessionResult(profile, history, result) -> { profile, history }
    cannot cover everything — the engine tracks per-pattern recency and
    prioritises the stalest patterns.
 4. **Prescription at current tier.** Movements come from the user's current
-   tier for that pattern. Low energy → PROPOSED: same tier, reduced volume
-   (fewer reps/sets), never a tier drop. Strong energy → full volume,
-   optionally one "taste" block of the next tier's movement late in the
-   session.
+   tier for that pattern (falling down the ladder only if today's
+   constraints empty the tier). Low energy → same tier, reduced sets,
+   never a tier drop. Strong energy → full volume plus optionally one
+   "taste" block of the next tier late in the session.
+
+## Prescription constants (validated by sim, ADR-0006)
+
+Firmed up from PROPOSED during implementation; the Gate 1 run below is
+what ratifies them. They live in `packages/engine/src/generate.ts`.
+
+- Transition/setup: 20s charged per block. Rest between sets: 45s,
+  padded up to 90s (rest-only padding — never extra volume) to land the
+  session in 90–100% of budget.
+- Sets: 3 per block; 2 when energy is low or the pattern is
+  volume-reduced; blocks shrink to a 2-set minimum to fit the budget.
+  Unilateral movements are charged double work time (both sides).
+- Taste block: strong energy only — one block, one set, next tier,
+  appended last, 60s reserved. Taste blocks never count for or against
+  progression.
+- `atNewTier` marks the first session at a freshly advanced tier. A
+  regression lands the user volume-reduced at the lower tier (soft
+  landing).
+- Session points (1/min) require at least one completed block; a fully
+  skipped session earns nothing and loses nothing.
+- Pattern absence (gate 4) is measured in TRAINING days, not calendar
+  days — calendar measurement would punish time off, contradicting
+  "absence never regresses".
+
+## Show the adaptation (ADR-0006 — next contract addition)
+
+The session preview must explain, in one plain-language line, why today's
+session fits the prompt answers ("Quiet mode: everything floor-based
+today"). The reason comes from the engine: `Session` gains a typed
+`adaptations` field (reason keys + params; UI maps keys to strings.ts).
+Not yet in `types.ts` — implement as the first post-Gate-1 engine change,
+additive only.
 
 ## Progression rules
 
