@@ -1,0 +1,17 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    // Mirror the workspace strictness in tsconfig.base.json (we can only
+    // extend one config, and expo/tsconfig.base wires jsx/module for us).
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "types": ["jest"]
+  },
+  "include": ["app", "src", "jest-setup.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules"]
+}
