@@ -1,0 +1,76 @@
+name: CI
+
+# Mirrors the local safety net (.githooks/pre-commit + the movement validator
+# hook) so a regression cannot reach main by way of an agent's pull request.
+# Every gate is its own named step: a red run names the gate that broke.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: Gates (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # No version pin here on purpose: action-setup reads the repo's own
+      # "packageManager" field from package.json, so CI and local stay in step.
+      - name: Set up pnpm (from package.json packageManager)
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node 22 with pnpm store cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: 'Gate: movement library integrity + forbidden language'
+        run: node scripts/validate-movements.mjs
+
+      - name: 'Gate: typecheck (engine + app)'
+        run: pnpm typecheck
+
+      - name: 'Gate: unit tests'
+        run: pnpm test
+
+      # The sim runs in ~2s, so it runs on every push and PR with no path
+      # filter — a PR touching packages/engine/** or data/** can never slip
+      # past it. The printed G1-G4 numbers are the point, so they are teed to
+      # the log and lifted into the job summary below.
+      - name: 'Gate: simulation (500 users / 26 weeks, gates G1-G4)'
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm sim 2>&1 | tee "$RUNNER_TEMP/sim-output.txt"
+
+      - name: Publish simulation gate numbers to job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Simulation gates"
+            echo ""
+            echo '```'
+            if [ -f "$RUNNER_TEMP/sim-output.txt" ]; then
+              grep -E '^(FITHER sim|G[1-9] )' "$RUNNER_TEMP/sim-output.txt" \
+                || cat "$RUNNER_TEMP/sim-output.txt"
+            else
+              echo "sim did not run — an earlier gate failed."
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
