@@ -81,6 +81,15 @@ export const strings = {
       tasteBlock: "Ends with one optional look at what comes next.",
     },
   },
+  resume: {
+    // From docs/copy/draft-strings.md ("Resume prompt"). Both paths keep
+    // her work: "Finish here" applies the blocks she completed — it is
+    // never a discard (fither-voice: no guilt about the interruption).
+    headline: "You're mid-session",
+    line: "Everything you've done is saved. Carry on, or call it complete here.",
+    continueLabel: "Keep going",
+    finishLabel: "Finish here",
+  },
   finish: {
     headline: "Session complete",
     note: "That counts.",

@@ -4,6 +4,7 @@ import React from "react";
 import { strings } from "../../../copy/strings";
 import { applyResult } from "../../../session/apply-result";
 import { createPlayer, reduce } from "../../../session/player-machine";
+import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../../../state/profile-store";
@@ -40,6 +41,11 @@ beforeEach(() => {
     hydrationFailed: false,
   });
   useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
+  useActiveSessionStore.setState({
+    snapshot: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
   seedFinishedSession();
   mockedApply.mockReturnValue({ ok: true, value: fixtureApplyResult() });
 });

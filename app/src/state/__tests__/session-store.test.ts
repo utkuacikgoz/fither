@@ -1,5 +1,9 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { applyResult } from "../../session/apply-result";
 import { createSession } from "../../session/create-session";
+import { createPlayer, reduce } from "../../session/player-machine";
+import { useActiveSessionStore } from "../active-session-store";
 import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
@@ -29,6 +33,11 @@ beforeEach(() => {
     hydrationFailed: false,
   });
   useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
+  useActiveSessionStore.setState({
+    snapshot: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
   useSessionStore.getState().resetSession();
   mockedCreate.mockReturnValue({
     ok: true,
@@ -133,5 +142,194 @@ describe("session store", () => {
     const result = useSessionStore.getState().startSession(fixturePrompt);
     expect(result).toEqual({ ok: false, reason: "notReady" });
     expect(mockedCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("crash-safe persistence (S3)", () => {
+  function activeSnapshot() {
+    return useActiveSessionStore.getState().snapshot;
+  }
+
+  it("snapshots the session when it starts", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    const snapshot = activeSnapshot();
+    expect(snapshot?.session).toEqual(fixtureSession);
+    expect(snapshot?.player?.phase).toEqual({ kind: "blockIntro", blockIndex: 0 });
+  });
+
+  it("persists on phase transitions and outcome captures, never on ticks", () => {
+    // One hold block so the work phase actually counts down.
+    mockedCreate.mockReturnValue({
+      ok: true,
+      value: {
+        session: fixtureSession,
+        playerBlocks: [
+          {
+            movementId: "plank",
+            name: "Plank",
+            cue: "Breathe steadily.",
+            sets: 1,
+            amount: 5,
+            restSeconds: 0,
+            timingType: "seconds",
+          },
+        ],
+      },
+    });
+    useSessionStore.getState().startSession(fixturePrompt);
+
+    const save = jest.fn(useActiveSessionStore.getState().save);
+    useActiveSessionStore.setState({ save });
+    const storageWrites = () =>
+      jest
+        .mocked(AsyncStorage.setItem)
+        .mock.calls.filter(([key]) => key === "fither/active-session-v1").length;
+    const writesBefore = storageWrites();
+
+    useSessionStore.getState().dispatchPlayer({ type: "begin" });
+    expect(save).toHaveBeenCalledTimes(1); // intro -> work is a transition
+
+    for (let i = 0; i < 4; i += 1) {
+      useSessionStore.getState().dispatchPlayer({ type: "tick" });
+    }
+    // Four countdown ticks: no snapshot writes, in memory or storage.
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(storageWrites()).toBe(writesBefore + 1);
+
+    // The fifth tick ends the hold -> feedback: that IS a transition.
+    useSessionStore.getState().dispatchPlayer({ type: "tick" });
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(storageWrites()).toBe(writesBefore + 2);
+
+    useSessionStore.getState().dispatchPlayer({ type: "feedback", outcome: "completed" });
+    expect(save).toHaveBeenCalledTimes(3); // outcome captured
+    expect(activeSnapshot()?.player.outcomes).toEqual(["completed"]);
+  });
+
+  it("round-trips the snapshot through AsyncStorage under its own key", async () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    const raw = await AsyncStorage.getItem("fither/active-session-v1");
+    expect(raw).not.toBeNull();
+    const persisted = JSON.parse(raw as string) as {
+      state: { snapshot: { session: { date: string } } };
+    };
+    expect(persisted.state.snapshot.session.date).toBe(fixtureSession.date);
+  });
+
+  it("clears the snapshot once the session is applied", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().finish).not.toBeNull();
+    expect(activeSnapshot()).toBeNull();
+  });
+
+  it("keeps the snapshot when the save fails so a relaunch can retry", () => {
+    mockedApply.mockReturnValue({ ok: false, reason: "engineUnavailable" });
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().saveFailed).toBe(true);
+    expect(activeSnapshot()).not.toBeNull();
+  });
+
+  it("resetSession discards the snapshot", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().resetSession();
+    expect(activeSnapshot()).toBeNull();
+  });
+});
+
+describe("restoreActiveSession", () => {
+  function seedSnapshot(player = createPlayer(fixturePlayerBlocks)) {
+    useActiveSessionStore.setState({
+      snapshot: { prompt: fixturePrompt, session: fixtureSession, player },
+    });
+    return player;
+  }
+
+  it("returns none when nothing is persisted", () => {
+    expect(useSessionStore.getState().restoreActiveSession(fixtureSession.date)).toBe(
+      "none",
+    );
+  });
+
+  it("restores a same-day in-progress session for the resume offer", () => {
+    const player = seedSnapshot(
+      reduce(createPlayer(fixturePlayerBlocks), { type: "begin" }),
+    );
+    const result = useSessionStore
+      .getState()
+      .restoreActiveSession(fixtureSession.date);
+    expect(result).toBe("inProgress");
+    const state = useSessionStore.getState();
+    expect(state.session).toEqual(fixtureSession);
+    expect(state.player).toEqual(player);
+    expect(state.finish).toBeNull();
+  });
+
+  it("silently discards a snapshot from a previous day — no mention, no restore", () => {
+    seedSnapshot();
+    const result = useSessionStore.getState().restoreActiveSession("2026-09-01");
+    expect(result).toBe("none");
+    expect(useActiveSessionStore.getState().snapshot).toBeNull();
+    expect(useSessionStore.getState().session).toBeNull();
+  });
+
+  it("routes a finished-but-unsaved session to the finish path, which applies it", () => {
+    let player = createPlayer(fixturePlayerBlocks);
+    player = reduce(player, { type: "skipBlock" });
+    player = reduce(player, { type: "skipBlock" });
+    seedSnapshot(player);
+
+    const result = useSessionStore
+      .getState()
+      .restoreActiveSession(fixtureSession.date);
+    expect(result).toBe("completedUnsaved");
+
+    // The finish screen's normal save path now applies it (retries too).
+    useSessionStore.getState().completeSession();
+    expect(mockedApply).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+      session: fixtureSession,
+      outcomes: ["skipped", "skipped"],
+    });
+    expect(useSessionStore.getState().finish).not.toBeNull();
+    expect(useActiveSessionStore.getState().snapshot).toBeNull();
+  });
+
+  it("refuses to restore before the stores hydrate", () => {
+    seedSnapshot();
+    useActiveSessionStore.setState({ hydrated: false });
+    expect(useSessionStore.getState().restoreActiveSession(fixtureSession.date)).toBe(
+      "none",
+    );
+    expect(useSessionStore.getState().session).toBeNull();
+  });
+});
+
+describe("finishSessionEarly", () => {
+  it("banks captured outcomes, marks the rest skipped, and snapshots done", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    const dispatch = useSessionStore.getState().dispatchPlayer;
+    dispatch({ type: "begin" });
+    dispatch({ type: "advance" }); // set 1 done -> rest
+    dispatch({ type: "advance" }); // end rest -> set 2
+    dispatch({ type: "advance" }); // set 2 done -> feedback
+    dispatch({ type: "feedback", outcome: "completed" });
+
+    useSessionStore.getState().finishSessionEarly();
+    const { player } = useSessionStore.getState();
+    expect(player?.phase).toEqual({ kind: "done" });
+    expect(player?.outcomes).toEqual(["completed", "skipped"]);
+    expect(useActiveSessionStore.getState().snapshot?.player.phase).toEqual({
+      kind: "done",
+    });
+
+    // The normal apply path earns whatever the engine grants for it.
+    useSessionStore.getState().completeSession();
+    expect(mockedApply).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+      session: fixtureSession,
+      outcomes: ["completed", "skipped"],
+    });
   });
 });

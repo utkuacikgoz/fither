@@ -11,6 +11,7 @@ import { Screen } from "../../design/primitives/screen";
 import { spacing } from "../../design/tokens";
 import { todayIso } from "../../lib/dates";
 import { useSessionStore } from "../../state/session-store";
+import { useActiveSessionStore } from "../../state/active-session-store";
 import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useSettingsStore } from "../../state/settings-store";
@@ -47,6 +48,8 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
   const profileFailed = useProfileStore((s) => s.hydrationFailed);
   const ledgerHydrated = useLedgerStore((s) => s.hydrated);
   const ledgerFailed = useLedgerStore((s) => s.hydrationFailed);
+  const activeHydrated = useActiveSessionStore((s) => s.hydrated);
+  const activeFailed = useActiveSessionStore((s) => s.hydrationFailed);
 
   const [step, setStep] = useState<Step>("time");
   const [minutes, setMinutes] = useState<SessionMinutes | null>(null);
@@ -90,8 +93,10 @@ export function DailyPromptScreen({ onSessionReady }: DailyPromptScreenProps) {
     setAvoid([]);
   };
 
-  const hydrated = settingsHydrated && profileHydrated && ledgerHydrated;
-  const hydrationFailed = settingsFailed || profileFailed || ledgerFailed;
+  const hydrated =
+    settingsHydrated && profileHydrated && ledgerHydrated && activeHydrated;
+  const hydrationFailed =
+    settingsFailed || profileFailed || ledgerFailed || activeFailed;
 
   if (!hydrated) {
     return (

@@ -154,6 +154,25 @@ export function reduce(state: PlayerState, event: PlayerEvent): PlayerState {
   }
 }
 
+/**
+ * End the session now, keeping every outcome already captured. Blocks not
+ * yet concluded — including one mid-set or awaiting its feedback answer —
+ * record "skipped": we only report what she actually told us. Used by the
+ * resume flow's "finish here" path; never a discard.
+ */
+export function finishEarly(state: PlayerState): PlayerState {
+  if (state.phase.kind === "done") return state;
+  const remaining = state.blocks.length - state.outcomes.length;
+  return {
+    ...state,
+    outcomes: [
+      ...state.outcomes,
+      ...Array.from({ length: remaining }, (): BlockOutcome => "skipped"),
+    ],
+    phase: { kind: "done" },
+  };
+}
+
 // ---------- Selectors (display math only; no rules) ----------
 
 export function totalSets(state: PlayerState): number {
@@ -195,4 +214,22 @@ export function isCountingDown(state: PlayerState): boolean {
 
 export function isFinished(state: PlayerState): boolean {
   return state.phase.kind === "done";
+}
+
+/**
+ * True when two states sit at the same machine position — same phase kind,
+ * block, set and outcome count — ignoring countdown seconds. Countdown
+ * ticks keep the position; transitions and captured outcomes change it.
+ * The session store uses this to persist crash-recovery snapshots only
+ * when something worth restoring happened.
+ */
+export function samePosition(a: PlayerState, b: PlayerState): boolean {
+  return positionKey(a) === positionKey(b);
+}
+
+function positionKey(state: PlayerState): string {
+  const { phase } = state;
+  const blockIndex = "blockIndex" in phase ? phase.blockIndex : -1;
+  const setIndex = "setIndex" in phase ? phase.setIndex : -1;
+  return `${phase.kind}:${blockIndex}:${setIndex}:${state.outcomes.length}`;
 }
