@@ -75,6 +75,17 @@ for (const m of movements) {
 
   if (!Array.isArray(m.cues) || m.cues.length < 2 || m.cues.length > 4)
     err(`${label}: cues must have 2-4 entries`);
+
+  // Forbidden-language gate (fither-domain): applies to data models too.
+  // Substring terms catch compounds ("bodyweight"); word terms avoid
+  // false positives ("stone" is fine, "tone up" is not).
+  const FORBIDDEN_SUBSTRINGS = /weight|calorie|streak|sculpt|bikini|skinny/i;
+  const FORBIDDEN_WORDS = /\b(fat|burn|burns|tone|toned|toning|slim|slimming|crush|shred|shredded)\b/i;
+  const texts = [m.id ?? "", m.name ?? "", ...(Array.isArray(m.cues) ? m.cues : [])];
+  for (const text of texts) {
+    if (FORBIDDEN_SUBSTRINGS.test(text) || FORBIDDEN_WORDS.test(text))
+      err(`${label}: forbidden language in "${text}" (see fither-domain forbidden list)`);
+  }
 }
 
 // Progression graph rules.

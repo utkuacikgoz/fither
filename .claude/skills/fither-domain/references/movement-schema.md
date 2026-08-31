@@ -71,6 +71,10 @@ machine-checked and not vibes.
    easiest guarantee to silently break when editing one movement.
 6. `timing` is complete enough to estimate block duration (the engine's
    time-budget gate depends on it).
+7. No forbidden language (fither-domain list) in ids, names, or cues —
+   "weight" included as a substring, so "bodyweight" fails too. Names
+   render in the player and become skill unlocks; the data model is a
+   user-facing surface.
 
 ## Change protocol
 
