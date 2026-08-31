@@ -4,6 +4,7 @@ import { applyResult } from "../../session/apply-result";
 import { createSession } from "../../session/create-session";
 import { createPlayer, reduce } from "../../session/player-machine";
 import { useActiveSessionStore } from "../active-session-store";
+import { useEntitlementStore } from "../entitlement-store";
 import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
@@ -35,6 +36,12 @@ beforeEach(() => {
   useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
   useActiveSessionStore.setState({
     snapshot: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useEntitlementStore.setState({
+    trialStartDate: null,
+    purchase: null,
     hydrated: true,
     hydrationFailed: false,
   });
@@ -331,5 +338,36 @@ describe("finishSessionEarly", () => {
       session: fixtureSession,
       outcomes: ["completed", "skipped"],
     });
+  });
+});
+
+describe("trial start (ADR-0009 §2 — app-layer policy, never engine)", () => {
+  it("stamps the trial start when the first session is applied", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    useSessionStore.getState().completeSession();
+    expect(useEntitlementStore.getState().trialStartDate).toBe(fixtureSession.date);
+  });
+
+  it("never moves an already-stamped trial start", () => {
+    useEntitlementStore.setState({ trialStartDate: "2026-08-01" });
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    useSessionStore.getState().completeSession();
+    expect(useEntitlementStore.getState().trialStartDate).toBe("2026-08-01");
+  });
+
+  it("a failed save spends no trial — only a landed apply counts", () => {
+    mockedApply.mockReturnValue({ ok: false, reason: "engineUnavailable" });
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    useSessionStore.getState().completeSession();
+    expect(useEntitlementStore.getState().trialStartDate).toBeNull();
+  });
+
+  it("refuses to start a session before the entitlement store hydrates", () => {
+    useEntitlementStore.setState({ hydrated: false });
+    const result = useSessionStore.getState().startSession(fixturePrompt);
+    expect(result).toEqual({ ok: false, reason: "notReady" });
   });
 });

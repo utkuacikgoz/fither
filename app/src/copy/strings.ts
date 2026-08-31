@@ -72,13 +72,97 @@ export const strings = {
       `${minutes} minutes · ${movements} movements`,
     defaultFit: "Built around your time and current level.",
     start: "Start session",
+    // Replacements from docs/copy/draft-strings.md §0 (2026-08-31): each
+    // line reads as "Cause: effect", matching the domain file's examples.
     adaptations: {
-      soreness: (areas: string) => `Works around ${areas}.`,
-      quiet: "Every movement stays quiet.",
-      lowEnergy: "Less volume. Same level.",
-      softLanding: "A little less volume where you need it.",
-      staleFocus: "Brings a movement pattern back into focus.",
-      tasteBlock: "Ends with one optional look at what comes next.",
+      soreness: (areas: string) => `Works around your ${areas} today.`,
+      quiet: "Quiet mode: nothing here makes a sound.",
+      lowEnergy: "Low energy: same movements, lighter volume.",
+      softLanding: "Slightly lighter where last session was hard.",
+      staleFocus: "One movement pattern rotates back in today.",
+      tasteBlock: "Ends with a first look at your next level. Optional.",
+    },
+  },
+  // Onboarding — docs/copy/draft-strings.md §1, wired verbatim. Three
+  // screens, one decision each, then the handoff eyebrow atop the first
+  // daily-prompt question. Nothing else may spend Gate 3 budget.
+  onboarding: {
+    welcome: {
+      headline: "Strength that fits your life.",
+      body: "10, 20 or 30 minutes. No equipment. Built for the day you're actually having.",
+      cta: "Begin",
+    },
+    equipment: {
+      question: "What's within reach?",
+      options: {
+        floorOnly: "Just me and the floor",
+        chair: "A sturdy chair too",
+      },
+    },
+    avoid: {
+      question: "Anything we should always work around?",
+      nothing: "Nothing",
+      confirm: "Noted. Every session will work around it.",
+    },
+    handoff: {
+      eyebrow: "Last step",
+      line: "Now, today. Four taps and you're moving.",
+    },
+  },
+  // Paywall — docs/copy/draft-strings.md §3, wired verbatim. An honest
+  // letter: annual led, plain prices, no countdowns, no strikethroughs.
+  paywall: {
+    headline: "The honest version",
+    letter:
+      "FITHER is one subscription and it covers everything: every session, every length, adapted daily to your time, energy and surroundings. It works offline — on a plane, in a quiet house at 6am. No ads, nothing sold separately.",
+    trialLine:
+      "The first 7 days are free. If it doesn't fit your life, cancel in Settings before the week ends and pay nothing.",
+    plans: {
+      annual: {
+        label: "Yearly",
+        // GBP reference price (ADR-0002). The billing port's offering is
+        // the display source; these are the fallback strings it carries.
+        price: "£39.99/year",
+        note: "£3.33 a month, billed once a year",
+      },
+      monthly: {
+        label: "Monthly",
+        price: "£5.99/month",
+      },
+    },
+    cta: "Start my free week",
+    afterTrialNote: (price: string) => `7 days free, then ${price}. Cancel anytime.`,
+    restore: "Restore purchase",
+    restoreError: "Couldn't restore your purchase. Try again in a minute.",
+    legal: {
+      autoRenew:
+        "Your subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store settings.",
+      termsLabel: "Terms of Use",
+      privacyLabel: "Privacy Policy",
+    },
+    // Optional included-list (draft §3): wired for the copy surface; not
+    // rendered unless the letter alone tests too sparse.
+    included: [
+      "Every session, adapted daily",
+      "10, 20 and 30 minutes — all of them",
+      "Works fully offline",
+      "Skill milestones as you get stronger",
+      "No ads, ever",
+    ],
+  },
+  // Notifications — docs/copy/draft-strings.md §4. Strings only for now;
+  // no notification code exists yet. Invitations, never nags.
+  notifications: {
+    rationale: {
+      line: "One quiet note a day when your session is ready. That's all we'd ever send.",
+      allow: "Sounds good",
+      decline: "Not now",
+    },
+    daily: {
+      ready: "Today's session is ready. Ten, twenty or thirty minutes — your call.",
+      quietTen: "Ten quiet minutes, whenever you are.",
+      fitsToday: "A workout that fits today. Ready when you are.",
+      yourMinutes: "Somewhere in today there are ten minutes. They're yours.",
     },
   },
   resume: {
