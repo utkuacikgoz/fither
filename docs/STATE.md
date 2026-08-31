@@ -70,17 +70,28 @@ failures.
 
 1. **Persist and resume in-progress player state (S3).** Document and test
    the remaining dual-write gap between profile/history and the ledger.
-2. **GATE 2 — owner's physical test.** Run `pnpm install && pnpm ios` from a
+2. **Progression pacing decision (from docs/sim-analysis.md).** Every
+   persona reaches tier 6 in all five patterns by week 8-12 — even
+   2x/week users exhaust the ladder in ~15 sessions and then have
+   nothing to unlock for 14+ weeks, because 20/30-minute sessions cover
+   all five patterns and advancement needs 3 clean SESSIONS per tier.
+   Structural, not a harness artifact. Take it to the coach with the
+   packet; candidate levers: clean-session counts that rise with tier,
+   or advancement counted per pattern less often than every session.
+   Also decide: 10-minute-only users earn half the points of 30-minute
+   users at identical consistency (1410 vs 3125 at week 26) — is
+   points-per-minute the right price for equal showing-up?
+3. **GATE 2 — owner's physical test.** Run `pnpm install && pnpm ios` from a
    normal checkout and do a real 10-minute workout. This has still not been
    launched on an iOS simulator in the build environment.
-3. **Copy/onboarding/paywall pack.** Write the remaining keyed copy, build
+4. **Copy/onboarding/paywall pack.** Write the remaining keyed copy, build
    onboarding, then add the decided £5.99 monthly / £39.99 annual paywall
    without compromising offline workouts.
-4. **Exercise instruction media.** Add the motion layer only after the real
+5. **Exercise instruction media.** Add the motion layer only after the real
    workout test confirms player pacing. Prefer authored Rive/3D clips with
    cue pointers and reduced-motion fallbacks; never block the workout on a
    network fetch.
-5. Then gamification/share card, distribution instrumentation, and store
+6. Then gamification/share card, distribution instrumentation, and store
    preparation per `docs/build-system.md`.
 
 ## Deferred, recorded
