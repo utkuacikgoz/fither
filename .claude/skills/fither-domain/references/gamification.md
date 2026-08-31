@@ -26,6 +26,9 @@ permanently.
 - Each pattern's tier milestones map to named, human-meaningful skills —
   e.g. reaching push tier 4 unlocks "Full Push-Up". Names come from
   `data/movements.json` / Brief 5, not invented ad hoc in UI code.
+- Milestone tiers (decided, ADR-0005): **tier 4** (the capability
+  milestone — the ladder's namesake movement) and **tier 6** (mastery).
+  Two unlocks per pattern, ten in total; scarcity keeps them meaningful.
 - Unlocks trigger an unlock screen and a shareable card. The share card
   states the skill, never stats about the body.
 - Skills are never lost. A tier regression (an engine event) does not

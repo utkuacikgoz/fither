@@ -50,7 +50,7 @@ Pull with no equipment is the hard one — expect towel rows, table rows,
 prone pulls. That difficulty is exactly why the ladder rules below are
 machine-checked and not vibes.
 
-## Body areas (PROPOSED)
+## Body areas (decided, ADR-0005 — encoded in the shipped library and types)
 
 `shoulders`, `wrists`, `elbows`, `back`, `hips`, `knees`, `ankles`, `core`.
 

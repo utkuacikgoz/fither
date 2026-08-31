@@ -14,7 +14,7 @@ applySessionResult(profile, history, result) -> { profile, history }
 ```
 
 - Pure functions. No IO, no clock reads, no `Math.random` — the caller
-  passes `now` inside `prompt` and a `seed` for the RNG. Same inputs, same
+  passes the date inside `prompt` and a `seed` for the RNG. Same inputs, same
   session, always. This is what makes the simulation trustworthy and bugs
   reproducible.
 - The engine is the ONLY place progression and prescription logic lives.
@@ -28,7 +28,9 @@ applySessionResult(profile, history, result) -> { profile, history }
 - **history** — completed sessions with per-block outcomes
   (completed / struggled / skipped) and dates.
 - **prompt** — today's answers: `minutes` (10|20|30), `energy`
-  (low|okay|strong), `quiet` (bool), `avoid` (body areas), `now` (date).
+  (low|okay|strong), `quiet` (bool), `avoid` (body areas), `date` (ISO
+  yyyy-mm-dd), `equipment` (available equipment, from settings; wall is
+  always considered available).
 
 ## Session construction rules
 
