@@ -4,6 +4,7 @@ import React from "react";
 import { strings } from "../../../copy/strings";
 import { createSession } from "../../../session/create-session";
 import { useSessionStore } from "../../../state/session-store";
+import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { useSettingsStore } from "../../../state/settings-store";
@@ -20,6 +21,11 @@ beforeEach(() => {
   useLedgerStore.setState({ hydrated: true, hydrationFailed: false });
   useProfileStore.setState({ hydrated: true, hydrationFailed: false });
   useSettingsStore.setState({ hydrated: true, hydrationFailed: false });
+  useActiveSessionStore.setState({
+    snapshot: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
   useSessionStore.getState().resetSession();
   mockedCreate.mockReturnValue({
     ok: true,

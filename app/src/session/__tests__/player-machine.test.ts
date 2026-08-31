@@ -2,10 +2,12 @@ import { fixturePlayerBlocks } from "../../test-utils/fixtures";
 import {
   completedSets,
   createPlayer,
+  finishEarly,
   isCountingDown,
   isFinished,
   progressFraction,
   reduce,
+  samePosition,
   totalSets,
   type PlayerEvent,
   type PlayerState,
@@ -220,5 +222,82 @@ describe("progress selectors", () => {
     });
     expect(completedSets(state)).toBe(3);
     expect(progressFraction(state)).toBe(1);
+  });
+});
+
+describe("samePosition (persistence guard)", () => {
+  it("countdown ticks keep the position", () => {
+    // Second fixture block holds for 20 seconds.
+    const atHold = run(
+      createPlayer(fixturePlayerBlocks),
+      { type: "skipBlock" },
+      { type: "begin" },
+    );
+    const ticked = run(atHold, ...ticks(3));
+    expect(samePosition(atHold, ticked)).toBe(true);
+  });
+
+  it("phase transitions change the position", () => {
+    const intro = createPlayer(fixturePlayerBlocks);
+    const working = run(intro, { type: "begin" });
+    expect(samePosition(intro, working)).toBe(false);
+
+    const resting = run(working, { type: "advance" });
+    expect(samePosition(working, resting)).toBe(false);
+  });
+
+  it("a countdown expiring is a transition, not a tick", () => {
+    const atHold = run(
+      createPlayer(fixturePlayerBlocks),
+      { type: "skipBlock" },
+      { type: "begin" },
+    );
+    const expired = run(atHold, ...ticks(20));
+    expect(samePosition(atHold, expired)).toBe(false);
+  });
+
+  it("captured outcomes change the position", () => {
+    const start = createPlayer(fixturePlayerBlocks);
+    const skipped = run(start, { type: "skipBlock" });
+    expect(samePosition(start, skipped)).toBe(false);
+  });
+});
+
+describe("finishEarly", () => {
+  it("keeps captured outcomes and marks unconcluded blocks skipped", () => {
+    // Conclude block 0 as completed, stop at block 1's intro.
+    const midway = run(
+      createPlayer(fixturePlayerBlocks),
+      { type: "begin" },
+      { type: "advance" }, // set 1 done -> rest
+      { type: "advance" }, // end rest -> set 2
+      { type: "advance" }, // set 2 done -> feedback
+      { type: "feedback", outcome: "completed" },
+    );
+    const done = finishEarly(midway);
+    expect(isFinished(done)).toBe(true);
+    expect(done.outcomes).toEqual(["completed", "skipped"]);
+  });
+
+  it("marks a block awaiting its feedback answer as skipped", () => {
+    const atFeedback = run(
+      createPlayer(fixturePlayerBlocks),
+      { type: "begin" },
+      { type: "advance" },
+      { type: "advance" },
+      { type: "advance" },
+    );
+    expect(atFeedback.phase.kind).toBe("feedback");
+    const done = finishEarly(atFeedback);
+    expect(done.outcomes).toEqual(["skipped", "skipped"]);
+  });
+
+  it("is a no-op on a finished player", () => {
+    const done = run(
+      createPlayer(fixturePlayerBlocks),
+      { type: "skipBlock" },
+      { type: "skipBlock" },
+    );
+    expect(finishEarly(done)).toBe(done);
   });
 });
