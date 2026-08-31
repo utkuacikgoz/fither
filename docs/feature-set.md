@@ -6,16 +6,19 @@ do, and how done each piece is. Sources: `.claude/skills/fither-domain/`
 `docs/launch-checklist.md`, and the ADRs in `docs/adr/`. If this document
 and those files ever disagree, those files win — fix this one.
 
-Status snapshot date: 31 August 2026. "Built" means it exists in the repo
-and passes its own checks today. "In progress" means working code exists
-but its reality gate (section 4) has not been passed. "Planned" means it
-is committed for v1.0 but not started.
+Status snapshot date: 1 September 2026. "Built" means it exists in the
+repo and passes its own checks today. "In progress" means working code
+exists but its reality gate (section 4) has not been passed. "Planned"
+means it is committed for v1.0 but not started. Gate 1 (simulation) has
+PASSED; Gate 2 (the owner's real workout) is next and is what holds the
+"Built" app features short of done.
 
 ---
 
 ## 1. What FITHER is
 
-Strength you can actually keep. FITHER is equipment-free calisthenics for
+**Strength that fits your life** — and each morning, a workout that fits
+today (ADR-0006). FITHER is equipment-free calisthenics for
 time-poor women — careers, kids, caring responsibilities — in sessions
 that fit the day you are actually having: 10, 20 or 30 minutes, adapted
 daily to your time, energy and environment. Many users train at home while
@@ -33,23 +36,25 @@ works in airplane mode.
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| Daily prompt | Four quick questions before every session: how much time (10/20/30), how's your energy (low/okay/strong), do you need to be quiet (yes/no), anything sore today ("All good" is one tap). | Exactly four questions, ~10–15 seconds total; adding a question means re-testing Gate 3 (ADR-0003). | In progress |
-| Three session lengths | 10, 20 or 30 minutes. Never more options, never fewer. | The session must fit its time budget — running over is a bug and a simulation gate (Gate 1 #3). | In progress |
-| On-device session generation | The app builds today's session from the prompt answers, your history and the movement library — no server involved. | Runs entirely on device; a paying user in airplane mode always gets a full session (hard rule, CLAUDE.md). Quiet mode, available equipment and sore areas filter movements first. | In progress |
-| Session player | Guides you through the session block by block: what to do, how many, when to rest, with coaching cues for each movement. | Cue lines come from the movement library and must work read aloud (fither-voice). Currently placeholder visuals — animation and audio land in Phase 3. | In progress |
-| Session finish | Marks each block completed / struggled / skipped, feeds that back to the engine, and shows what you earned. | Outcomes are the only input to progression — the UI never re-derives an engine rule (CLAUDE.md). | In progress |
-| Offline-first | Everything the training loop needs — generation, progress, points, entitlements — lives on the phone. | Airplane mode is a hard product rule, tested explicitly before launch (launch checklist). Ops SDKs being unreachable must change nothing. | In progress |
+| Daily prompt | Four quick questions before every session: how much time (10/20/30), how's your energy (low/okay/strong), do you need to be quiet (yes/no), anything sore today ("All good" is one tap). One decision per screen. | Exactly four questions, ~10–15 seconds total; adding a question means re-testing Gate 3 (ADR-0003, ADR-0006). | Built |
+| Session preview | Before starting: one plain-language line explaining why today's session fits your answers (from the engine's adaptations), the block list, one Start button. | The UI renders only what the engine emitted, never re-derives a reason; a 10-minute session gets the same visual dignity as a 30-minute one (ADR-0006/0007). | Built |
+| Crash-safe resume | An interrupted session is saved; relaunching the same day offers "Keep going" or "Finish here" — finishing early banks every completed block. Yesterday's interruption is discarded without comment. | Nothing she did is ever silently lost, and absence is never mentioned (ADR-0007). | Built |
+| Three session lengths | 10, 20 or 30 minutes. Never more options, never fewer. | The session must fit its time budget — running over is a bug and a simulation gate (Gate 1 #3). | Built |
+| On-device session generation | The app builds today's session from the prompt answers, your history and the movement library — no server involved. | Runs entirely on device; a paying user in airplane mode always gets a full session (hard rule, CLAUDE.md). Quiet mode, available equipment and sore areas filter movements first; if today's answers exclude everything, the app says so honestly instead of faking a session. | Built |
+| Session player | Guides you through the session block by block: what to do, how many, when to rest, with coaching cues for each movement. | Cue lines come from the movement library and must work read aloud (fither-voice). Currently placeholder visuals — animation and audio land in Phase 3. Rest is hers — end-rest-early and skip controls always present. | Built |
+| Session finish | Marks each block completed / struggled / skipped, feeds that back to the engine, and shows what you earned. | Outcomes are the only input to progression — the UI never re-derives an engine rule (CLAUDE.md). Failed saves retry; work is never lost to an error. | Built |
+| Offline-first | Everything the training loop needs — generation, progress, points, entitlements — lives on the phone. | Airplane mode is a hard product rule, tested explicitly before launch (launch checklist). Ops SDKs being unreachable must change nothing. | Built |
 
 ### Progression engine
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| Per-pattern tiers | Five movement patterns (push, pull, squat, hinge, core), each with its own six-tier ladder. You can be tier 3 in push and tier 1 in pull. | Progression is per-pattern, never global (engine-spec). Five patterns, hinge kept separate from squat on purpose (ADR-0002). Tier 6 is terminal; progress there is volume and density. | In progress |
-| Advancing | A pattern moves up a tier after 3 clean sessions at the current tier (clean = no block of that pattern marked "struggled"). | Advance after 3 clean sessions; the counter resets on a struggled block (ADR-0002). | In progress |
-| Gentle regression | Struggling doesn't punish you immediately: 2 consecutive struggled sessions reduce volume at the same tier; a 3rd drops one tier. Any clean session resets it. | Volume first, tier after 3 (ADR-0003). **Absence never regresses** — a 2×/week user must never lose a tier; missing days costs nothing. | In progress |
-| Pattern coverage | The engine tracks which patterns you haven't trained lately and prioritises the stalest, so short sessions still cover everything over a week. | No pattern absent for more than 7 days of training (engine-spec, simulation gate). | In progress |
-| Energy adaptation | Low energy: same tier, less volume — never a tier drop. Strong energy: full volume, sometimes a "taste" of the next tier late in the session. | Working defaults marked PROPOSED in engine-spec pending Brief 2. | In progress |
-| Simulation harness | 500 simulated users trained for 26 virtual weeks before any real user touches the app, proving progression works. | `pnpm sim` must pass all four Gate 1 thresholds and print the actual numbers after every engine change. Reproducible from one seed. | Planned |
+| Per-pattern tiers | Five movement patterns (push, pull, squat, hinge, core), each with its own six-tier ladder. You can be tier 3 in push and tier 1 in pull. | Progression is per-pattern, never global (engine-spec). Five patterns, hinge kept separate from squat on purpose (ADR-0002). Tier 6 is terminal; progress there is volume and density. | Built |
+| Advancing | A pattern moves up a tier after 3 clean sessions at the current tier AND enough calendar time there — adaptation takes weeks, not just reps. Floors: 7/14/28/42/56 days per step. | 3 clean sessions (ADR-0002) plus the ADR-0008 time floor: the first named skill lands ~week 7 of consistent training, the ladder lasts beyond six months, and nobody can buy speed with extra volume. | Built |
+| Gentle regression | Struggling doesn't punish you immediately: 2 consecutive struggled sessions reduce volume at the same tier; a 3rd drops one tier. Any clean session resets it. | Volume first, tier after 3 (ADR-0003). **Absence never regresses** — a 2×/week user must never lose a tier; missing days costs nothing. Taste blocks and constraint fallbacks are progression-neutral (ADR-0007). | Built |
+| Pattern coverage | The engine tracks which patterns you haven't trained lately and prioritises the stalest, so short sessions still cover everything over a week. | No pattern absent for more than 7 days of training (engine-spec, simulation gate). | Built |
+| Energy adaptation | Low energy: same tier, less volume — never a tier drop. Strong energy: full volume, sometimes a "taste" of the next tier late in the session. | Defaults validated by the simulation (ADR-0006); Brief 2 may still override. | Built |
+| Simulation harness | 500 simulated users trained for 26 virtual weeks before any real user touches the app, proving progression works. | `pnpm sim` must pass all four Gate 1 thresholds and print the actual numbers after every engine change. Reproducible from one seed. Six personas including a low-capability one; five gates including the ADR-0008 pacing ceiling; plus a deep-dive analyzer (docs/sim-analysis.md). | Built |
 
 ### Movement library
 
@@ -65,23 +70,23 @@ works in airplane mode.
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| Points ledger | Points for work done: 10/20/30 per completed session by length (1 per minute), +5 per block at a newly reached tier, +25 per skill unlock. | Points are only ever added — no decay, deductions or expiry; the ledger is append-only by construction. Points buy nothing and gate nothing (gamification.md, ADR-0003). | In progress |
-| Named skill unlocks | Tier milestones become human-meaningful skills — e.g. reaching push tier 4 unlocks "Full Push-Up" — with an unlock screen. | Skills are never lost, even if a tier later regresses. Names come from the movement library, not invented in UI code. Which tiers count as milestones is currently a PROPOSED default (4 and 6). | In progress |
+| Points ledger | Points for work done: 20/25/30 per completed session for 10/20/30 minutes (a 15-point base for showing up plus 5 per ten minutes), +5 per block at a newly reached tier, +25 per skill unlock. | Points are only ever added — no decay, deductions or expiry; the ledger is append-only by construction. Points buy nothing and gate nothing. The base dominates: equal consistency is never halved by session length (gamification.md, ADR-0008). | Built |
+| Named skill unlocks | Tier milestones become human-meaningful skills — e.g. reaching push tier 4 unlocks "Full Push-Up" — with an unlock screen. | Skills are never lost, even if a tier later regresses. Names come from the movement library, not invented in UI code. Milestone tiers are 4 and 6 (ADR-0005); each unlocks once per lifetime — never lost, never re-earned (ADR-0007). | Built |
 | Shareable skill card | A card you can share when you unlock a skill. | States the skill, never anything about the body (gamification.md, fither-voice). | Planned |
 
 ### Onboarding
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| First-run onboarding | The shortest possible path from install to moving: whatever setup is truly needed, then straight into the daily prompt. | Gate 3: five real users must reach their first movement in under 60 seconds from opening the app; if not, questions get cut (build-system). Every word passes fither-voice. | Planned |
-| Notification permission ask | Asked in context — after the first completed session, when the value is obvious — never at first open. | Notifications are an invitation, never a nag; they never reference absence (launch checklist, fither-voice). | Planned |
+| First-run onboarding | The shortest possible path from install to moving: whatever setup is truly needed, then straight into the daily prompt. | Gate 3: five real users must reach their first movement in under 60 seconds from opening the app; if not, questions get cut (build-system). Every word passes fither-voice. Copy drafted and keyed in docs/copy/draft-strings.md; screens not built. | Planned (copy drafted) |
+| Notification permission ask | Asked in context — after the first completed session, when the value is obvious — never at first open. | Notifications are an invitation, never a nag; they never reference absence (launch checklist, fither-voice). Copy drafted. | Planned (copy drafted) |
 
 ### Monetization
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
 | Subscription | £5.99/month or £39.99/year with a 7-day free trial, via RevenueCat. Annual is the plan the paywall leads with. | Decided in ADR-0002 (GBP reference prices; other storefronts via Apple's tiers). | Planned |
-| Honest paywall | States what's included and the price, plainly. | No fake urgency, no countdown timers, no "only today" (fither-voice). | Planned |
+| Honest paywall | States what's included and the price, plainly. | No fake urgency, no countdown timers, no "only today" (fither-voice). Full letter drafted in docs/copy. | Planned (copy drafted) |
 | Offline entitlements | Once you've paid, the app never checks your subscription against the network before letting you train. | A paying user in airplane mode is never locked out — hard rule (fither-domain, reviewer checklist). | Planned |
 
 ### Platform & ops
@@ -89,8 +94,8 @@ works in airplane mode.
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
 | iOS app (Expo) | iPhone app, English-speaking market first. | iOS first; no Android-only effort in v1 (fither-code). | In progress |
-| Design system | A single set of design tokens (colour, type, spacing) behind every screen — premium and calm. | No raw style values in screens; tokens live in one file (ADR-0004). | In progress |
-| Single copy surface | Every user-facing string lives in one file, written to the coach voice. | Calm, capable, no guilt, no jargon, British-neutral English; the forbidden list applies to every surface including errors and emails (fither-voice). Current strings are first-draft pending copy-writer polish. | In progress |
+| Design system | A single set of design tokens (colour, type, spacing) behind every screen — premium and calm. | No raw style values in screens; tokens live in one file (ADR-0004). | Built |
+| Single copy surface | Every user-facing string lives in one file, written to the coach voice. | Calm, capable, no guilt, no jargon, British-neutral English; the forbidden list applies to every surface including errors and emails (fither-voice). Strings are copy-writer polished; onboarding/paywall/notification copy staged in docs/copy pending their screens. | Built |
 | Movement animations | 60 Rive animations, one per movement. | A commissioned design job, the single largest cost and the schedule's long pole (build-system §9); 6 reference animations first (Brief 6). | Planned |
 | Voice audio | Spoken coaching generated from the movement cues, one chosen voice shared with the content channel. | Voice choice is a one-time taste decision made outside the build (build-system §9). | Planned |
 | Crash reporting (Sentry) | Errors reach the owner before users report them. | Wired and verified with a deliberate test crash before the first TestFlight build (ADR-0002, launch checklist). | Planned |
@@ -158,10 +163,12 @@ the product (build-system §7).
 
 | Gate | When | Pass condition | If it fails |
 |---|---|---|---|
-| 1 | After the engine, before any UI | The 500-user / 26-week simulation meets all four thresholds: a 4×/week user reaches push tier 4+ by week 12; a 2×/week user never regresses a tier; no session exceeds its time budget; no pattern absent more than 7 days. | Fix the engine or the movement ladders. Nothing downstream is built until it passes. |
+| 1 | After the engine, before any UI | The 500-user / 26-week simulation meets all thresholds: a 4×/week user reaches push tier 4+ by week 12; a 2×/week user never regresses a tier; no session exceeds its time budget; no pattern absent more than 7 days; and no consistent persona exhausts the full ladder before week 18 (ADR-0008). | Fix the engine or the movement ladders. Nothing downstream is built until it passes. |
 | 2 | After the ugly-but-working loop | The owner completes a real 10-minute workout from the build — actually training, not a simulator walkthrough. | Fix pacing and prescription before any polish. |
 | 3 | After onboarding | Five women, on their own phones with no help, each reach their first movement in under 60 seconds of opening the app. | Cut onboarding questions until they do. |
 
-As of today: none of the three gates has been run. The movement library's
-own machine gate (the validator) passes; Gate 1 is the next milestone and
-is blocked on the simulation harness.
+As of today: **Gate 1 has PASSED** — all simulation gates green across
+500 users / 26 weeks, re-verified on every engine commit and in CI
+(numbers in docs/STATE.md and docs/sim-analysis.md). Gate 2 — the
+owner's real 10-minute workout from the build — is the next milestone.
+Gate 3 waits on the onboarding screens.
