@@ -53,6 +53,10 @@ possible; one sneaky dependency breaks the whole validation story.
   screen: the screen component, its child components, its tests.
 - **Files**: kebab-case filenames, PascalCase component exports,
   camelCase everything else.
+- **Design**: every screen follows `references/design-system.md` (premium,
+  calm, token-driven). Components consume tokens from
+  `app/src/design/tokens.ts` only — a raw hex or ad-hoc font size in a
+  screen is a bug, and it's how "calm and premium" quietly erodes.
 
 ## Testing
 

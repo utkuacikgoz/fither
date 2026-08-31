@@ -1,0 +1,13 @@
+#!/bin/sh
+# Tests must pass to commit; engine or data changes must also pass the sim.
+# Skips quietly when the workspace isn't installed (e.g. docs-only clones).
+
+command -v pnpm >/dev/null 2>&1 || exit 0
+[ -d node_modules ] || { echo "pre-commit: no install, skipping checks"; exit 0; }
+
+pnpm test || { echo "pre-commit: tests failed" >&2; exit 1; }
+
+if git diff --cached --name-only | grep -qE '^(packages/engine/|data/)'; then
+  pnpm sim || { echo "pre-commit: simulation gates failed" >&2; exit 1; }
+fi
+exit 0

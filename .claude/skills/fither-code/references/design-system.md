@@ -1,0 +1,76 @@
+# FITHER design system — premium, calm, clean
+
+The design bar: the app should feel like a beautifully set table, not a
+dashboard. Think Headspace's calm, Opal's restraint, a good hardcover's
+typography. She opens it mid-chaos — the app is the quietest thing in her
+day. Every UI session follows this file; tokens live in
+`app/src/design/tokens.ts` and components consume ONLY tokens, never raw
+values. One hardcoded hex in a screen is a bug.
+
+## Principles
+
+1. **Calm beats clever.** One focal point per screen. If a screen has two
+   competing calls to action, cut one. Empty space is a feature we ship.
+2. **The session is sacred.** During a workout the screen shows: the
+   movement, the count/timer, the cue. Nothing else. No chrome, no tab
+   bar, no points ticking up mid-set.
+3. **Big, warm, unhurried type.** Body 17pt minimum. Timers and counts
+   are huge (48–72pt). Never more than two type sizes visible at once
+   outside settings.
+4. **Motion is breath, not fireworks.** 250–350ms ease-out fades and
+   gentle slides. Nothing bounces. One exception: the skill-unlock moment
+   gets one considered, generous animation — it's the emotional payoff.
+   Respect Reduce Motion always.
+5. **Touch targets 44pt+, everything reachable one-handed** at the bottom
+   of the screen during a session — her hands may be shaking.
+
+## Tokens (light theme; the app is light-first, dark supported)
+
+```ts
+// color
+bg:        "#FAF7F2"  // warm bone — never pure white
+surface:   "#FFFFFF"  // cards, sparingly
+ink:       "#1F1D1A"  // near-black warm text
+inkSoft:   "#6E675E"  // secondary text
+accent:    "#5C6F5E"  // deep sage — buttons, active states
+accentSoft:"#E7ECE7"  // sage wash — selected chips, progress track fill
+gold:      "#B98A2F"  // skill unlocks ONLY; scarcity is what makes it feel earned
+danger:    "#A65746"  // muted terracotta, errors only
+line:      "#E8E2D8"  // hairline borders
+
+// dark theme
+bgDark:      "#171614"
+surfaceDark: "#211F1C"
+inkDark:     "#F2EEE8"
+inkSoftDark: "#A29A8E"
+accentDark:  "#8FA491"
+lineDark:    "#33302B"
+```
+
+- **No pink, no neon, no gradients on chrome.** The sage/gold pairing is
+  the identity; if it starts looking like a generic fitness app, stop.
+- Spacing: 4pt grid; screens breathe with 24pt side margins, 32pt+
+  between sections. Radius: 16 for cards, 24 for sheets, buttons pill or
+  16. Shadows barely-there (opacity ≤ 0.06) or none — prefer hairlines.
+- Type: system SF Pro (Text/Display); SF Rounded for big numerals
+  (timers, counts, points) — rounded numbers feel kinder. No custom font
+  until the Brief 6 identity lands; these tokens make swapping cheap.
+
+## Feel of the key moments
+
+- **Daily prompt**: four full-width questions, one visible at a time or a
+  single calm stack — tappable rows, not tiny chips. Under 15 seconds,
+  zero typing. Opening line addresses the day, not the user's failings.
+- **Session player**: bone background, movement name large, one cue line,
+  huge rounded countdown. Progress = a thin line filling along the top.
+  Rest screens are the calmest thing in the app — deliberate exhale.
+- **Unlock**: bone → deep sage full-screen moment, gold accent, the skill
+  name set huge. One button: Continue. This is the only loud screen.
+- **Paywall**: reads like an honest letter, not a slot machine. Price
+  plainly set, two options, no countdowns, no strikethrough theatrics.
+
+## Accessibility is part of premium
+
+Dynamic Type without breakage, contrast AA minimum on all text (the muted
+palette must still pass — check inkSoft on bg), VoiceOver labels on the
+player controls, captions/text for anything audio-only.

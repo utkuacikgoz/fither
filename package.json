@@ -1,0 +1,11 @@
+{
+  "name": "fither",
+  "private": true,
+  "scripts": {
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "sim": "pnpm --filter @fither/engine sim",
+    "ios": "pnpm --filter fither-app ios"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
