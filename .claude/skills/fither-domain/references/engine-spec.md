@@ -69,8 +69,12 @@ what ratifies them. They live in `packages/engine/src/generate.ts`.
 - `atNewTier` marks the first session at a freshly advanced tier. A
   regression lands the user volume-reduced at the lower tier (soft
   landing).
-- Session points (1/min) require at least one completed block; a fully
-  skipped session earns nothing and loses nothing.
+- Session points (decided, ADR-0008 as owner-revised): base + duration
+  with showing up dominating — a completed session earns
+  `POINTS.perSessionByMinutes` = 20/25/30 for 10/20/30 minutes (base 15
+  + 5 per ten minutes; "ten minutes is complete" caps the spread at
+  1.5x). Requires at least one completed block; a fully skipped session
+  earns nothing and loses nothing.
 - Pattern absence (gate 4) is measured in TRAINING days, not calendar
   days — calendar measurement would punish time off, contradicting
   "absence never regresses".
@@ -106,6 +110,18 @@ appended taste block.
 - **Advance (decided, ADR-0002):** a pattern's tier increases after **3**
   clean sessions at the current tier (clean = all blocks for that pattern
   completed without "struggled"). Counter resets on a struggled block.
+- **Time floor (decided, ADR-0008):** advancement ALSO requires
+  `DAYS_AT_TIER_TO_ADVANCE[tier]` calendar days since the pattern reached
+  its current tier — 1→2: 7, 2→3: 14, 3→4: 28, 4→5: 42, 5→6: 56
+  (cumulative minimum: tier 4 at day 49, tier 6 at day 147). `tierSince`
+  is stamped on every tier change, advance and regress alike. Clean
+  sessions keep banking while the floor is unmet; the tier moves on the
+  first clean session where both conditions hold. A persisted state
+  without `tierSince` (legacy) treats the floor as satisfied once and is
+  stamped on its next applied session; fresh profiles carry no stamp (the
+  engine has no clock), so a new user's tier-1 floor runs from her first
+  session. The floor is elapsed calendar time, so absence never delays
+  beyond it — and absence still never regresses.
 - **Regress (decided, ADR-0003):** only on repeated in-session failure —
   2 consecutive sessions with the pattern's blocks marked
   struggled/skipped reduce volume at the same tier; a 3rd consecutive one
@@ -137,6 +153,16 @@ Report the printed numbers after every engine change; never just "passes".
 
 If Gate 1 fails, fix the engine or the movement ladders. Nothing downstream
 gets built until it passes.
+
+ADR-0008 adds a ceiling gate:
+
+| # | Gate |
+|---|---|
+| 5 | No consistent persona's MEDIAN full-ladder exhaustion (all five patterns at tier 6) before week 18; never within 26 weeks passes |
+
+Pacing is machine-gated in both directions: G1 is the floor, G5 the
+ceiling. Erratic has no consistent cadence and is reported for
+information only.
 
 ## Brief 2 (paste verbatim when available)
 

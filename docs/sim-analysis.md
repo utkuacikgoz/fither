@@ -1,5 +1,12 @@
 # Simulation deep-dive — how users actually progress
 
+> **Superseded in part (ADR-0008).** The progression and points numbers
+> below describe the PRE-ADR-0008 engine (no time floors, 1 point/min)
+> and drove that ADR. For current numbers see
+> [Post-ADR-0008 re-run](#post-adr-0008-re-run) at the end. The
+> structural findings (lockstep patterns, quiet no-op, dead regression
+> path) still hold.
+
 Every number in this document comes from a real run of
 `packages/engine/sim/analyze.ts`, which replays the exact same 500-user /
 26-week simulation that `pnpm sim` gates on (same personas, same behaviour
@@ -295,3 +302,85 @@ The findings above are properties of the model, not of one lucky seed.
   bounds set by this model; the *structural* findings (lockstep patterns,
   quiet no-op, dead regression path, points asymmetry) hold regardless of
   how fast capability grows.
+
+## Post-ADR-0008 re-run
+
+Same harness, same seed 20260831, 500 users, 26 weeks — re-run after
+ADR-0008 landed (time floors `DAYS_AT_TIER_TO_ADVANCE` = 7/14/28/42/56
+days per step, and base+duration session points 20/25/30 for 10/20/30
+minutes per the owner's revision of decision 3). 36755 sessions (0
+empty; the count shifts from 36785 because tier pacing changes which
+movements are prescribed, which shifts downstream RNG consumption).
+Everything in this section supersedes the corresponding numbers above.
+Gate run on the same seed: **G1–G5 all PASS** — G1 median week 8
+(84/84 by week 12), G2 0 regressions, G3 0 over budget, G4 max absence
+3 training days, G5 median exhaustion consistent4=22, consistent2=23,
+lowCapability2=23, quiet=22, tenMin=23 (erratic=never, info only).
+
+### Full-ladder exhaustion (all five patterns at tier 6)
+
+Previously week 8–12 for everyone (headline finding 1). Now:
+
+| persona | median week [p10, p90] | never within 26 weeks |
+|---|---|---|
+| consistent4 | 22 [22, 23] | 0/84 |
+| consistent2 | 23 [22, 24] | 0/84 |
+| lowCapability2 | 23 [22, 24] | 0/83 |
+| erratic | >26 [25, >26] | 44/83 |
+| quiet | 22 [22, 23] | 0/83 |
+| tenMin | 23 [22, 24] | 0/83 |
+
+The time floors dominate: every consistent cadence exhausts at the
+147-day cumulative minimum (~week 22) plus a session or two of slack,
+regardless of frequency — which is the product promise (less time ≠
+less progress) made literal. The G5 ceiling (week 18) clears by 4+
+weeks; only ~14% of the run now happens post-exhaustion instead of
+~55%. A side effect: taste blocks on strong-energy sessions jumped from
+15–40% to 80–93%, because users now spend most of the run below tier 6
+where a next tier exists to taste.
+
+### Weeks to first skill unlock (tier 4) — median [p10, p90]
+
+Floor-bound at the 49-day cumulative minimum (~week 8) for every
+consistent persona; previously week 3–6.
+
+| persona | first (any pattern) | worst per-pattern p90 | never any |
+|---|---|---|---|
+| consistent4 | 8 [8, 8] | 8 | 0/84 |
+| consistent2 | 8 [8, 8] | 9 | 0/84 |
+| lowCapability2 | 8 [8, 8] | 9 | 0/83 |
+| erratic | 10 [8, 11] | 12 | 0/83 |
+| quiet | 8 [8, 8] | 8 | 0/83 |
+| tenMin | 8 [8, 8] | 9 | 0/83 |
+
+The retention moment moved from week 3–5 to week 8–10. Still under the
+~10-week concern threshold at the median, but only just — erratic's
+median IS week 10 with p90 at 12. Worth a product eye: the first
+skill-unlock card now lands two months in for everyone.
+
+### Points at week 26 (median cumulative, new 20/25/30 scheme)
+
+| persona | w26 points | sessions/user (median) | previous w26 (1/min) |
+|---|---|---|---|
+| consistent4 | 3330 | 104 | 3125 |
+| consistent2 | 1780 | 52 | 1600 |
+| lowCapability2 | 1775 | 52 | 1575 |
+| erratic | 1655 | 51 | 1435 |
+| quiet | 2340 | 78 | 1940 |
+| tenMin | 2455 | 104 | 1410 |
+
+The parity fix does what it was asked to: tenMin at the same session
+count as consistent4 (104) now earns 74% of her points instead of 45%
+— duration still pays visibly (a 30-min session earns 1.5x a 10-min
+one) but showing up dominates. Bonus-session rates rose slightly
+across the board (progression events now spread over 22 weeks instead
+of clustering in the first 8).
+
+### Stability
+
+Re-run with second seed 20270101 (36861 sessions): first-unlock medians
+identical (erratic 9 vs 10), exhaustion medians identical for all
+consistent personas (erratic 26 vs >26), points within 0–45 of the
+primary seed for every persona. The floors make the pacing findings
+even more seed-independent than before, since calendar time, not RNG,
+now sets the tempo.

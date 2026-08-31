@@ -10,6 +10,10 @@ export const PATTERNS: readonly Pattern[] = [
 ] as const;
 
 function freshPatternState(): PatternState {
+  // No tierSince stamp (ADR-0008): the engine has no clock, so a fresh
+  // profile cannot know "today". The legacy-tolerance rule in apply.ts
+  // doubles as the fresh-profile rule: the first applied session stamps
+  // tierSince, and the tier-1 time floor runs from that first session.
   return { tier: 1, cleanStreak: 0, struggledStreak: 0, volumeReduced: false };
 }
 

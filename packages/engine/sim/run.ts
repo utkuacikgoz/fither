@@ -33,6 +33,18 @@ const WEEKS = 26;
 const G1_WEEK_LIMIT = 12;
 const G1_TIER = 4;
 const G4_LIMIT = 7; // training days (sessions), per engine-spec.md gate 4
+// G5 (ADR-0008): ceiling gate. No consistent persona's MEDIAN week of
+// full-ladder exhaustion (all five patterns at tier 6) may precede this.
+// "Never within 26 weeks" passes. Erratic has no consistent cadence and
+// is reported for information only.
+const G5_WEEK_LIMIT = 18;
+const G5_PERSONAS: readonly PersonaId[] = [
+  "consistent4",
+  "consistent2",
+  "lowCapability2",
+  "quiet",
+  "tenMin",
+];
 
 const here = dirname(fileURLToPath(import.meta.url));
 const library: MovementLibrary = JSON.parse(
@@ -68,6 +80,20 @@ let lowCapabilityBlocks = 0;
 let lowCapabilityDifficultBlocks = 0;
 let g4MaxAbsence = 0;
 const personaCounts = new Map<PersonaId, number>();
+// G5: per-persona weeks of full-ladder exhaustion (Infinity = never).
+const g5ExhaustWeeks = new Map<PersonaId, number[]>();
+for (const persona of PERSONAS) g5ExhaustWeeks.set(persona, []);
+
+/** Median where an even split against "never" (Infinity) is still never. */
+function medianWeek(values: number[]): number {
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  if (s.length % 2 === 1) return s[mid] as number;
+  const lo = s[mid - 1] ?? Infinity;
+  const hi = s[mid] ?? Infinity;
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return Infinity;
+  return (lo + hi) / 2;
+}
 
 // ---------- Run ----------
 
@@ -89,6 +115,7 @@ for (let u = 0; u < USERS; u++) {
     core: 0,
   };
   let pushTier4Week = Infinity;
+  let exhaustWeek = Infinity;
 
   for (let week = 1; week <= WEEKS; week++) {
     for (const plan of weekPlan(persona, rng)) {
@@ -186,10 +213,19 @@ for (let u = 0; u < USERS; u++) {
       ) {
         pushTier4Week = week;
       }
+
+      // G5: first week ALL five patterns sit at tier 6.
+      if (
+        exhaustWeek === Infinity &&
+        PATTERNS.every((p) => profile.patterns[p].tier === 6)
+      ) {
+        exhaustWeek = week;
+      }
     }
   }
 
   if (persona === "consistent4") g1WeekReached.push(pushTier4Week);
+  g5ExhaustWeeks.get(persona)?.push(exhaustWeek);
 }
 
 // ---------- Report ----------
@@ -208,6 +244,15 @@ const g1Pass = g1ByWeek12 === g1Total;
 const g2Pass = g2Regressions === 0;
 const g3Pass = overBudgetCount === 0;
 const g4Pass = g4MaxAbsence <= G4_LIMIT;
+
+const g5Medians = new Map<PersonaId, number>();
+for (const persona of PERSONAS) {
+  g5Medians.set(persona, medianWeek(g5ExhaustWeeks.get(persona) ?? []));
+}
+const g5Pass = G5_PERSONAS.every(
+  (persona) => (g5Medians.get(persona) ?? Infinity) >= G5_WEEK_LIMIT,
+);
+const fmtExhaust = (w: number) => (Number.isFinite(w) ? String(w) : "never");
 
 const pct = (x: number) => `${(100 * x).toFixed(1)}%`;
 const mark = (ok: boolean) => (ok ? "PASS" : "FAIL");
@@ -233,7 +278,14 @@ console.log(
 console.log(
   `G4 ${mark(g4Pass)}  max pattern absence: ${g4MaxAbsence} training days (limit ${G4_LIMIT})`,
 );
+console.log(
+  `G5 ${mark(g5Pass)}  median full-ladder exhaustion week (consistent personas must be >= ${G5_WEEK_LIMIT} or never): ` +
+    G5_PERSONAS.map(
+      (persona) => `${persona}=${fmtExhaust(g5Medians.get(persona) ?? Infinity)}`,
+    ).join(", ") +
+    `; erratic=${fmtExhaust(g5Medians.get("erratic") ?? Infinity)} (info only)`,
+);
 
-if (!(g1Pass && g2Pass && g3Pass && g4Pass)) {
+if (!(g1Pass && g2Pass && g3Pass && g4Pass && g5Pass)) {
   process.exit(1);
 }

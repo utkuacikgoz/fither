@@ -12,11 +12,26 @@ import type {
 } from "./types.js";
 import {
   CLEAN_SESSIONS_TO_ADVANCE,
+  DAYS_AT_TIER_TO_ADVANCE,
   POINTS,
   STRUGGLED_SESSIONS_TO_REDUCE_VOLUME,
   STRUGGLED_SESSIONS_TO_REGRESS,
 } from "./types.js";
 import { PATTERNS } from "./profile.js";
+
+/**
+ * Whole calendar days from one ISO yyyy-mm-dd date to another. Pure
+ * string-date math via `Date.UTC` (a pure function — no clock read, no
+ * timezone). Exported so the UI can render floor countdowns without
+ * re-deriving the rule.
+ */
+export function calendarDaysBetween(from: string, to: string): number {
+  const utc = (iso: string): number => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1);
+  };
+  return Math.round((utc(to) - utc(from)) / 86_400_000);
+}
 
 /**
  * Tiers whose arrival unlocks a named skill (PROPOSED: mid-ladder capability
@@ -73,13 +88,14 @@ export function applySessionResult(
   const ledgerEvents: LedgerEvent[] = [];
   const unlockedSkills: ApplyResult["unlockedSkills"] = [];
 
-  // Session completion points: 1/minute (10/20/30). Requires at least one
+  // Session completion points (ADR-0008): base + duration, showing up
+  // dominating — 20/25/30 for 10/20/30 minutes. Requires at least one
   // completed block (PROPOSED) — a fully skipped session earns nothing,
   // but nothing is ever deducted either.
   if (outcomes.some((o) => o === "completed")) {
     ledgerEvents.push({
       type: "session",
-      points: session.minutes * POINTS.perSessionMinute,
+      points: POINTS.perSessionByMinutes[session.minutes],
       date: session.date,
     });
   }
@@ -118,10 +134,12 @@ export function applySessionResult(
       next.struggledStreak = prev.struggledStreak + 1;
       if (next.struggledStreak >= STRUGGLED_SESSIONS_TO_REGRESS) {
         // Third consecutive struggle: drop one tier, land softly
-        // (volume-reduced) with fresh counters.
+        // (volume-reduced) with fresh counters. Every tier change —
+        // regress included — restarts the time-floor clock (ADR-0008).
         next.tier = Math.max(1, prev.tier - 1) as Tier;
         next.struggledStreak = 0;
         next.volumeReduced = true;
+        next.tierSince = session.date;
       } else if (next.struggledStreak >= STRUGGLED_SESSIONS_TO_REDUCE_VOLUME) {
         next.volumeReduced = true;
       }
@@ -131,9 +149,21 @@ export function applySessionResult(
       next.struggledStreak = 0;
       next.volumeReduced = false;
       next.cleanStreak = prev.cleanStreak + 1;
-      if (next.cleanStreak >= CLEAN_SESSIONS_TO_ADVANCE && prev.tier < 6) {
+      // Advancement needs BOTH the clean streak and the time floor
+      // (ADR-0008): DAYS_AT_TIER_TO_ADVANCE[tier] calendar days since the
+      // tier was reached. Cleans keep banking while the floor is unmet —
+      // the tier moves on the first clean session where both hold. A
+      // state without tierSince treats the floor as satisfied once
+      // (legacy tolerance); it is stamped below and real from then on.
+      const floorMet =
+        prev.tier < 6 &&
+        (prev.tierSince === undefined ||
+          calendarDaysBetween(prev.tierSince, session.date) >=
+            DAYS_AT_TIER_TO_ADVANCE[prev.tier as Exclude<Tier, 6>]);
+      if (next.cleanStreak >= CLEAN_SESSIONS_TO_ADVANCE && floorMet) {
         next.tier = (prev.tier + 1) as Tier;
         next.cleanStreak = 0;
+        next.tierSince = session.date;
         const alreadyUnlocked = unlockedMilestones.some(
           (milestone) =>
             milestone.pattern === pattern && milestone.tier === next.tier,
@@ -159,6 +189,11 @@ export function applySessionResult(
       }
       // Tier 6 is terminal: cleanStreak keeps counting, tier never changes.
     }
+    // Tier changes are stamped above. Otherwise a missing tierSince gets
+    // stamped now: the legacy tolerance spent its one free pass this
+    // apply and the floor clock starts today. Patterns not in this
+    // session are never touched (absence never regresses — nor stamps).
+    if (next.tierSince === undefined) next.tierSince = session.date;
     nextPatterns[pattern] = next;
   }
 

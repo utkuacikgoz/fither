@@ -1,4 +1,4 @@
-# Where the build stands — 2026-09-01
+# Where the build stands — 2026-09-01 (post ADR-0008/0009)
 
 Read `CLAUDE.md` first, then this. The engine remediation and the core
 app-flow remediation from ADR-0007 are implemented in the current working
@@ -9,16 +9,16 @@ tree. The numbers below were produced after those changes.
 ```
 node scripts/validate-movements.mjs  OK — 60 movements, ladders complete,
                                      constrained tiers 1-4 intact
-engine typecheck                     pass
-app typecheck                        pass
-engine tests                         50/50
-app tests                            68/68
-simulation (seed 20260831, 500 users, 26 weeks, 36785 sessions)
-  G1 PASS  84/84 4x-week users at push tier >=4 by week 12, median week 3
-  G2 PASS  0 tier regressions across both 2x-week personas
-           low-capability difficult blocks: 1460/27465
+engine + app typecheck               pass
+engine tests                         63/63
+app tests                            92/92
+simulation (seed 20260831, 500 users, 26 weeks, 36755 sessions)
+  G1 PASS  84/84 4x-week users at push tier >=4 by week 12, median week 8
+  G2 PASS  0 tier regressions; low-capability difficult blocks 752/28303
   G3 PASS  0 sessions over budget (utilization 90.0-100.0%)
   G4 PASS  max pattern absence 3 training days (limit 7)
+  G5 PASS  full-ladder exhaustion medians week 22-23 (floor: 18);
+           erratic never exhausts within 26 weeks
 ```
 
 The clone lives inside another Vite project, so Vitest was run with an
@@ -68,31 +68,28 @@ failures.
 
 ## Next, in order
 
-1. **Persist and resume in-progress player state (S3).** Document and test
-   the remaining dual-write gap between profile/history and the ledger.
-2. **Progression pacing decision (from docs/sim-analysis.md).** Every
-   persona reaches tier 6 in all five patterns by week 8-12 — even
-   2x/week users exhaust the ladder in ~15 sessions and then have
-   nothing to unlock for 14+ weeks, because 20/30-minute sessions cover
-   all five patterns and advancement needs 3 clean SESSIONS per tier.
-   Structural, not a harness artifact. Take it to the coach with the
-   packet; candidate levers: clean-session counts that rise with tier,
-   or advancement counted per pattern less often than every session.
-   Also decide: 10-minute-only users earn half the points of 30-minute
-   users at identical consistency (1410 vs 3125 at week 26) — is
-   points-per-minute the right price for equal showing-up?
-3. **GATE 2 — owner's physical test.** Run `pnpm install && pnpm ios` from a
-   normal checkout and do a real 10-minute workout. This has still not been
-   launched on an iOS simulator in the build environment.
-4. **Copy/onboarding/paywall pack.** Write the remaining keyed copy, build
-   onboarding, then add the decided £5.99 monthly / £39.99 annual paywall
-   without compromising offline workouts.
-5. **Exercise instruction media.** Add the motion layer only after the real
-   workout test confirms player pacing. Prefer authored Rive/3D clips with
-   cue pointers and reduced-motion fallbacks; never block the workout on a
-   network fetch.
-6. Then gamification/share card, distribution instrumentation, and store
-   preparation per `docs/build-system.md`.
+1. **Onboarding + dev-mode monetization (ADR-0009)** — being built now:
+   three drafted onboarding screens, trial-from-first-completed-session,
+   paywall gating only new-session generation after expiry, billing
+   behind a typed port with a local dev implementation (no third-party
+   SDKs; everything clickable; RevenueCat later = implement the adapter).
+2. **GATE 2 — owner's physical test.** `pnpm install && pnpm ios` from a
+   normal checkout, then a real 10-minute workout. Still never launched
+   on an iOS simulator in the build environment.
+3. **GATE 3 prep** — onboarding exists after item 1; five real users,
+   under 60 seconds to first movement.
+4. **Exercise instruction media** — after Gate 2 confirms pacing.
+   Authored Rive/3D clips, reduced-motion fallbacks, never a network
+   fetch on the workout path.
+5. Then share card, ops SDKs (with the offline-lockout re-review),
+   and store preparation per `docs/build-system.md`.
+
+Recently closed: ADR-0008 ladder pacing (time floors 7/14/28/42/56 days;
+exhaustion moved from week 8-12 to 22-23, first unlock week 8, G5
+ceiling gate added) and points parity (20/25/30 by length, base 15 + 5
+per ten minutes; tenMin users now earn 74% of consistent4 at equal
+session count, was 45%). Erratic users' first unlock is median week 10
+(p90 12) — watch in real data; flagged in docs/sim-analysis.md.
 
 ## Deferred, recorded
 

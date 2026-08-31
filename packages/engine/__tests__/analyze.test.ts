@@ -40,6 +40,7 @@ describe("sim/analyze", () => {
       "### 4. Struggle economics",
       "### 5. Session composition",
       "### 6. Budget utilization",
+      "### 7. Full-ladder exhaustion",
     ]) {
       expect(report).toContain(heading);
     }

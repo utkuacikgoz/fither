@@ -73,6 +73,15 @@ export interface PatternState {
   struggledStreak: number;
   /** True while in the reduced-volume soft landing. */
   volumeReduced: boolean;
+  /**
+   * ISO yyyy-mm-dd date the CURRENT tier was reached (ADR-0008). Set on
+   * every tier change — advance and regress alike. Optional for legacy
+   * tolerance: a state persisted before this field existed treats the
+   * time floor as satisfied once and is stamped on its next applied
+   * session; fresh profiles also start without it (the engine has no
+   * clock), so a new user's tier-1 floor starts at her first session.
+   */
+  tierSince?: string;
 }
 
 /** A skill milestone reached at least once during the user's lifetime. */
@@ -188,16 +197,35 @@ export interface ApplyResult {
   unlockedSkills: Array<{ pattern: Pattern; tier: Tier; movementName: string }>;
 }
 
-// ---------- Rule constants (ADR-0002 / ADR-0003) ----------
+// ---------- Rule constants (ADR-0002 / ADR-0003 / ADR-0008) ----------
 
 export const CLEAN_SESSIONS_TO_ADVANCE = 3;
 export const STRUGGLED_SESSIONS_TO_REDUCE_VOLUME = 2;
 export const STRUGGLED_SESSIONS_TO_REGRESS = 3;
 export const MAX_PATTERN_ABSENCE_DAYS = 7;
 
-/** Points: 1 per minute; +5 per block at a newly reached tier; +25 per skill unlock. */
+/**
+ * Time floor per ladder step (ADR-0008), keyed by the CURRENT tier (the
+ * step's start). A pattern advances only when BOTH hold: the clean-session
+ * streak (ADR-0002) AND at least this many calendar days since the tier
+ * was reached (`tierSince`). Adaptation is time-bound, not session-bound;
+ * the floor paces frequent and infrequent users nearly equally. Tier 6 is
+ * terminal and has no floor. Cumulative minimum: tier 4 at day 49, tier 6
+ * at day 147 (~week 21).
+ */
+export const DAYS_AT_TIER_TO_ADVANCE: Readonly<
+  Record<Exclude<Tier, 6>, number>
+> = { 1: 7, 2: 14, 3: 28, 4: 42, 5: 56 };
+
+/**
+ * Points (ADR-0008, owner-revised): a completed session earns base 15
+ * + 5 per ten minutes — 20/25/30 for 10/20/30. Showing up dominates and
+ * "ten minutes is complete" caps the spread at 1.5x, while longer
+ * sessions still visibly earn more. +5 per completed block at a newly
+ * reached tier; +25 per skill unlock.
+ */
 export const POINTS = {
-  perSessionMinute: 1,
+  perSessionByMinutes: { 10: 20, 20: 25, 30: 30 },
   perNewTierBlock: 5,
   perSkillUnlock: 25,
 } as const;

@@ -81,6 +81,8 @@ interface UserRecord {
   unlockWeek: Record<Pattern, number>;
   /** Week of the FIRST tier-4 unlock in any pattern; Infinity if never. */
   firstAnyUnlockWeek: number;
+  /** First week ALL five patterns sit at tier 6 (ADR-0008 G5); Infinity if never. */
+  fullLadderWeek: number;
   reductionEpisodes: number; // volumeReduced false -> true transitions
   regressionEpisodes: number; // tier drops
   volumeReducedSessions: number; // sessions starting with >= 1 reduced pattern
@@ -158,6 +160,7 @@ export function runAnalysis(
         core: Infinity,
       },
       firstAnyUnlockWeek: Infinity,
+      fullLadderWeek: Infinity,
       reductionEpisodes: 0,
       regressionEpisodes: 0,
       volumeReducedSessions: 0,
@@ -300,6 +303,12 @@ export function runAnalysis(
             rec.unlockWeek[p] = week;
             if (week < rec.firstAnyUnlockWeek) rec.firstAnyUnlockWeek = week;
           }
+        }
+        if (
+          rec.fullLadderWeek === Infinity &&
+          PATTERNS.every((p) => profile.patterns[p].tier === 6)
+        ) {
+          rec.fullLadderWeek = week;
         }
       }
 
@@ -523,6 +532,23 @@ export function formatReport(a: Analysis): string {
   }
   line();
 
+  // 7. Full-ladder exhaustion (ADR-0008 G5 observed at persona level).
+  line(`### 7. Full-ladder exhaustion (all five patterns at tier 6)`);
+  line();
+  line(`| persona | median week [p10, p90] | never within run |`);
+  line(`|---|---|---|`);
+  for (const persona of PERSONAS) {
+    const recs = a.byPersona.get(persona) ?? [];
+    const weeks = recs.map((r) => r.fullLadderWeek);
+    const never = weeks.filter((w) => !Number.isFinite(w)).length;
+    line(
+      `| ${persona} | ${fmtWeek(median(weeks), a.weeks)} ` +
+        `[${fmtWeek(percentile(weeks, 10), a.weeks)}, ${fmtWeek(percentile(weeks, 90), a.weeks)}] | ` +
+        `${never}/${recs.length} |`,
+    );
+  }
+  line();
+
   return out.join("\n");
 }
 
@@ -541,9 +567,11 @@ export function keyMetrics(a: Analysis): string {
       }),
     );
     const pts = median(recs.map((r) => r.pointsAtWeek.get(a.weeks) ?? 0));
+    const exhaust = median(recs.map((r) => r.fullLadderWeek));
     rows.push(
       `  ${persona}: first unlock median wk ${fmtWeek(first, a.weeks)}, ` +
-        `mean tier @w${a.weeks} ${w26.toFixed(1)}, median points ${pts}`,
+        `mean tier @w${a.weeks} ${w26.toFixed(1)}, median points ${pts}, ` +
+        `full-ladder exhaustion median wk ${fmtWeek(exhaust, a.weeks)}`,
     );
   }
   return rows.join("\n");
