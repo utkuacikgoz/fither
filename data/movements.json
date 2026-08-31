@@ -1,0 +1,1045 @@
+{
+  "version": 1,
+  "movements": [
+    {
+      "id": "wall-push-up",
+      "name": "Wall Push-Up",
+      "pattern": "push",
+      "tier": 1,
+      "progressionTo": "incline-push-up",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Hands on the wall at shoulder height",
+        "One straight line from head to heels",
+        "Lower slowly, then press the wall away"
+      ]
+    },
+    {
+      "id": "wide-wall-push-up",
+      "name": "Wide Wall Push-Up",
+      "pattern": "push",
+      "tier": 1,
+      "progressionTo": "wide-incline-push-up",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Hands on the wall, wider than your shoulders",
+        "Keep your body in one line",
+        "Chest toward the wall, then press away"
+      ]
+    },
+    {
+      "id": "wall-push-up-hold",
+      "name": "Wall Push-Up Hold",
+      "pattern": "push",
+      "tier": 1,
+      "progressionTo": "incline-push-up-hold",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "Lower halfway to the wall and hold",
+        "Body straight, elbows soft",
+        "Breathe steadily"
+      ]
+    },
+    {
+      "id": "incline-push-up",
+      "name": "Incline Push-Up",
+      "pattern": "push",
+      "tier": 2,
+      "progressionTo": "kneeling-push-up",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, hands on the seat",
+        "One straight line from head to heels",
+        "Lower slowly, press back up"
+      ]
+    },
+    {
+      "id": "wide-incline-push-up",
+      "name": "Wide Incline Push-Up",
+      "pattern": "push",
+      "tier": 2,
+      "progressionTo": "wide-kneeling-push-up",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, hands wide on the seat",
+        "Brace your middle",
+        "Chest to the chair, then press away"
+      ]
+    },
+    {
+      "id": "incline-push-up-hold",
+      "name": "Incline Push-Up Hold",
+      "pattern": "push",
+      "tier": 2,
+      "progressionTo": "incline-pike-push-up",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "Chair against a wall, hands on the seat",
+        "Lower halfway and hold there",
+        "Squeeze your middle and keep breathing"
+      ]
+    },
+    {
+      "id": "kneeling-push-up",
+      "name": "Kneeling Push-Up",
+      "pattern": "push",
+      "tier": 3,
+      "progressionTo": "full-push-up",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "Knees down, hands under your shoulders",
+        "One line from knees to head",
+        "Lower with control, press up strong"
+      ]
+    },
+    {
+      "id": "wide-kneeling-push-up",
+      "name": "Wide Kneeling Push-Up",
+      "pattern": "push",
+      "tier": 3,
+      "progressionTo": "full-push-up",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "Knees down, hands set wide",
+        "Hips in line with your back",
+        "Slow on the way down, strong on the way up"
+      ]
+    },
+    {
+      "id": "incline-pike-push-up",
+      "name": "Incline Pike Push-Up",
+      "pattern": "push",
+      "tier": 3,
+      "progressionTo": "pike-push-up",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, hands on the seat",
+        "Walk feet back and lift your hips high",
+        "Bend your elbows, head toward the chair",
+        "Press back to hips high"
+      ]
+    },
+    {
+      "id": "full-push-up",
+      "name": "Full Push-Up",
+      "pattern": "push",
+      "tier": 4,
+      "progressionTo": "decline-push-up",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["shoulders", "elbows", "wrists", "core"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Hands under shoulders, legs long",
+        "One straight line from head to heels",
+        "Lower slowly, chest near the floor",
+        "Press the floor away"
+      ]
+    },
+    {
+      "id": "pike-push-up",
+      "name": "Pike Push-Up",
+      "pattern": "push",
+      "tier": 4,
+      "progressionTo": "decline-push-up",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["shoulders", "elbows", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Hips high, hands and feet on the floor",
+        "Bend your elbows, head toward the floor",
+        "Press back up to hips high"
+      ]
+    },
+    {
+      "id": "decline-push-up",
+      "name": "Decline Push-Up",
+      "pattern": "push",
+      "tier": 5,
+      "progressionTo": "archer-push-up",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["shoulders", "elbows", "wrists", "core"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, feet on the seat",
+        "Hands under your shoulders",
+        "Lower slowly, press up strong"
+      ]
+    },
+    {
+      "id": "archer-push-up",
+      "name": "Archer Push-Up",
+      "pattern": "push",
+      "tier": 6,
+      "progressionTo": null,
+      "silent": true,
+      "equipment": "none",
+      "loads": ["shoulders", "elbows", "wrists", "core"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 4, "secondsPerRep": 5 },
+      "cues": [
+        "Hands set wide on the floor",
+        "Lower toward one hand, other arm long",
+        "Press back to the middle",
+        "Switch sides each rep"
+      ]
+    },
+    {
+      "id": "shoulder-blade-squeeze",
+      "name": "Shoulder Blade Squeeze",
+      "pattern": "pull",
+      "tier": 1,
+      "progressionTo": "prone-w-raise",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["back", "shoulders"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 12, "secondsPerRep": 3 },
+      "cues": [
+        "Stand tall, arms by your sides",
+        "Draw your shoulder blades together",
+        "Hold a moment, then release"
+      ]
+    },
+    {
+      "id": "wall-slide",
+      "name": "Wall Slide",
+      "pattern": "pull",
+      "tier": 1,
+      "progressionTo": "doorframe-lean-row",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["back", "shoulders"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Stand with your back against the wall",
+        "Arms bent, backs of your hands on the wall",
+        "Slide your arms up, then pull them down"
+      ]
+    },
+    {
+      "id": "prone-w-raise",
+      "name": "Prone W Raise",
+      "pattern": "pull",
+      "tier": 2,
+      "progressionTo": "prone-y-raise",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["back", "shoulders"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 3 },
+      "cues": [
+        "Lie face down, arms bent in a W shape",
+        "Lift your hands and elbows off the floor",
+        "Squeeze between your shoulder blades",
+        "Lower slowly"
+      ]
+    },
+    {
+      "id": "doorframe-lean-row",
+      "name": "Doorframe Lean Row",
+      "pattern": "pull",
+      "tier": 2,
+      "progressionTo": "doorframe-row",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["back", "shoulders", "elbows"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Hold the doorframe with both hands, feet close",
+        "Lean back until your arms are long",
+        "Pull your chest to the frame, then lower"
+      ]
+    },
+    {
+      "id": "prone-y-raise",
+      "name": "Prone Y Raise",
+      "pattern": "pull",
+      "tier": 3,
+      "progressionTo": "prone-y-t-w-raise",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["back", "shoulders"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 3 },
+      "cues": [
+        "Lie face down, arms long in a Y shape",
+        "Thumbs up, lift both arms off the floor",
+        "Lower with control"
+      ]
+    },
+    {
+      "id": "doorframe-row",
+      "name": "Doorframe Row",
+      "pattern": "pull",
+      "tier": 3,
+      "progressionTo": "deep-doorframe-row",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["back", "shoulders", "elbows"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "Grip the frame, walk your feet forward",
+        "Lean back with arms straight",
+        "Pull your chest to your hands",
+        "Lower back out with control"
+      ]
+    },
+    {
+      "id": "prone-y-t-w-raise",
+      "name": "Prone Y-T-W Raise",
+      "pattern": "pull",
+      "tier": 4,
+      "progressionTo": "single-arm-doorframe-row",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["back", "shoulders"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 5, "secondsPerRep": 6 },
+      "cues": [
+        "Lie face down, arms in a Y shape",
+        "Lift, then move to a T, then a W",
+        "Keep your arms off the floor the whole time",
+        "Lower and start again"
+      ]
+    },
+    {
+      "id": "deep-doorframe-row",
+      "name": "Deep Doorframe Row",
+      "pattern": "pull",
+      "tier": 4,
+      "progressionTo": "single-arm-doorframe-row",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["back", "shoulders", "elbows"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "Feet far forward, body at a strong lean",
+        "Grip firm, dry hands",
+        "Pull your chest to the frame, elbows back",
+        "Lower slowly"
+      ]
+    },
+    {
+      "id": "single-arm-doorframe-row",
+      "name": "Single-Arm Doorframe Row",
+      "pattern": "pull",
+      "tier": 5,
+      "progressionTo": "single-arm-doorframe-row-pause",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["back", "shoulders", "elbows", "wrists"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "One hand on the frame, feet forward",
+        "Keep your hips square",
+        "Pull your chest to your hand",
+        "Slow on the way back"
+      ]
+    },
+    {
+      "id": "single-arm-doorframe-row-pause",
+      "name": "Single-Arm Doorframe Row with Pause",
+      "pattern": "pull",
+      "tier": 6,
+      "progressionTo": null,
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["back", "shoulders", "elbows", "wrists"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 5, "secondsPerRep": 6 },
+      "cues": [
+        "Feet further forward this time",
+        "Pull in and pause at the top",
+        "Lower slowly, hips square"
+      ]
+    },
+    {
+      "id": "supported-sit-to-stand",
+      "name": "Supported Sit-to-Stand",
+      "pattern": "squat",
+      "tier": 1,
+      "progressionTo": "sit-to-stand",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["knees", "hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 5 },
+      "cues": [
+        "Sit tall at the front of the chair",
+        "Push through your feet, hands on your thighs",
+        "Stand tall, then sit back slowly"
+      ]
+    },
+    {
+      "id": "high-wall-sit",
+      "name": "High Wall Sit",
+      "pattern": "squat",
+      "tier": 1,
+      "progressionTo": "wall-sit",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["knees", "hips"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "Back on the wall, slide down a little",
+        "Feet flat, knees soft",
+        "Hold and breathe steadily"
+      ]
+    },
+    {
+      "id": "partial-squat",
+      "name": "Partial Squat",
+      "pattern": "squat",
+      "tier": 1,
+      "progressionTo": "half-squat",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["knees", "hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Feet hip-width, arms forward for balance",
+        "Bend your knees a little, hips back",
+        "Stand tall through your whole foot"
+      ]
+    },
+    {
+      "id": "sit-to-stand",
+      "name": "Sit-to-Stand",
+      "pattern": "squat",
+      "tier": 2,
+      "progressionTo": "bodyweight-squat",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["knees", "hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 5 },
+      "cues": [
+        "Sit tall, feet flat on the floor",
+        "Stand up without using your hands",
+        "Sit back slowly and quietly"
+      ]
+    },
+    {
+      "id": "wall-sit",
+      "name": "Wall Sit",
+      "pattern": "squat",
+      "tier": 2,
+      "progressionTo": "paused-squat",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["knees", "hips"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 30 },
+      "cues": [
+        "Back flat on the wall",
+        "Slide down, knees over your ankles",
+        "Hold and breathe"
+      ]
+    },
+    {
+      "id": "half-squat",
+      "name": "Half Squat",
+      "pattern": "squat",
+      "tier": 2,
+      "progressionTo": "sumo-squat",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["knees", "hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Feet hip-width apart",
+        "Sit halfway down, hips back",
+        "Drive up through your whole foot"
+      ]
+    },
+    {
+      "id": "bodyweight-squat",
+      "name": "Bodyweight Squat",
+      "pattern": "squat",
+      "tier": 3,
+      "progressionTo": "split-squat",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["knees", "hips", "ankles"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Feet a little wider than your hips",
+        "Chest up, knees track over your toes",
+        "Sit down low, then push the floor away"
+      ]
+    },
+    {
+      "id": "sumo-squat",
+      "name": "Sumo Squat",
+      "pattern": "squat",
+      "tier": 3,
+      "progressionTo": "split-squat",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["knees", "hips", "ankles"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Wide stance, toes turned out",
+        "Sit straight down, chest tall",
+        "Press up through your heels"
+      ]
+    },
+    {
+      "id": "paused-squat",
+      "name": "Paused Squat",
+      "pattern": "squat",
+      "tier": 3,
+      "progressionTo": "reverse-lunge",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["knees", "hips", "ankles"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 6 },
+      "cues": [
+        "Sit to the bottom of your squat",
+        "Pause there for two slow breaths",
+        "Stand up strong"
+      ]
+    },
+    {
+      "id": "split-squat",
+      "name": "Split Squat",
+      "pattern": "squat",
+      "tier": 4,
+      "progressionTo": "elevated-split-squat",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["knees", "hips", "ankles"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "One foot forward, one foot back",
+        "Lower your back knee toward the floor",
+        "Push up through your front foot",
+        "Keep your chest tall"
+      ]
+    },
+    {
+      "id": "reverse-lunge",
+      "name": "Reverse Lunge",
+      "pattern": "squat",
+      "tier": 4,
+      "progressionTo": "elevated-split-squat",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["knees", "hips", "ankles"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 5 },
+      "cues": [
+        "Step back, lower your back knee",
+        "Front knee over your ankle",
+        "Push through your front foot to stand"
+      ]
+    },
+    {
+      "id": "elevated-split-squat",
+      "name": "Elevated Split Squat",
+      "pattern": "squat",
+      "tier": 5,
+      "progressionTo": "single-leg-sit-to-stand",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["knees", "hips", "ankles"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, back foot on the seat",
+        "Lower straight down, chest tall",
+        "Drive up through your front foot"
+      ]
+    },
+    {
+      "id": "single-leg-sit-to-stand",
+      "name": "Single-Leg Sit-to-Stand",
+      "pattern": "squat",
+      "tier": 6,
+      "progressionTo": null,
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["knees", "hips", "ankles"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 4, "secondsPerRep": 6 },
+      "cues": [
+        "Sit tall, one foot off the floor",
+        "Stand up on one leg, slow and steady",
+        "Lower back down with control",
+        "A fingertip on the chair is fine"
+      ]
+    },
+    {
+      "id": "glute-bridge",
+      "name": "Glute Bridge",
+      "pattern": "hinge",
+      "tier": 1,
+      "progressionTo": "glute-bridge-march",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Lie on your back, knees bent",
+        "Press through your heels, lift your hips",
+        "Squeeze at the top, lower slowly"
+      ]
+    },
+    {
+      "id": "glute-bridge-hold",
+      "name": "Glute Bridge Hold",
+      "pattern": "hinge",
+      "tier": 1,
+      "progressionTo": "paused-glute-bridge",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "Lift your hips and hold them high",
+        "Squeeze at the top the whole time",
+        "Ribs down, breathe steadily"
+      ]
+    },
+    {
+      "id": "standing-hip-hinge",
+      "name": "Standing Hip Hinge",
+      "pattern": "hinge",
+      "tier": 1,
+      "progressionTo": "hinge-and-reach",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips", "back"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Feet hip-width, soft knees",
+        "Push your hips back, chest forward",
+        "Keep your back long",
+        "Stand tall and squeeze"
+      ]
+    },
+    {
+      "id": "glute-bridge-march",
+      "name": "Glute Bridge March",
+      "pattern": "hinge",
+      "tier": 2,
+      "progressionTo": "single-leg-glute-bridge",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips", "core"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 3 },
+      "cues": [
+        "Hold your bridge high",
+        "Lift one foot, then the other",
+        "Keep your hips level and steady"
+      ]
+    },
+    {
+      "id": "paused-glute-bridge",
+      "name": "Paused Glute Bridge",
+      "pattern": "hinge",
+      "tier": 2,
+      "progressionTo": "feet-elevated-glute-bridge",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 5 },
+      "cues": [
+        "Lift your hips high",
+        "Pause and squeeze at the top",
+        "Lower slowly, quiet and controlled"
+      ]
+    },
+    {
+      "id": "hinge-and-reach",
+      "name": "Hinge and Reach",
+      "pattern": "hinge",
+      "tier": 2,
+      "progressionTo": "single-leg-glute-bridge",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips", "back"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Push your hips back, reach your arms forward",
+        "Back stays long, knees soft",
+        "Stand tall, arms back down"
+      ]
+    },
+    {
+      "id": "single-leg-glute-bridge",
+      "name": "Single-Leg Glute Bridge",
+      "pattern": "hinge",
+      "tier": 3,
+      "progressionTo": "single-leg-hip-hinge",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips", "core"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "One knee bent, the other leg long",
+        "Press through one heel, lift your hips",
+        "Keep your hips level",
+        "Lower with control"
+      ]
+    },
+    {
+      "id": "feet-elevated-glute-bridge",
+      "name": "Feet-Elevated Glute Bridge",
+      "pattern": "hinge",
+      "tier": 3,
+      "progressionTo": "hip-thrust",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, heels on the seat",
+        "Lift your hips high",
+        "Squeeze at the top, lower slowly"
+      ]
+    },
+    {
+      "id": "single-leg-hip-hinge",
+      "name": "Single-Leg Hip Hinge",
+      "pattern": "hinge",
+      "tier": 4,
+      "progressionTo": "single-leg-elevated-bridge",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["hips", "back", "ankles"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 5 },
+      "cues": [
+        "Stand on one leg, soft knee",
+        "Hinge forward, back leg reaches behind you",
+        "Back long, hips square",
+        "Stand tall to finish"
+      ]
+    },
+    {
+      "id": "hip-thrust",
+      "name": "Hip Thrust",
+      "pattern": "hinge",
+      "tier": 4,
+      "progressionTo": "single-leg-elevated-bridge",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, shoulders on the seat",
+        "Feet flat, drive your hips to the ceiling",
+        "Chin tucked, ribs down",
+        "Lower slowly"
+      ]
+    },
+    {
+      "id": "single-leg-elevated-bridge",
+      "name": "Single-Leg Elevated Bridge",
+      "pattern": "hinge",
+      "tier": 5,
+      "progressionTo": "single-leg-hip-thrust",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["hips", "core"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Chair against a wall, one heel on the seat",
+        "Other leg toward the ceiling",
+        "Press through your heel, lift your hips",
+        "Keep your hips square"
+      ]
+    },
+    {
+      "id": "single-leg-hip-thrust",
+      "name": "Single-Leg Hip Thrust",
+      "pattern": "hinge",
+      "tier": 6,
+      "progressionTo": null,
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["hips", "core"],
+      "unilateral": true,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Shoulders on the seat, one foot planted",
+        "Drive your hips up through one heel",
+        "Hips level, lower slowly"
+      ]
+    },
+    {
+      "id": "wall-plank",
+      "name": "Wall Plank",
+      "pattern": "core",
+      "tier": 1,
+      "progressionTo": "incline-plank",
+      "silent": true,
+      "equipment": "wall",
+      "loads": ["core", "shoulders", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "Hands on the wall, walk your feet back",
+        "One straight line from head to heels",
+        "Press the wall away and hold",
+        "Breathe steadily"
+      ]
+    },
+    {
+      "id": "seated-knee-lift",
+      "name": "Seated Knee Lift",
+      "pattern": "core",
+      "tier": 1,
+      "progressionTo": "kneeling-balance-reach",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["core", "hips"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 3 },
+      "cues": [
+        "Sit tall, hands by your hips",
+        "Grow tall as you lift one knee",
+        "Lower quietly, switch sides"
+      ]
+    },
+    {
+      "id": "lying-heel-slide",
+      "name": "Lying Heel Slide",
+      "pattern": "core",
+      "tier": 1,
+      "progressionTo": "lying-heel-tap",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "Lie on your back, knees bent",
+        "Slide one heel away until the leg is long",
+        "Keep your lower back settled",
+        "Slide it back, switch sides"
+      ]
+    },
+    {
+      "id": "incline-plank",
+      "name": "Incline Plank",
+      "pattern": "core",
+      "tier": 2,
+      "progressionTo": "knee-plank",
+      "silent": true,
+      "equipment": "chair",
+      "loads": ["core", "shoulders", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "Chair against a wall, hands on the seat",
+        "Straight line from head to heels",
+        "Hold steady and breathe"
+      ]
+    },
+    {
+      "id": "kneeling-balance-reach",
+      "name": "Kneeling Balance Reach",
+      "pattern": "core",
+      "tier": 2,
+      "progressionTo": "knee-side-plank",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core", "back"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 8, "secondsPerRep": 4 },
+      "cues": [
+        "On hands and knees, back flat",
+        "Reach one arm and the opposite leg long",
+        "Hips stay level",
+        "Return slowly, switch sides"
+      ]
+    },
+    {
+      "id": "lying-heel-tap",
+      "name": "Lying Heel Tap",
+      "pattern": "core",
+      "tier": 2,
+      "progressionTo": "knee-plank",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 4 },
+      "cues": [
+        "On your back, knees above your hips",
+        "Lower one heel to tap the floor",
+        "Lower back stays settled",
+        "Switch sides"
+      ]
+    },
+    {
+      "id": "knee-plank",
+      "name": "Knee Plank",
+      "pattern": "core",
+      "tier": 3,
+      "progressionTo": "full-plank",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core", "shoulders"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 25 },
+      "cues": [
+        "Forearms down, knees down",
+        "One line from knees to head",
+        "Press the floor away and breathe"
+      ]
+    },
+    {
+      "id": "knee-side-plank",
+      "name": "Knee Side Plank",
+      "pattern": "core",
+      "tier": 3,
+      "progressionTo": "side-plank",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core", "shoulders"],
+      "unilateral": true,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "On your side, forearm down, knees bent",
+        "Lift your hips into one line",
+        "Hold and breathe"
+      ]
+    },
+    {
+      "id": "full-plank",
+      "name": "Full Plank",
+      "pattern": "core",
+      "tier": 4,
+      "progressionTo": "plank-shoulder-tap",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core", "shoulders"],
+      "unilateral": false,
+      "timing": { "type": "seconds", "defaultValue": 30 },
+      "cues": [
+        "Forearms down, legs long",
+        "One straight line from head to heels",
+        "Squeeze your middle, breathe steadily"
+      ]
+    },
+    {
+      "id": "side-plank",
+      "name": "Side Plank",
+      "pattern": "core",
+      "tier": 4,
+      "progressionTo": "plank-shoulder-tap",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core", "shoulders"],
+      "unilateral": true,
+      "timing": { "type": "seconds", "defaultValue": 20 },
+      "cues": [
+        "Forearm down, legs long and stacked",
+        "Lift your hips into one line",
+        "Hold steady and breathe"
+      ]
+    },
+    {
+      "id": "plank-shoulder-tap",
+      "name": "Plank Shoulder Tap",
+      "pattern": "core",
+      "tier": 5,
+      "progressionTo": "plank-walkout",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core", "shoulders", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 10, "secondsPerRep": 3 },
+      "cues": [
+        "Hands under shoulders, feet a little wide",
+        "Tap one shoulder, hips stay still",
+        "Slow and quiet, switch sides"
+      ]
+    },
+    {
+      "id": "plank-walkout",
+      "name": "Plank Walkout",
+      "pattern": "core",
+      "tier": 6,
+      "progressionTo": null,
+      "silent": true,
+      "equipment": "none",
+      "loads": ["core", "shoulders", "wrists"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 5, "secondsPerRep": 8 },
+      "cues": [
+        "Stand, hinge, hands to the floor",
+        "Walk your hands out to a plank",
+        "Pause, then walk back and stand",
+        "Keep your hips steady"
+      ]
+    }
+  ]
+}
