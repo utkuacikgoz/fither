@@ -18,6 +18,7 @@ export {
 } from "./generate.js";
 export {
   applySessionResult,
+  calendarDaysBetween,
   milestoneMovement,
   SKILL_MILESTONE_TIERS,
 } from "./apply.js";

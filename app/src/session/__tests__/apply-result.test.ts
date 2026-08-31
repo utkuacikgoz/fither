@@ -28,6 +28,6 @@ describe("applyResult boundary (integration)", () => {
     const { value } = outcome;
     expect(value.history.entries).toHaveLength(1);
     const sessionEvent = value.ledgerEvents.find((e) => e.type === "session");
-    expect(sessionEvent?.points).toBe(session.minutes * POINTS.perSessionMinute);
+    expect(sessionEvent?.points).toBe(POINTS.perSessionByMinutes[session.minutes]);
   });
 });
