@@ -456,7 +456,7 @@
       "name": "Sit-to-Stand",
       "pattern": "squat",
       "tier": 2,
-      "progressionTo": "bodyweight-squat",
+      "progressionTo": "air-squat",
       "silent": true,
       "equipment": "chair",
       "loads": ["knees", "hips"],
@@ -503,8 +503,8 @@
       ]
     },
     {
-      "id": "bodyweight-squat",
-      "name": "Bodyweight Squat",
+      "id": "air-squat",
+      "name": "Air Squat",
       "pattern": "squat",
       "tier": 3,
       "progressionTo": "split-squat",
