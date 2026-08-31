@@ -41,8 +41,8 @@ possible; one sneaky dependency breaks the whole validation story.
 
 ## Where things live
 
-- **State**: one store layer in `app/src/state/` (zustand — PROPOSED
-  default, ADR if changed). Screens read from hooks; no component-local
+- **State**: one store layer in `app/src/state/` (zustand — decided,
+  ADR-0005). Screens read from hooks; no component-local
   copies of engine state. Persistence via the store layer only, and it
   must work offline — airplane mode is a hard product rule.
 - **Strings**: every user-facing string in `app/src/copy/strings.ts`,
