@@ -10,6 +10,14 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { getBilling, type PlanId, type PurchaseRecord } from "../monetization/billing";
 
+/**
+ * What a restore attempt meant, in the screen's terms: "restored" granted
+ * an entitlement; "empty" completed fine but found no purchase on this
+ * account (not an error — she may simply be new); "failed" is an actual
+ * failure worth retrying.
+ */
+export type RestoreResult = "restored" | "empty" | "failed";
+
 interface EntitlementStoreState {
   hydrated: boolean;
   hydrationFailed: boolean;
@@ -25,8 +33,8 @@ interface EntitlementStoreState {
   markSessionCompleted: (date: string) => void;
   /** Buy through the billing port and persist the grant. */
   purchasePlan: (plan: PlanId) => Promise<boolean>;
-  /** Restore through the billing port; true iff a purchase came back. */
-  restorePurchases: () => Promise<boolean>;
+  /** Restore through the billing port; grants only on "restored". */
+  restorePurchases: () => Promise<RestoreResult>;
   /**
    * DEV-ONLY reset for testing paywall flows: clears the app-side trial
    * and purchase. Deliberately does NOT touch dev-billing's fake receipt,
@@ -58,9 +66,11 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
 
       restorePurchases: async () => {
         const outcome = await getBilling().restore();
-        if (!outcome.ok) return false;
+        if (!outcome.ok) {
+          return outcome.reason === "nothingToRestore" ? "empty" : "failed";
+        }
         set({ purchase: outcome.purchase });
-        return true;
+        return "restored";
       },
 
       resetForDev: () => set({ trialStartDate: null, purchase: null }),

@@ -77,15 +77,23 @@ describe("entitlement store", () => {
     useEntitlementStore.getState().resetForDev();
 
     const restored = await useEntitlementStore.getState().restorePurchases();
-    expect(restored).toBe(true);
+    expect(restored).toBe("restored");
     expect(useEntitlementStore.getState().purchase).toMatchObject({
       plan: "annual",
     });
   });
 
-  it("restore with nothing to restore grants nothing", async () => {
+  it("restore with nothing to restore says 'empty', not 'failed', and grants nothing", async () => {
     const restored = await useEntitlementStore.getState().restorePurchases();
-    expect(restored).toBe(false);
+    expect(restored).toBe("empty");
+    expect(useEntitlementStore.getState().purchase).toBeNull();
+  });
+
+  it("restore reports an actual failure as 'failed'", async () => {
+    // The dev port's failure path: the receipt store's hydration failed.
+    useDevReceiptStore.setState({ hydrated: false, hydrationFailed: true });
+    const restored = await useEntitlementStore.getState().restorePurchases();
+    expect(restored).toBe("failed");
     expect(useEntitlementStore.getState().purchase).toBeNull();
   });
 
@@ -97,7 +105,7 @@ describe("entitlement store", () => {
       hydrated: true,
       receipt: { plan: "annual", date: "2026-08-30" },
     });
-    await expect(pending).resolves.toBe(true);
+    await expect(pending).resolves.toBe("restored");
     expect(useEntitlementStore.getState().purchase).toMatchObject({
       plan: "annual",
     });

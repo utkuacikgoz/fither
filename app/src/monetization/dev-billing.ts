@@ -54,9 +54,12 @@ export const useDevReceiptStore = create<DevReceiptState>()(
   ),
 );
 
-/** Resolves once the receipt store has hydrated (restore may run early). */
+/** Resolves once the receipt store has settled (restore may run early). */
 function receiptReady(): Promise<void> {
-  if (useDevReceiptStore.getState().hydrated) return Promise.resolve();
+  const { hydrated, hydrationFailed } = useDevReceiptStore.getState();
+  // Settled either way — a store already in the failed state will never
+  // emit another change, so waiting on the subscription would hang.
+  if (hydrated || hydrationFailed) return Promise.resolve();
   return new Promise((resolve) => {
     const unsubscribe = useDevReceiptStore.subscribe((state) => {
       if (state.hydrated || state.hydrationFailed) {

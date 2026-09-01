@@ -71,8 +71,13 @@ failures.
 1. **GATE 2 — owner's physical test.** `pnpm install && pnpm ios` from a
    normal checkout, then a real 10-minute workout. Still never launched
    on an iOS simulator in the build environment.
-2. **GATE 3 prep** — onboarding exists after item 1; five real users,
-   under 60 seconds to first movement.
+2. **GATE 3 — ready to run** (docs/gate-3-protocol.md): five real
+   users, under 60 seconds to first movement. The app measures
+   time-to-first-movement on device (first screen mount → first work
+   phase; dev readout via long-press on the prompt's day label), a
+   dev-only full first-run reset lets testers share one phone, and the
+   expired-trial paywall + restore-empty copy are wired. Needs only
+   the five women.
 3. **Exercise instruction media** — after Gate 2 confirms pacing.
    Authored Rive/3D clips, reduced-motion fallbacks, never a network
    fetch on the workout path.

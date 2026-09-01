@@ -159,12 +159,16 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     const screen = render(<LaunchScreen {...callbacks()} />);
     expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
+    expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
   });
 
-  it("an expired trial swaps new-session generation for the paywall", () => {
+  it("an expired trial swaps new-session generation for the paywall, in its expired voice", () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
     const screen = render(<LaunchScreen {...callbacks()} />);
-    expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
+    // Never the pre-trial "free week ahead" letter once the week is spent.
+    expect(screen.queryByText(strings.paywall.headline)).toBeNull();
+    expect(screen.queryByText(strings.paywall.cta)).toBeNull();
     expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
     // Her record is untouched — gating blocks nothing already earned.
     expect(useProfileStore.getState().history.entries).toHaveLength(1);
@@ -186,6 +190,7 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     const screen = render(<LaunchScreen {...cbs} />);
     expect(screen.getByText(strings.resume.headline)).toBeTruthy();
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
+    expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
     fireEvent.press(screen.getByTestId("resume-continue"));
     expect(cbs.onResumeSession).toHaveBeenCalledTimes(1);
   });
@@ -193,7 +198,7 @@ describe("entitlement gating (ADR-0009 §3)", () => {
   it("buying on the paywall unlocks for real: the prompt appears and the grant persists", async () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
     const screen = render(<LaunchScreen {...callbacks()} />);
-    expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
 
     fireEvent.press(screen.getByTestId("paywall-purchase"));
     await waitFor(() =>

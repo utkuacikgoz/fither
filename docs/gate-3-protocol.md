@@ -28,9 +28,13 @@ run. No developers.
 
 ## Setup, per tester
 
-1. Fresh state: a clean install on the test phone, or the dev reset
-   (recordings + entitlement + onboarding) so the app behaves as a first
-   run. Verify the app opens to the welcome screen before handing it over.
+1. Fresh state, exact procedure on a shared dev-build phone: long-press
+   the daily prompt's day label → "[dev] Reset first-run state" →
+   "[dev] Confirm: wipe everything" → force-quit the app IMMEDIATELY
+   (any further activity re-persists state). The next cold open starts
+   from nothing: onboarding shows, and its timing records as a true
+   first run. (A clean reinstall works too.) Verify the welcome screen
+   appears before handing the phone over.
 2. Do Not Disturb on the phone; nothing else running.
 3. Say only this, verbatim: **"This is a workout app. Use it however
    feels natural."** Then hand over the phone and say nothing else.

@@ -1,10 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { firstMovementTracker } from "../../lib/first-movement-timer";
 import { applyResult } from "../../session/apply-result";
 import { createSession } from "../../session/create-session";
 import { createPlayer, reduce } from "../../session/player-machine";
 import { useActiveSessionStore } from "../active-session-store";
 import { useEntitlementStore } from "../entitlement-store";
+import { useFirstMovementStore } from "../first-movement-store";
 import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
@@ -46,6 +48,14 @@ beforeEach(() => {
     hydrationFailed: false,
   });
   useSessionStore.getState().resetSession();
+  // Gate 3 instrumentation baseline: tracker disarmed (no t0), no runs.
+  // Suites that don't mark a launch exercise the un-instrumented path.
+  firstMovementTracker.reset();
+  useFirstMovementStore.setState({
+    runs: [],
+    hydrated: true,
+    hydrationFailed: false,
+  });
   mockedCreate.mockReturnValue({
     ok: true,
     value: { session: fixtureSession, playerBlocks: fixturePlayerBlocks },
@@ -338,6 +348,118 @@ describe("finishSessionEarly", () => {
       session: fixtureSession,
       outcomes: ["completed", "skipped"],
     });
+  });
+});
+
+describe("Gate 3 capture at the dispatch boundary", () => {
+  // No real clocks: t0 is injected via the tracker, t1 via a frozen
+  // Date.now — the only clock the wiring reads, and only on capture.
+  const T0 = 1_000;
+  const T1 = 43_500;
+
+  beforeEach(() => {
+    jest.spyOn(Date, "now").mockReturnValue(T1);
+    firstMovementTracker.markLaunch(T0);
+    firstMovementTracker.markFirstRun(true);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks(); // un-freeze Date.now for the other suites
+  });
+
+  function recordedRuns() {
+    return useFirstMovementStore.getState().runs;
+  }
+
+  it("records exactly one labelled run, at the first work entry only", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    expect(recordedRuns()).toHaveLength(0); // blockIntro is not moving
+
+    useSessionStore.getState().dispatchPlayer({ type: "begin" });
+    expect(recordedRuns()).toEqual([
+      { t0: T0, t1: T1, deltaMs: T1 - T0, firstRun: true },
+    ]);
+
+    // Walk into rest and back into work: still one run.
+    useSessionStore.getState().dispatchPlayer({ type: "advance" }); // set 1 -> rest
+    useSessionStore.getState().dispatchPlayer({ type: "advance" }); // rest -> set 2
+    expect(recordedRuns()).toHaveLength(1);
+  });
+
+  it("never writes on countdown ticks after the capture", () => {
+    // One hold block so work actually counts down.
+    mockedCreate.mockReturnValue({
+      ok: true,
+      value: {
+        session: fixtureSession,
+        playerBlocks: [
+          {
+            movementId: "plank",
+            name: "Plank",
+            cue: "Breathe steadily.",
+            sets: 1,
+            amount: 5,
+            restSeconds: 0,
+            timingType: "seconds",
+          },
+        ],
+      },
+    });
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().dispatchPlayer({ type: "begin" });
+    const afterCapture = recordedRuns();
+    expect(afterCapture).toHaveLength(1);
+
+    const timingWrites = () =>
+      jest
+        .mocked(AsyncStorage.setItem)
+        .mock.calls.filter(([key]) => key === "fither/first-movement-v1").length;
+    const writesAfterCapture = timingWrites();
+
+    for (let i = 0; i < 4; i += 1) {
+      useSessionStore.getState().dispatchPlayer({ type: "tick" });
+    }
+    // Ticks change nothing: same state object, no storage writes.
+    expect(recordedRuns()).toBe(afterCapture);
+    expect(timingWrites()).toBe(writesAfterCapture);
+  });
+
+  it("labels a non-first-run launch as such", () => {
+    firstMovementTracker.reset();
+    firstMovementTracker.markLaunch(T0);
+    firstMovementTracker.markFirstRun(false);
+
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().dispatchPlayer({ type: "begin" });
+    expect(recordedRuns()).toEqual([
+      { t0: T0, t1: T1, deltaMs: T1 - T0, firstRun: false },
+    ]);
+  });
+
+  it("records nothing when the session is skipped through without moving", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().dispatchPlayer({ type: "skipBlock" });
+    useSessionStore.getState().dispatchPlayer({ type: "skipBlock" });
+    expect(useSessionStore.getState().player?.phase).toEqual({ kind: "done" });
+    expect(recordedRuns()).toHaveLength(0);
+  });
+
+  it("a restored mid-session launch captures at its next work entry", () => {
+    // She relaunched mid-workout: the snapshot restores directly into a
+    // work phase without a dispatch, so the capture lands on the first
+    // dispatch that finds the machine in work again.
+    let player = createPlayer(fixturePlayerBlocks);
+    player = reduce(player, { type: "begin" }); // work, set 1 (reps)
+    useActiveSessionStore.setState({
+      snapshot: { prompt: fixturePrompt, session: fixtureSession, player },
+    });
+    useSessionStore.getState().restoreActiveSession(fixtureSession.date);
+    expect(recordedRuns()).toHaveLength(0); // restore alone is not a dispatch
+
+    useSessionStore.getState().dispatchPlayer({ type: "advance" }); // set 1 -> rest
+    expect(recordedRuns()).toHaveLength(0);
+    useSessionStore.getState().dispatchPlayer({ type: "advance" }); // rest -> set 2
+    expect(recordedRuns()).toHaveLength(1);
   });
 });
 

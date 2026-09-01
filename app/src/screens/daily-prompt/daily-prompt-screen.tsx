@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { BodyArea, DailyPrompt, Energy, SessionMinutes } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
@@ -17,6 +17,7 @@ import { useEntitlementStore } from "../../state/entitlement-store";
 import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useSettingsStore } from "../../state/settings-store";
+import { FirstMovementReadout } from "../dev-timing/first-movement-readout";
 
 // The four decided questions (ADR-0003), one at a time. Four taps, no
 // typing, under 15 seconds. "All good" is the one-tap soreness default.
@@ -56,6 +57,7 @@ export function DailyPromptScreen({
   const entitlementFailed = useEntitlementStore((s) => s.hydrationFailed);
 
   const [step, setStep] = useState<Step>("time");
+  const [devTimingVisible, setDevTimingVisible] = useState(false);
   const [minutes, setMinutes] = useState<SessionMinutes | null>(null);
   const [energy, setEnergy] = useState<Energy | null>(null);
   const [quiet, setQuiet] = useState<boolean | null>(null);
@@ -130,15 +132,37 @@ export function DailyPromptScreen({
     );
   }
 
+  // Gate 3 dev readout (dev-timing/first-movement-readout.tsx). Overlay
+  // state, not navigation: the prompt stays mounted, her answers survive.
+  if (__DEV__ && devTimingVisible) {
+    return <FirstMovementReadout onClose={() => setDevTimingVisible(false)} />;
+  }
+
   const handoffVisible = showHandoff && step === "time";
+
+  // In __DEV__ the day label doubles as the invisible entry to the Gate 3
+  // timing readout — a long-press, so no tap in the real flow can hit it.
+  // Release builds render the exact same tree as before: no wrapper.
+  const dayLabel = (
+    <AppText variant="caption" style={styles.dayLabel}>
+      {handoffVisible
+        ? strings.onboarding.handoff.eyebrow
+        : strings.prompt.dayLabel}
+    </AppText>
+  );
 
   return (
     <Screen>
-      <AppText variant="caption" style={styles.dayLabel}>
-        {handoffVisible
-          ? strings.onboarding.handoff.eyebrow
-          : strings.prompt.dayLabel}
-      </AppText>
+      {__DEV__ ? (
+        <Pressable
+          testID="dev-timing-entry"
+          onLongPress={() => setDevTimingVisible(true)}
+        >
+          {dayLabel}
+        </Pressable>
+      ) : (
+        dayLabel
+      )}
       {handoffVisible && (
         <AppText variant="bodySoft" style={styles.handoffLine}>
           {strings.onboarding.handoff.line}

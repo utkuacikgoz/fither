@@ -15,10 +15,19 @@ async function flushPersistence() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+// A trial start safely in the past: expired on any real clock. The
+// pre-trial state uses trialStartDate null (no session ever completed),
+// so neither depends on the test machine's date.
+const LONG_EXPIRED_TRIAL_START = "2000-01-01";
+
+function seedExpiredTrial() {
+  useEntitlementStore.setState({ trialStartDate: LONG_EXPIRED_TRIAL_START });
+}
+
 beforeEach(async () => {
   await AsyncStorage.clear();
   useEntitlementStore.setState({
-    trialStartDate: "2026-08-01",
+    trialStartDate: null,
     purchase: null,
     hydrated: true,
     hydrationFailed: false,
@@ -46,6 +55,46 @@ describe("PaywallScreen", () => {
     expect(screen.getByText(strings.paywall.legal.autoRenew)).toBeTruthy();
     expect(screen.getByText(strings.paywall.legal.termsLabel)).toBeTruthy();
     expect(screen.getByText(strings.paywall.legal.privacyLabel)).toBeTruthy();
+  });
+
+  it("pre-expiry, keeps the pre-trial copy and never the expired letter", () => {
+    const screen = render(<PaywallScreen />);
+    expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
+    expect(screen.queryByText(strings.paywall.expired.letter)).toBeNull();
+    expect(screen.queryByText(strings.paywall.expired.trialLine)).toBeNull();
+    expect(screen.queryByText(strings.paywall.expired.cta)).toBeNull();
+  });
+
+  it("an expired trial swaps in the expired letter — no 'free week ahead' promise", () => {
+    seedExpiredTrial();
+    const screen = render(<PaywallScreen />);
+
+    expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.letter)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.trialLine)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.cta)).toBeTruthy();
+    expect(
+      screen.getByText(
+        strings.paywall.expired.afterTrialNote(strings.paywall.plans.annual.price),
+      ),
+    ).toBeTruthy();
+
+    // None of the pre-trial free-week copy survives into the expired state.
+    expect(screen.queryByText(strings.paywall.headline)).toBeNull();
+    expect(screen.queryByText(strings.paywall.letter)).toBeNull();
+    expect(screen.queryByText(strings.paywall.trialLine)).toBeNull();
+    expect(screen.queryByText(strings.paywall.cta)).toBeNull();
+    expect(
+      screen.queryByText(
+        strings.paywall.afterTrialNote(strings.paywall.plans.annual.price),
+      ),
+    ).toBeNull();
+
+    // Plans, restore and disclosure are shared, state-independent.
+    expect(screen.getByText(strings.paywall.plans.annual.label)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.plans.monthly.label)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.restore)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.legal.autoRenew)).toBeTruthy();
   });
 
   it("leads with annual: preselected, listed first, priced in the trial note", () => {
@@ -111,14 +160,28 @@ describe("PaywallScreen", () => {
       }),
     );
     expect(screen.queryByTestId("paywall-restore-error")).toBeNull();
+    expect(screen.queryByTestId("paywall-restore-empty")).toBeNull();
   });
 
-  it("restore with nothing to restore shows the calm error and grants nothing", async () => {
+  it("restore with nothing to restore says so calmly — not the error — and grants nothing", async () => {
+    const screen = render(<PaywallScreen />);
+    fireEvent.press(screen.getByTestId("paywall-restore"));
+    await waitFor(() =>
+      expect(screen.getByText(strings.paywall.restoreEmpty)).toBeTruthy(),
+    );
+    expect(screen.queryByText(strings.paywall.restoreError)).toBeNull();
+    expect(useEntitlementStore.getState().purchase).toBeNull();
+  });
+
+  it("an actual restore failure shows the retry error, not the empty notice", async () => {
+    // The dev port's failure path: the receipt store's hydration failed.
+    useDevReceiptStore.setState({ hydrated: false, hydrationFailed: true });
     const screen = render(<PaywallScreen />);
     fireEvent.press(screen.getByTestId("paywall-restore"));
     await waitFor(() =>
       expect(screen.getByText(strings.paywall.restoreError)).toBeTruthy(),
     );
+    expect(screen.queryByText(strings.paywall.restoreEmpty)).toBeNull();
     expect(useEntitlementStore.getState().purchase).toBeNull();
   });
 
@@ -134,15 +197,28 @@ describe("PaywallScreen", () => {
     expect(useEntitlementStore.getState().trialStartDate).toBeNull();
   });
 
-  it("renders no user-facing text outside strings.ts", () => {
+  it("renders no user-facing text outside strings.ts, in either state", () => {
     const allowed = collectStringValues(strings);
     // Parameterised and dev-only values are allowed explicitly.
     allowed.add(strings.paywall.afterTrialNote(strings.paywall.plans.annual.price));
     allowed.add(strings.paywall.afterTrialNote(strings.paywall.plans.monthly.price));
+    allowed.add(
+      strings.paywall.expired.afterTrialNote(strings.paywall.plans.annual.price),
+    );
+    allowed.add(
+      strings.paywall.expired.afterTrialNote(strings.paywall.plans.monthly.price),
+    );
     allowed.add(DEV_RESET_LABEL); // __DEV__-only, never shipped to users
 
-    const screen = render(<PaywallScreen />);
-    for (const leaf of renderedTextLeaves(screen.toJSON())) {
+    const preTrial = render(<PaywallScreen />);
+    for (const leaf of renderedTextLeaves(preTrial.toJSON())) {
+      expect(allowed.has(leaf)).toBe(true);
+    }
+    preTrial.unmount();
+
+    seedExpiredTrial();
+    const expired = render(<PaywallScreen />);
+    for (const leaf of renderedTextLeaves(expired.toJSON())) {
       expect(allowed.has(leaf)).toBe(true);
     }
   });
