@@ -144,6 +144,25 @@ export const strings = {
       line: "Now, today. Four taps and you're moving.",
     },
   },
+  // Sign-in (2026-09-01, dev-mode only for now — nothing connects yet).
+  // Guest is a full peer of the provider buttons: she is never
+  // second-class for skipping an account. Apple/Google wordings are the
+  // platform-sanctioned conventions — do not restyle them.
+  auth: {
+    // The decided brand tagline (ADR-0006), reused verbatim — no rival
+    // slogan invented for this screen.
+    welcome: "Strength that fits your life.",
+    apple: "Continue with Apple",
+    google: "Continue with Google",
+    guest: "Continue without an account",
+    guestNote: "Your training lives on this phone either way.",
+    // Deliberately promises nothing: sync does not exist, so the
+    // move-to-a-new-phone benefit line must WAIT until it does. This is
+    // the whole honest truth of an account today. Revisit when sync
+    // ships — flagged in the copy report.
+    accountNote: "For now, an account simply keeps your place here. Nothing more yet.",
+    error: "Couldn't sign you in. Try again in a minute, or continue without an account.",
+  },
   // Paywall — docs/copy/draft-strings.md §3, wired verbatim. An honest
   // letter: annual led, plain prices, no countdowns, no strikethroughs.
   paywall: {
@@ -237,6 +256,74 @@ export const strings = {
     heading: "New skill",
     note: "It counts.",
     continueLabel: "Continue",
+  },
+  // Share — the unlock screen's share sheet and card (2026-09-01).
+  // Gamification rules: the card states the skill, never anything about
+  // the body's appearance. The sheet text is HERS — she is sending it,
+  // so it speaks in first person, not the app bragging on her behalf.
+  share: {
+    action: "Share this",
+    // Under 140 characters with any skill name from the library. No
+    // link and no store ask — there is no listing yet, and begging
+    // isn't the voice anyway. FITHER named once, at the end, quietly.
+    message: (skill: string) =>
+      `${skill} — my body can do this now. Trained with FITHER.`,
+    card: {
+      // Rendered beneath the skill name. Capability only; "this body"
+      // keeps it neutral so the card reads true from any viewer's side.
+      line: "A new thing this body can do.",
+    },
+  },
+  // Settings (2026-09-01). The restore ACTION and its result messages
+  // already live under paywall.restore / restoreError / restoreEmpty —
+  // the settings screen reuses those; only the section heading is new
+  // here. Do not duplicate them.
+  settings: {
+    title: "Settings",
+    // Quiet footer line — the brand name carries it; "Version" would
+    // just be furniture. e.g. "FITHER 1.2.0".
+    version: (v: string) => `FITHER ${v}`,
+    // Persistent work-arounds, same body areas as the daily prompt
+    // (reuse prompt.soreness.areas for the labels). No medical framing,
+    // no caution-speak: this is a preference she sets, not a condition
+    // she declares.
+    avoid: {
+      title: "Always work around",
+      body: "Anything you pick here is quietly built into every day's plan. Change it whenever you like.",
+    },
+    restore: {
+      title: "Subscription",
+    },
+    // Dev builds only, but still in-voice: plain, no jargon-wink.
+    dev: {
+      title: "Developer tools",
+    },
+  },
+  // Progress screen (2026-09-01). Titled "Progress", not "Profile":
+  // this screen shows what her body can do — pattern tiers, named
+  // skills, points — not who she is. "Profile" invites identity/body
+  // framing the product refuses.
+  profile: {
+    title: "Progress",
+    patterns: {
+      title: "Patterns",
+    },
+    skills: {
+      title: "Skills",
+      // Forward-looking, zero guilt: says where skills come from,
+      // never when, and never what's absent. "counts" echoes
+      // unlock.note ("It counts.").
+      empty: "Named skills land here as you reach new tiers. Every session counts toward the first.",
+    },
+    points: {
+      // A record of work done, never a balance: points buy nothing and
+      // gate nothing (gamification.md), so no "balance"/"spend" shape.
+      // finish.pointsLabel ("points") stays the in-session unit label;
+      // this is the full ledger line.
+      total: (points: number) => `${points} points earned`,
+    },
+    // Six tiers per pattern is fixed product truth (fither-domain).
+    tier: (tier: number) => `Tier ${tier} of 6`,
   },
   errors: {
     // Shown while the session engine or movement library is unavailable
