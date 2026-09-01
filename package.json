@@ -7,5 +7,11 @@
     "sim": "pnpm --filter @fither/engine sim",
     "ios": "pnpm --filter fither-app ios"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "overrides": {
+      "react-native-worklets": "0.10.1",
+      "react-native-reanimated": "4.5.1"
+    }
+  }
 }
