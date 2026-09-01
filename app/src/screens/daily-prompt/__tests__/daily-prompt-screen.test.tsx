@@ -13,6 +13,10 @@ import {
   fixturePlayerBlocks,
   fixtureSession,
 } from "../../../test-utils/fixtures";
+import {
+  DEV_TIMING_TITLE,
+} from "../../dev-timing/first-movement-readout";
+import { useFirstMovementStore } from "../../../state/first-movement-store";
 import { DailyPromptScreen } from "../daily-prompt-screen";
 
 jest.mock("../../../session/create-session", () => ({ createSession: jest.fn() }));
@@ -177,6 +181,31 @@ describe("DailyPromptScreen", () => {
       expect.anything(),
       expect.any(Number),
     );
+  });
+
+  it("dev-only timing readout: long-press entry, prompt state survives", () => {
+    // Jest runs with __DEV__ true, so the invisible long-press target on
+    // the day label is rendered here — in release it does not exist.
+    useFirstMovementStore.setState({
+      runs: [],
+      hydrated: true,
+      hydrationFailed: false,
+    });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    // A plain tap does nothing — only a long-press opens the readout.
+    fireEvent.press(screen.getByTestId("dev-timing-entry"));
+    expect(screen.queryByText(DEV_TIMING_TITLE)).toBeNull();
+
+    // Answer one question first: the overlay must not lose her place.
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent(screen.getByTestId("dev-timing-entry"), "longPress");
+    expect(screen.getByText(DEV_TIMING_TITLE)).toBeTruthy();
+    expect(screen.queryByText(strings.prompt.energy.question)).toBeNull();
+
+    fireEvent.press(screen.getByTestId("dev-timing-close"));
+    expect(screen.queryByText(DEV_TIMING_TITLE)).toBeNull();
+    expect(screen.getByText(strings.prompt.energy.question)).toBeTruthy();
   });
 
   it("shows the onboarding handoff atop the first question only", () => {

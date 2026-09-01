@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { todayIso } from "../../lib/dates";
+import { firstMovementTracker } from "../../lib/first-movement-timer";
 import { entitlementStatus, isEntitled } from "../../monetization/entitlement";
 import { useActiveSessionStore } from "../../state/active-session-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
@@ -63,16 +64,35 @@ export function LaunchScreen({
     activeHydrated &&
     entitlementHydrated;
 
+  // Gate 3 t0: the launch surface's first mount this JS lifetime. Marked
+  // in a mount effect (first commit; native pre-JS launch time is not
+  // observable from here) and idempotent, so remounts within one launch
+  // never move it. Reading the clock once is the entire cost.
+  useEffect(() => {
+    firstMovementTracker.markLaunch(Date.now());
+  }, []);
+
   useEffect(() => {
     if (!hydrated || decided.current) return;
     decided.current = true;
+    // Gate 3 first-run flag, stamped the moment hydration reveals it:
+    // same first-ever-open predicate as the onboarding branch below. The
+    // flag describes the state at launch — completing onboarding later in
+    // this same launch keeps it a first run.
+    firstMovementTracker.markFirstRun(!onboardingCompleted && !hasHistory);
     const result = restoreActiveSession(todayIso());
     if (result === "completedUnsaved") {
       onResumeFinished();
     } else if (result === "inProgress") {
       setOfferResume(true);
     }
-  }, [hydrated, restoreActiveSession, onResumeFinished]);
+  }, [
+    hydrated,
+    restoreActiveSession,
+    onResumeFinished,
+    onboardingCompleted,
+    hasHistory,
+  ]);
 
   if (offerResume) {
     return (

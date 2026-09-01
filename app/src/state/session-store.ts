@@ -1,6 +1,7 @@
 import type { ApplyResult, DailyPrompt, Session } from "@fither/engine";
 import { create } from "zustand";
 
+import { firstMovementTracker } from "../lib/first-movement-timer";
 import { applyResult } from "../session/apply-result";
 import { createSession, type CreateSessionResult } from "../session/create-session";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../session/player-machine";
 import { useActiveSessionStore } from "./active-session-store";
 import { useEntitlementStore } from "./entitlement-store";
+import { useFirstMovementStore } from "./first-movement-store";
 import { useProfileStore } from "./profile-store";
 import { useLedgerStore } from "./ledger-store";
 import { useSettingsStore } from "./settings-store";
@@ -105,6 +107,19 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     if (!player) return;
     const next = reduce(player, event);
     set({ player: next });
+    // Gate 3 t1, captured at the dispatch boundary (never in the player's
+    // render path): the first time this launch lands in a "work" phase —
+    // intro and rest don't count as moving. The tracker fires at most
+    // once per launch, so the one storage write below happens on that
+    // capture only; every later dispatch, ticks included, is a no-op that
+    // never even reads the clock.
+    const firstWorkRun = firstMovementTracker.captureWorkEntry(
+      next.phase.kind,
+      () => Date.now(),
+    );
+    if (firstWorkRun) {
+      useFirstMovementStore.getState().record(firstWorkRun);
+    }
     // Persist the crash-recovery snapshot only when the machine actually
     // moved — phase transitions and captured outcomes. Countdown ticks
     // arrive once per second; writing AsyncStorage on every tick would

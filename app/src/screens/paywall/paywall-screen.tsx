@@ -7,7 +7,9 @@ import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
 import { spacing } from "../../design/tokens";
+import { todayIso } from "../../lib/dates";
 import { getBilling, type PlanId } from "../../monetization/billing";
+import { entitlementStatus } from "../../monetization/entitlement";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { PlanRow } from "./plan-row";
 
@@ -17,6 +19,15 @@ import { PlanRow } from "./plan-row";
 // through the billing port; the screen never talks to a provider
 // directly. Unlocking is store-driven — the launch surface re-renders
 // into the daily prompt the moment the grant lands.
+//
+// Two copy states, decided by the app-layer entitlement policy (never
+// re-derived here): an expired trial gets the paywall.expired.* letter —
+// no "free week ahead" promise she can no longer have — while every
+// other state (pre-expiry, e.g. reached via future settings) keeps the
+// pre-trial keys.
+
+/** After a restore attempt: nothing to say, no purchase found, or failed. */
+type RestoreNotice = "none" | "empty" | "failed";
 
 // Developer-facing only, shown solely in __DEV__ builds — deliberately
 // not user-facing copy, so it does not live in strings.ts. Exported for
@@ -27,11 +38,27 @@ export function PaywallScreen() {
   const purchasePlan = useEntitlementStore((s) => s.purchasePlan);
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
   const resetForDev = useEntitlementStore((s) => s.resetForDev);
+  const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
+  const purchase = useEntitlementStore((s) => s.purchase);
 
   const offerings = getBilling().getOfferings();
   const [selected, setSelected] = useState<PlanId>("annual");
   const [busy, setBusy] = useState(false);
-  const [restoreFailed, setRestoreFailed] = useState(false);
+  const [restoreNotice, setRestoreNotice] = useState<RestoreNotice>("none");
+
+  // The expired gate state, from the same policy the launch gate uses.
+  const expired =
+    entitlementStatus({ trialStartDate, purchase, today: todayIso() }) ===
+    "trialExpired";
+  const copy = expired
+    ? strings.paywall.expired
+    : {
+        headline: strings.paywall.headline,
+        letter: strings.paywall.letter,
+        trialLine: strings.paywall.trialLine,
+        cta: strings.paywall.cta,
+        afterTrialNote: strings.paywall.afterTrialNote,
+      };
 
   const selectedOffering =
     offerings.find((o) => o.plan === selected) ?? offerings[0];
@@ -39,7 +66,7 @@ export function PaywallScreen() {
   const buy = async () => {
     if (busy) return;
     setBusy(true);
-    setRestoreFailed(false);
+    setRestoreNotice("none");
     await purchasePlan(selected);
     setBusy(false);
   };
@@ -47,8 +74,8 @@ export function PaywallScreen() {
   const restore = async () => {
     if (busy) return;
     setBusy(true);
-    const restored = await restorePurchases();
-    setRestoreFailed(!restored);
+    const result = await restorePurchases();
+    setRestoreNotice(result === "restored" ? "none" : result);
     setBusy(false);
   };
 
@@ -59,13 +86,13 @@ export function PaywallScreen() {
         showsVerticalScrollIndicator={false}
       >
         <AppText variant="title" style={styles.headline}>
-          {strings.paywall.headline}
+          {copy.headline}
         </AppText>
         <AppText variant="body" style={styles.letter}>
-          {strings.paywall.letter}
+          {copy.letter}
         </AppText>
         <AppText variant="bodySoft" style={styles.trialLine}>
-          {strings.paywall.trialLine}
+          {copy.trialLine}
         </AppText>
 
         <View style={styles.plans}>
@@ -83,14 +110,14 @@ export function PaywallScreen() {
 
         <PrimaryButton
           testID="paywall-purchase"
-          label={strings.paywall.cta}
+          label={copy.cta}
           onPress={() => {
             void buy();
           }}
         />
         {selectedOffering ? (
           <AppText variant="caption" style={styles.afterTrial}>
-            {strings.paywall.afterTrialNote(selectedOffering.priceLabel)}
+            {copy.afterTrialNote(selectedOffering.priceLabel)}
           </AppText>
         ) : null}
 
@@ -102,13 +129,22 @@ export function PaywallScreen() {
               void restore();
             }}
           />
-          {restoreFailed && (
+          {restoreNotice === "failed" && (
             <AppText
               variant="bodySoft"
               style={styles.restoreError}
               testID="paywall-restore-error"
             >
               {strings.paywall.restoreError}
+            </AppText>
+          )}
+          {restoreNotice === "empty" && (
+            <AppText
+              variant="bodySoft"
+              style={styles.restoreError}
+              testID="paywall-restore-empty"
+            >
+              {strings.paywall.restoreEmpty}
             </AppText>
           )}
         </View>
