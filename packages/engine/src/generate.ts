@@ -8,9 +8,9 @@ import type {
   Profile,
   Session,
   SessionBlock,
-} from "./types.js";
-import { createRng } from "./rng.js";
-import { PATTERNS } from "./profile.js";
+} from "./types";
+import { createRng } from "./rng";
+import { PATTERNS } from "./profile";
 
 // ---------- Prescription constants (PROPOSED defaults, engine-spec.md) ----------
 

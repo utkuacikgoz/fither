@@ -2,6 +2,8 @@
   "name": "fither",
   "private": true,
   "scripts": {
+    "bundle:ios": "pnpm --filter fither-app bundle:ios",
+    "release:check": "node scripts/validate-release-config.mjs",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "sim": "pnpm --filter @fither/engine sim",
