@@ -6,7 +6,7 @@ do, and how done each piece is. Sources: `.claude/skills/fither-domain/`
 `docs/launch-checklist.md`, and the ADRs in `docs/adr/`. If this document
 and those files ever disagree, those files win — fix this one.
 
-Status snapshot date: 1 September 2026. "Built" means it exists in the
+Status snapshot date: 1 September 2026 (evening refresh). "Built" means it exists in the
 repo and passes its own checks today. "In progress" means working code
 exists but its reality gate (section 4) has not been passed. "Planned"
 means it is committed for v1.0 but not started. Gate 1 (simulation) has
@@ -78,16 +78,16 @@ works in airplane mode.
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| First-run onboarding | The shortest possible path from install to moving: whatever setup is truly needed, then straight into the daily prompt. | Gate 3: five real users must reach their first movement in under 60 seconds from opening the app; if not, questions get cut (build-system). Every word passes fither-voice. Copy drafted and keyed in docs/copy/draft-strings.md; screens not built. | Planned (copy drafted) |
-| Notification permission ask | Asked in context — after the first completed session, when the value is obvious — never at first open. | Notifications are an invitation, never a nag; they never reference absence (launch checklist, fither-voice). Copy drafted. | Planned (copy drafted) |
+| First-run onboarding | Three screens, one decision each — welcome, equipment, anything-to-avoid — then straight into the daily prompt. Runs once, persisted. | Gate 3: five real users must reach their first movement in under 60 seconds; the app measures the number itself (time-to-first-movement instrumentation, dev readout, per-tester reset). Protocol: docs/gate-3-protocol.md. | Built (Gate 3 pending) |
+| Notification permission ask | Asked in context — after the first completed session, when the value is obvious — never at first open. | Notifications are an invitation, never a nag; they never reference absence (launch checklist, fither-voice). Copy staged in strings.ts; the permission request code is not built. | Planned (copy staged) |
 
 ### Monetization
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| Subscription | £5.99/month or £39.99/year with a 7-day free trial, via RevenueCat. Annual is the plan the paywall leads with. | Decided in ADR-0002 (GBP reference prices; other storefronts via Apple's tiers). | Planned |
-| Honest paywall | States what's included and the price, plainly. | No fake urgency, no countdown timers, no "only today" (fither-voice). Full letter drafted in docs/copy. | Planned (copy drafted) |
-| Offline entitlements | Once you've paid, the app never checks your subscription against the network before letting you train. | A paying user in airplane mode is never locked out — hard rule (fither-domain, reviewer checklist). | Planned |
+| Subscription | £5.99/month or £39.99/year with a 7-day free trial. Annual led. Currently served by a dev-only billing implementation behind a typed port — fully clickable, zero network; RevenueCat in Phase 4 is one adapter file (ADR-0009). | ADR-0002 prices; trial starts at the first COMPLETED session; expired trial gates only new-session generation — history, points and skills stay hers. | Built (dev-mode) |
+| Honest paywall | States what's included and the price, plainly. | No fake urgency, no countdowns (fither-voice); honest expired-state copy; restore distinguishes no-purchase from failure. | Built |
+| Offline entitlements | Entitlement state persists on device and is evaluated offline; nothing on the training path ever waits on a network. | A paying user in airplane mode is never locked out — hard rule (fither-domain; re-review required when the real billing SDK lands). | Built (dev-mode) |
 
 ### Platform & ops
 
@@ -171,4 +171,6 @@ As of today: **Gate 1 has PASSED** — all simulation gates green across
 500 users / 26 weeks, re-verified on every engine commit and in CI
 (numbers in docs/STATE.md and docs/sim-analysis.md). Gate 2 — the
 owner's real 10-minute workout from the build — is the next milestone.
-Gate 3 waits on the onboarding screens.
+Gate 3 is fully built and ready to run (instrumented measurement,
+per-tester reset, protocol at docs/gate-3-protocol.md); it waits only
+on five real users.

@@ -215,8 +215,9 @@ Roughly 13 weeks to ship, with animations as the binding constraint. The TikTok 
 ## 11. This week
 
 - [x] Create the repo, write CLAUDE.md and the three skills
-- [ ] Brief 0 scaffold
-- [ ] Start `movement-author` on the 60 movements
+- [x] Brief 0 scaffold
+- [x] Start `movement-author` on the 60 movements (done: library built,
+  validated, coach packet at docs/coach-review.md)
 - [ ] Commission the 6 reference animations, Brief 6
 - [ ] Start the TikTok channel with environment and text formats
 - [ ] Landing page with email capture, linked from the channel bio
