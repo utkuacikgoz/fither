@@ -93,7 +93,7 @@ works in airplane mode.
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| iOS app (Expo) | iPhone app, English-speaking market first. | iOS first; no Android-only effort in v1 (fither-code). | In progress |
+| iOS app (Expo) | iPhone app, English-speaking market first. Source-controlled EAS profiles cover simulator development, registered-device development, internal preview, and App Store production; production build numbers are remotely managed and auto-incremented (ADR-0010). | iOS first; no Android-only effort in v1 (fither-code). The owner must still link Expo/Apple accounts, confirm the bundle ID, add approved identity assets, and produce the first signed build. | In progress (build foundation committed) |
 | Design system | A single set of design tokens (colour, type, spacing) behind every screen — premium and calm. | No raw style values in screens; tokens live in one file (ADR-0004). | Built |
 | Single copy surface | Every user-facing string lives in one file, written to the coach voice. | Calm, capable, no guilt, no jargon, British-neutral English; the forbidden list applies to every surface including errors and emails (fither-voice). Strings are copy-writer polished; onboarding/paywall/notification copy staged in docs/copy pending their screens. | Built |
 | Movement animations | 60 Rive animations, one per movement. | A commissioned design job, the single largest cost and the schedule's long pole (build-system §9); 6 reference animations first (Brief 6). | Planned |

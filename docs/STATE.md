@@ -9,6 +9,8 @@ tree. The numbers below were produced after those changes.
 ```
 node scripts/validate-movements.mjs  OK — 60 movements, ladders complete,
                                      constrained tiers 1-4 intact
+pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
+                                     isolated EAS build environments
 engine + app typecheck               pass
 engine tests                         63/63
 app tests                            175/175
@@ -21,11 +23,10 @@ simulation (seed 20260831, 500 users, 26 weeks, 36755 sessions)
            erratic never exhausts within 26 weeks
 ```
 
-The clone lives inside another Vite project, so Vitest was run with an
-isolated temporary config to prevent the parent project's Cloudflare config
-from leaking in. App Jest was run with `--no-watchman` because the sandbox
-cannot write Watchman's LaunchAgent. These are host constraints, not repo
-failures.
+The engine carries an explicit Vitest config, so a checkout nested inside
+another Vite project cannot inherit its parent's plugins. App Jest runs with
+`--no-watchman`, keeping the same command reliable in restricted build hosts
+that cannot write Watchman's LaunchAgent.
 
 ## Done
 
@@ -81,6 +82,19 @@ failures.
   dev-only full first-run reset (storage-level, two-tap confirm) so
   Gate 3 testers share one phone. Protocol: docs/gate-3-protocol.md.
 
+**Production foundation — source-controlled portion**
+
+- iOS-only app identity set to FITHER 1.0.0, native build 1, with the stable
+  `com.fither.app` bundle identifier pending owner confirmation in Apple.
+- EAS simulator-development, device-development, internal-preview, and
+  production profiles; named environment isolation and remotely managed,
+  auto-incrementing production build numbers (ADR-0010).
+- SDK-matched Expo development client, plus a release-configuration validator
+  enforced by the local commit hook and CI.
+- Account handoff and commands documented in `docs/release-builds.md`. The EAS
+  project link, Apple signing, approved identity assets, and first cloud build
+  require the owner's accounts and remain open.
+
 ## Next, in order
 
 1. **GATE 2 — owner's physical test.** `pnpm install && pnpm ios` from a
@@ -96,7 +110,10 @@ failures.
 3. **Exercise instruction media** — after Gate 2 confirms pacing.
    Authored Rive/3D clips, reduced-motion fallbacks, never a network
    fetch on the workout path.
-4. Then share card, ops SDKs (with the offline-lockout re-review),
+4. **Connect the build accounts** — owner confirms Apple enrollment and bundle
+   ID, links the EAS project, and produces the first signed preview build using
+   `docs/release-builds.md`.
+5. Then RevenueCat, share card, ops SDKs (with the offline-lockout re-review),
    and store preparation per `docs/build-system.md`.
 
 Recently closed: ADR-0009 onboarding + dev-mode monetization (three

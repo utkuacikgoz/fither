@@ -1,4 +1,4 @@
-import type { Pattern, PatternState, Profile } from "./types.js";
+import type { Pattern, PatternState, Profile } from "./types";
 
 /** Canonical pattern order (ADR-0002). Used for deterministic tie-breaks. */
 export const PATTERNS: readonly Pattern[] = [
