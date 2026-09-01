@@ -1,13 +1,19 @@
 import { Pressable, StyleSheet } from "react-native";
 
 import { useTheme } from "../theme";
-import { hairline, minTouchTarget, radius, spacing } from "../tokens";
+import { glyph, hairline, minTouchTarget, radius, spacing } from "../tokens";
 import { AppText } from "./app-text";
 
 interface RowButtonProps {
   label: string;
   onPress: () => void;
   selected?: boolean;
+  /**
+   * Multi-select rows (soreness picks, the onboarding avoid-list) show a
+   * check glyph while selected, so "tapped and staying" reads at a
+   * glance. Single-select rows auto-advance and never need it.
+   */
+  multiSelect?: boolean;
   testID?: string;
 }
 
@@ -16,7 +22,13 @@ interface RowButtonProps {
  * not tiny chips. 44pt+ touch target, hairline border, sage wash when
  * selected.
  */
-export function RowButton({ label, onPress, selected = false, testID }: RowButtonProps) {
+export function RowButton({
+  label,
+  onPress,
+  selected = false,
+  multiSelect = false,
+  testID,
+}: RowButtonProps) {
   const colors = useTheme();
   return (
     <Pressable
@@ -36,7 +48,20 @@ export function RowButton({ label, onPress, selected = false, testID }: RowButto
         },
       ]}
     >
-      <AppText variant="bodyLarge">{label}</AppText>
+      <AppText variant="bodyLarge" style={styles.label}>
+        {label}
+      </AppText>
+      {multiSelect && selected && (
+        // Decorative: selection is already announced via accessibilityState.
+        <AppText
+          variant="bodyLarge"
+          color={colors.accent}
+          importantForAccessibility="no"
+          testID={testID ? `${testID}-check` : undefined}
+        >
+          {glyph.check}
+        </AppText>
+      )}
     </Pressable>
   );
 }
@@ -48,7 +73,12 @@ const styles = StyleSheet.create({
     borderWidth: hairline,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.sm + spacing.xs,
+  },
+  label: {
+    flexShrink: 1,
   },
 });

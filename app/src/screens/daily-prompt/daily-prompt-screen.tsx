@@ -4,13 +4,16 @@ import type { BodyArea, DailyPrompt, Energy, SessionMinutes } from "@fither/engi
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
 import { spacing } from "../../design/tokens";
 import { BODY_AREAS } from "../../lib/body-areas";
+import { needsCareMoment } from "../../lib/care-moment";
 import { todayIso } from "../../lib/dates";
+import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 import { useActiveSessionStore } from "../../state/active-session-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
@@ -56,12 +59,15 @@ export function DailyPromptScreen({
   const entitlementHydrated = useEntitlementStore((s) => s.hydrated);
   const entitlementFailed = useEntitlementStore((s) => s.hydrationFailed);
 
+  const appendCareNote = useCareNoteStore((s) => s.append);
+
   const [step, setStep] = useState<Step>("time");
   const [devTimingVisible, setDevTimingVisible] = useState(false);
   const [minutes, setMinutes] = useState<SessionMinutes | null>(null);
   const [energy, setEnergy] = useState<Energy | null>(null);
   const [quiet, setQuiet] = useState<boolean | null>(null);
   const [avoid, setAvoid] = useState<BodyArea[]>([]);
+  const [careNoteText, setCareNoteText] = useState("");
 
   const finish = (avoidAreas: BodyArea[]) => {
     if (minutes === null || energy === null || quiet === null) return;
@@ -98,6 +104,13 @@ export function DailyPromptScreen({
   };
 
   const restart = () => {
+    // If she wrote in the optional care note, keep it before the answers
+    // reset — one local, append-only save; it goes nowhere else.
+    const note = careNoteText.trim();
+    if (note.length > 0) {
+      appendCareNote({ date: todayIso(), text: note });
+    }
+    setCareNoteText("");
     setStep("time");
     setMinutes(null);
     setEnergy(null);
@@ -251,11 +264,19 @@ export function DailyPromptScreen({
               testID={`soreness-${area}`}
               label={strings.prompt.soreness.areas[area]}
               selected={avoid.includes(area)}
+              multiSelect
               onPress={() => toggleArea(area)}
             />
           ))}
           {avoid.length > 0 && (
             <View style={styles.confirm}>
+              <AppText
+                variant="caption"
+                style={styles.countCue}
+                testID="soreness-count"
+              >
+                {strings.prompt.soreness.areasNoted(avoid.length)}
+              </AppText>
               <PrimaryButton
                 testID="soreness-confirm"
                 label={strings.prompt.soreness.confirm}
@@ -279,18 +300,53 @@ export function DailyPromptScreen({
         </View>
       )}
 
-      {step === "noSession" && (
-        <View style={styles.question}>
-          <AppText variant="body" style={styles.title}>
-            {strings.errors.noSession}
-          </AppText>
-          <QuietButton
-            testID="prompt-adjust-answers"
-            label={strings.errors.tryAgain}
-            onPress={restart}
-          />
-        </View>
-      )}
+      {step === "noSession" &&
+        (() => {
+          // The engine couldn't build around her selection — if body areas
+          // were part of it, this is the "everything hurts" moment: lead
+          // with care, never a dead end. Whether a session was possible
+          // was decided engine-side; here we only read that result.
+          const mergedAvoidCount = BODY_AREAS.filter(
+            (area) => alwaysAvoid.includes(area) || avoid.includes(area),
+          ).length;
+          const care = needsCareMoment(mergedAvoidCount, false);
+          return (
+            <ScrollView
+              style={styles.question}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {care && (
+                <AppText
+                  variant="title"
+                  style={styles.careAcknowledgment}
+                  testID="care-acknowledgment"
+                >
+                  {strings.care.acknowledgment}
+                </AppText>
+              )}
+              <AppText variant="body" style={styles.title}>
+                {strings.errors.noSession}
+              </AppText>
+              {care && (
+                <View style={styles.careNote}>
+                  <NoteField
+                    testID="care-note"
+                    prompt={strings.care.notePrompt}
+                    privacyNote={strings.care.notePrivacy}
+                    value={careNoteText}
+                    onChangeText={setCareNoteText}
+                  />
+                </View>
+              )}
+              <QuietButton
+                testID="prompt-adjust-answers"
+                label={strings.errors.tryAgain}
+                onPress={restart}
+              />
+            </ScrollView>
+          );
+        })()}
     </Screen>
   );
 }
@@ -310,6 +366,16 @@ const styles = StyleSheet.create({
   },
   confirm: {
     marginTop: spacing.md,
+  },
+  countCue: {
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+  careAcknowledgment: {
+    marginBottom: spacing.md,
+  },
+  careNote: {
+    marginBottom: spacing.xl,
   },
   scrollContent: {
     paddingBottom: spacing.xl,
