@@ -108,14 +108,33 @@ that cannot write Watchman's LaunchAgent.
    dev-only full first-run reset lets testers share one phone, and the
    expired-trial paywall + restore-empty copy are wired. Needs only
    the five women.
-3. **Exercise instruction media** — after Gate 2 confirms pacing.
-   Authored Rive/3D clips, reduced-motion fallbacks, never a network
-   fetch on the workout path.
-4. **Connect the build accounts** — owner confirms Apple enrollment and bundle
-   ID, links the EAS project, and produces the first signed preview build using
-   `docs/release-builds.md`.
-5. Then RevenueCat, share card, ops SDKs (with the offline-lockout re-review),
-   and store preparation per `docs/build-system.md`.
+3. **Build wave 1 — landing now.** Shipped: shareable skill card on the
+   unlock screen (text share via the system sheet, zero new deps; image
+   export is a later isolated swap) plus settings/share/auth/profile
+   strings. In flight: the settings screen (restore, persistent avoid
+   areas, dev tools, version) and the sign-in flow (Apple + Google +
+   guest behind a typed auth port with a dev implementation, ADR-0011;
+   launch → sign-in → onboarding → prompt). Each lands only with green
+   gates; the adversarial reviewer passes over the whole wave before
+   main moves. Norman's six principles are now a per-screen checklist
+   in the design-system skill — the owner reviews against them.
+4. **Build wave 2 — after wave 1 merges** (sequenced to avoid file
+   collisions): the Progress screen (pattern tiers, unlocked skills,
+   points; entry from the daily prompt), the paywall visual redesign
+   (the honest letter, premium treatment), and copy cleanup
+   (`strings.brand.wordmark`; owner to decide silent share failure vs.
+   one calm fallback line).
+5. **Build wave 3 — after the owner's next device test**: notification
+   permission ask (in context, after the first completed session) +
+   rating prompt, batched because both add native modules (one rebuild);
+   the deferred cleanStreak→cleanCount rename (S2) with sim numbers;
+   docs refresh.
+6. **Owner-side, unblocking the rest**: test waves 1–2 clickable on
+   device (Norman review); run Gate 3; Apple enrollment + EAS link per
+   `docs/release-builds.md` — that unblocks signed builds, then
+   RevenueCat, ops SDKs (with the offline-lockout re-review), exercise
+   instruction media (Brief 6), and store preparation per
+   `docs/build-system.md`.
 
 Recently closed: ADR-0009 onboarding + dev-mode monetization (three
 onboarding screens; billing behind a typed port with a dev-only
