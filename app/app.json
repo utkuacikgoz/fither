@@ -4,7 +4,9 @@
     "slug": "fither",
     "version": "1.0.0",
     "scheme": "fither",
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -12,9 +14,18 @@
       "bundleIdentifier": "com.fither.app",
       "buildNumber": "1"
     },
-    "plugins": ["expo-router", "expo-dev-client"],
+    "plugins": [
+      "expo-router",
+      "expo-dev-client"
+    ],
     "experiments": {
       "typedRoutes": false
+    },
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF7F2"
     }
   }
 }
