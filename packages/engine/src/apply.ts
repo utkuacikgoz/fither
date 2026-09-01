@@ -9,15 +9,15 @@ import type {
   Profile,
   SessionResult,
   Tier,
-} from "./types.js";
+} from "./types";
 import {
   CLEAN_SESSIONS_TO_ADVANCE,
   DAYS_AT_TIER_TO_ADVANCE,
   POINTS,
   STRUGGLED_SESSIONS_TO_REDUCE_VOLUME,
   STRUGGLED_SESSIONS_TO_REGRESS,
-} from "./types.js";
-import { PATTERNS } from "./profile.js";
+} from "./types";
+import { PATTERNS } from "./profile";
 
 /**
  * Whole calendar days from one ISO yyyy-mm-dd date to another. Pure

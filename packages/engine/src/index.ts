@@ -1,8 +1,8 @@
 // Public surface of @fither/engine. Implementation lives in sibling
 // modules (engine-engineer's surface); the contract lives in types.ts.
 
-export * from "./types.js";
-export { createRng } from "./rng.js";
+export * from "./types";
+export { createRng } from "./rng";
 export {
   generateSession,
   trainingDaysSincePattern,
@@ -15,11 +15,11 @@ export {
   TARGET_UTILIZATION,
   TASTE_RESERVE_SECONDS,
   STALE_FOCUS_MIN_TRAINING_DAYS,
-} from "./generate.js";
+} from "./generate";
 export {
   applySessionResult,
   calendarDaysBetween,
   milestoneMovement,
   SKILL_MILESTONE_TIERS,
-} from "./apply.js";
-export { createInitialProfile, PATTERNS } from "./profile.js";
+} from "./apply";
+export { createInitialProfile, PATTERNS } from "./profile";

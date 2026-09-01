@@ -5,6 +5,7 @@
 command -v pnpm >/dev/null 2>&1 || exit 0
 [ -d node_modules ] || { echo "pre-commit: no install, skipping checks"; exit 0; }
 
+pnpm release:check || { echo "pre-commit: release config failed" >&2; exit 1; }
 pnpm test || { echo "pre-commit: tests failed" >&2; exit 1; }
 
 if git diff --cached --name-only | grep -qE '^(packages/engine/|data/)'; then

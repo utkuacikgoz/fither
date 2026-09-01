@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
 import { strings } from "../../../copy/strings";
@@ -133,16 +133,18 @@ describe("PaywallScreen", () => {
     await flushPersistence();
     const persisted = await AsyncStorage.getItem("fither/entitlement-v1");
     expect(persisted).toContain("monthly");
-    useEntitlementStore.setState({
-      purchase: null,
-      trialStartDate: null,
-      hydrated: false,
-      hydrationFailed: false,
+    await act(async () => {
+      useEntitlementStore.setState({
+        purchase: null,
+        trialStartDate: null,
+        hydrated: false,
+        hydrationFailed: false,
+      });
+      await flushPersistence();
+      await AsyncStorage.setItem("fither/entitlement-v1", persisted ?? "");
+      await useEntitlementStore.persist.rehydrate();
+      await flushPersistence();
     });
-    await flushPersistence();
-    await AsyncStorage.setItem("fither/entitlement-v1", persisted ?? "");
-    await useEntitlementStore.persist.rehydrate();
-    await flushPersistence();
     expect(useEntitlementStore.getState().purchase).toMatchObject({
       plan: "monthly",
     });
