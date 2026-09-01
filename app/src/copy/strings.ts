@@ -132,8 +132,26 @@ export const strings = {
     },
     cta: "Start my free week",
     afterTrialNote: (price: string) => `7 days free, then ${price}. Cancel anytime.`,
+    // Expired-trial variants (ADR-0009 flag). Shown when the paywall gates
+    // after the 7 free days are spent. Key shapes mirror the pre-trial
+    // keys one-for-one: headline, letter, trialLine, cta, afterTrialNote.
+    // No fake re-trial, no guilt about the week being over. The pre-trial
+    // keys above stay for any settings-reachable paywall before expiry.
+    expired: {
+      headline: "Your free week is complete",
+      letter:
+        "You've had the full seven days — every session, every length, adapted daily. A subscription covers exactly what you've been using: works offline, no ads, nothing sold separately.",
+      trialLine:
+        "Subscribing starts billing today. Cancel anytime in your App Store settings.",
+      cta: "Keep training",
+      afterTrialNote: (price: string) => `${price}, starting today. Cancel anytime.`,
+    },
     restore: "Restore purchase",
     restoreError: "Couldn't restore your purchase. Try again in a minute.",
+    // Restore found no purchase on this Apple ID. Not an error — she may
+    // simply be new, or on a new phone signed into a different Apple ID.
+    restoreEmpty:
+      "No purchase found on this Apple ID. If you subscribed before, check you're signed in with the same one.",
     legal: {
       autoRenew:
         "Your subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store settings.",
