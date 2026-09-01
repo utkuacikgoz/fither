@@ -24,6 +24,35 @@ values. One hardcoded hex in a screen is a bug.
 5. **Touch targets 44pt+, everything reachable one-handed** at the bottom
    of the screen during a session — her hands may be shaking.
 
+## Norman's principles — every screen answers all six
+
+The owner reviews UX against Don Norman's principles; treat a violation
+like a failing test. Before shipping any screen, walk it:
+
+1. **Affordance** — can she tell what is tappable by looking? Buttons
+   look pressable (fill or pill), rows that navigate look like rows that
+   navigate. Nothing interactive disguised as text; nothing decorative
+   dressed as a control.
+2. **Signifiers** — does the screen point to the one next action?
+   Selected states are unmistakable (check glyph, fill), the primary
+   action names its outcome ("Start", never "OK"), and anything
+   non-obvious carries its own one-line clue in place.
+3. **Constraints** — is the wrong path hard? Disable-don't-hide is wrong
+   here: prefer not rendering what can't apply. Impossible combinations
+   are prevented upstream (the engine's honest adjust-answers state, the
+   delayed skip), not error-messaged after.
+4. **Mapping** — do controls sit where their effect happens? The thing a
+   button changes is adjacent to the button; counts appear next to what
+   was counted; per-option state lives on the option, not in a summary
+   elsewhere.
+5. **Feedback** — does every tap answer within 100ms? Selection renders
+   immediately, async work shows its honest state (saving / retry), and
+   completed work is acknowledged where she is looking. Silence after a
+   tap is a bug.
+6. **Conceptual model** — after one use, could she explain the screen to
+   a friend? One decision per screen keeps the model small. If a flow
+   needs explaining, restructure the flow instead of adding copy.
+
 ## Tokens (light theme; the app is light-first, dark supported)
 
 ```ts
