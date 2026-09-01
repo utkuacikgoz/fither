@@ -17,11 +17,13 @@ The gates, in order, each its own named step so a red run names what broke:
 | Step | Command | Guards |
 |---|---|---|
 | movement library | `node scripts/validate-movements.mjs` | `data/movements.json` integrity, ladders, forbidden-language list |
+| release config | `pnpm release:check` | iOS identity/version alignment and isolated EAS profiles |
 | typecheck | `pnpm typecheck` | engine + app, TypeScript strict |
+| iOS bundle | `pnpm bundle:ios` | Metro can resolve the complete production app graph |
 | unit tests | `pnpm test` | vitest (engine) + jest (app) |
-| simulation | `pnpm sim` | Gates G1–G4, 500 users × 26 weeks, fixed seed |
+| simulation | `pnpm sim` | Gates G1–G5, 500 users × 26 weeks, fixed seed |
 
-The sim's printed G1–G4 numbers are teed into the job log and lifted into the
+The sim's printed G1–G5 numbers are teed into the job log and lifted into the
 run's job summary. They are the deliverable — a green tick alone does not tell
 you the median week or the utilization band, and the house rule is to report
 the actual numbers.

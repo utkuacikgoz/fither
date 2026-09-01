@@ -23,6 +23,10 @@ Play Store addendum at the bottom applies if/when Android ships.
 
 ## Pre-launch technical essentials
 
+- [x] **Build variants are source-controlled.** Simulator development,
+  registered-device development, internal preview, and production store builds
+  use isolated EAS environments; production build numbers auto-increment.
+  Account linking, signing, and the first signed build remain below.
 - [ ] **Test beyond your own device.** The simulator and your phone are not
   a test matrix. Cover at minimum: an older small iPhone (SE-class), a
   current base model, a Pro Max, and the oldest iOS version you support

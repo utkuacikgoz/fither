@@ -1,4 +1,4 @@
-import type { Rng } from "./types.js";
+import type { Rng } from "./types";
 
 /**
  * Mulberry32 — deterministic, seedable, zero dependencies.

@@ -42,15 +42,21 @@ jobs:
       - name: 'Gate: movement library integrity + forbidden language'
         run: node scripts/validate-movements.mjs
 
+      - name: 'Gate: iOS release configuration'
+        run: pnpm release:check
+
       - name: 'Gate: typecheck (engine + app)'
         run: pnpm typecheck
+
+      - name: 'Gate: production iOS JavaScript bundle'
+        run: pnpm bundle:ios
 
       - name: 'Gate: unit tests'
         run: pnpm test
 
       # The sim runs in ~2s, so it runs on every push and PR with no path
       # filter — a PR touching packages/engine/** or data/** can never slip
-      # past it. The printed G1-G4 numbers are the point, so they are teed to
+      # past it. The printed G1-G5 numbers are the point, so they are teed to
       # the log and lifted into the job summary below.
       - name: 'Gate: simulation (500 users / 26 weeks, gates G1-G4)'
         shell: bash
