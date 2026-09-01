@@ -97,9 +97,10 @@ that cannot write Watchman's LaunchAgent.
 
 ## Next, in order
 
-1. **GATE 2 — owner's physical test.** `pnpm install && pnpm ios` from a
-   normal checkout, then a real 10-minute workout. Still never launched
-   on an iOS simulator in the build environment.
+1. ~~GATE 2~~ **PASSED 2026-09-01.** The owner ran the app from a device
+   build, trained with it, and called it good after the live-testing UX
+   pack (three-option feedback, quiet skip, selection cues, care moment)
+   shipped in response.
 2. **GATE 3 — ready to run** (docs/gate-3-protocol.md): five real
    users, under 60 seconds to first movement. The app measures
    time-to-first-movement on device (first screen mount → first work

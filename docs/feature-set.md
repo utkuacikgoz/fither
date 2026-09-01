@@ -167,10 +167,10 @@ the product (build-system §7).
 | 2 | After the ugly-but-working loop | The owner completes a real 10-minute workout from the build — actually training, not a simulator walkthrough. | Fix pacing and prescription before any polish. |
 | 3 | After onboarding | Five women, on their own phones with no help, each reach their first movement in under 60 seconds of opening the app. | Cut onboarding questions until they do. |
 
-As of today: **Gate 1 has PASSED** — all simulation gates green across
-500 users / 26 weeks, re-verified on every engine commit and in CI
-(numbers in docs/STATE.md and docs/sim-analysis.md). Gate 2 — the
-owner's real 10-minute workout from the build — is the next milestone.
-Gate 3 is fully built and ready to run (instrumented measurement,
-per-tester reset, protocol at docs/gate-3-protocol.md); it waits only
-on five real users.
+As of today: **Gates 1 and 2 have PASSED.** Gate 1: all simulation gates
+green across 500 users / 26 weeks, re-verified on every engine commit and
+in CI (numbers in docs/STATE.md and docs/sim-analysis.md). Gate 2: the
+owner trained with a real device build (2026-09-01) and confirmed pacing
+and prescription after the live-testing UX pack shipped. Gate 3 is fully
+built and ready to run (instrumented measurement, per-tester reset,
+protocol at docs/gate-3-protocol.md); it waits only on five real users.
