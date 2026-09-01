@@ -7,9 +7,17 @@ onboarding questions until they do — that is the pre-agreed remedy, not
 redesign.
 
 The app now measures the number itself: time-to-first-movement is
-recorded on device from app open to the first work phase, and the
-first-run measurement is visible in the dev readout. Use it as the
-number of record; keep a phone stopwatch as backup.
+recorded on device from app open to the first WORK phase — the moment
+she is actually moving, not when the player appears. The dev readout
+opens by long-pressing the day label on the daily prompt (dev builds
+only). Use it as the number of record; keep a phone stopwatch as backup.
+
+What the number covers: store loading, onboarding, the four questions,
+session generation, the preview, and the first block intro. It starts
+at the app's first screen mount — native launch time before that is not
+included — so the recorded number slightly understates true icon-tap-to-
+movement time. A sub-60s reading is therefore conservative in the right
+direction; the stopwatch from icon tap is the stricter check.
 
 ## Who
 
