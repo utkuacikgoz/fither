@@ -7,6 +7,7 @@ import {
   collectStringValues,
   renderedTextLeaves,
 } from "../../../test-utils/copy-audit";
+import { glyph } from "../../../design/tokens";
 import { OnboardingScreen } from "../onboarding-screen";
 
 beforeEach(() => {
@@ -74,11 +75,16 @@ describe("OnboardingScreen", () => {
 
   it("renders no user-facing text outside strings.ts on any step", () => {
     const allowed = collectStringValues(strings);
+    // areasNoted is parameterised; allowlist the output this flow renders.
+    allowed.add(strings.prompt.soreness.areasNoted(1));
+    // The selection checkmark is a glyph token, not copy.
+    allowed.add(glyph.check);
     const screen = render(<OnboardingScreen onDone={jest.fn()} />);
 
     const auditStep = () => {
       for (const leaf of renderedTextLeaves(screen.toJSON())) {
-        expect(allowed.has(leaf)).toBe(true);
+        // On failure the message shows the offending leaf, not just false.
+        expect(allowed.has(leaf) ? true : leaf).toBe(true);
       }
     };
 

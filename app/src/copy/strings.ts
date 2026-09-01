@@ -31,8 +31,14 @@ export const strings = {
     },
     soreness: {
       question: "Anything sore or off-limits today?",
+      // Shared with the onboarding avoid-list screen (one string, on
+      // purpose): both "nothing to work around" defaults say "All good".
       allGood: "All good",
       confirm: "Noted. We'll work around it.",
+      // COPY-WRITER: new key (2026-09-01, live-testing pass) — the quiet
+      // count cue under multi-select body-area pickers.
+      areasNoted: (count: number) =>
+        count === 1 ? "1 area noted" : `${count} areas noted`,
       areas: {
         shoulders: "Shoulders",
         wrists: "Wrists",
@@ -61,9 +67,36 @@ export const strings = {
         : `${sets} × ${amount} reps`,
     feedback: {
       question: "How was that?",
-      completed: "Good",
-      struggled: "That was hard",
+      // COPY-WRITER: three answers since 2026-09-01 (live-testing pass),
+      // each one fine to give. The ENGINE contract is untouched: both
+      // positive answers record "completed", "hard" records "struggled" —
+      // see the mapping comment in session-player-screen.tsx.
+      options: {
+        feltStrong: "Felt strong",
+        good: "Good",
+        hard: "That was hard",
+      },
     },
+    // COPY-WRITER: new keys (2026-09-01, live-testing pass). One calm
+    // confirm when she taps the quiet exit on a block intro — never a
+    // lecture, no cost framing; skipping stays fully allowed and is never
+    // mentioned again afterwards.
+    skipConfirm: {
+      title: (movement: string) => `Skip ${movement}?`,
+      body: "Fewer reps count too. Either way is fine.",
+      keepGoing: "Keep going",
+      skipIt: "Skip it",
+    },
+  },
+  // COPY-WRITER: new keys (2026-09-01, live-testing pass). Shown only
+  // when today's work-around list is heavy, or the engine couldn't build
+  // around it. One acknowledgment, one optional local note — no advice,
+  // no diagnosis, no follow-up questions. The privacy line states a hard
+  // technical fact: the note is written to this phone only, zero network.
+  care: {
+    acknowledgment: "That's a lot to carry today.",
+    notePrompt: "Want to say what happened?",
+    notePrivacy: "Stays on your phone. Never sent anywhere.",
   },
   preview: {
     eyebrow: "Made for today",
@@ -101,7 +134,9 @@ export const strings = {
     },
     avoid: {
       question: "Anything we should always work around?",
-      nothing: "Nothing",
+      // The one-tap default deliberately reuses prompt.soreness.allGood
+      // ("All good") — one shared string, warmer than the old "Nothing",
+      // and it matches the daily prompt she'll see every day after.
       confirm: "Noted. Every session will work around it.",
     },
     handoff: {

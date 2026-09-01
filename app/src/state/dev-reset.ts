@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useDevReceiptStore } from "../monetization/dev-billing";
 import { useActiveSessionStore } from "./active-session-store";
+import { useCareNoteStore } from "./care-note-store";
 import { useEntitlementStore } from "./entitlement-store";
 import { useFirstMovementStore } from "./first-movement-store";
 import { useLedgerStore } from "./ledger-store";
@@ -36,6 +37,7 @@ import { useSettingsStore } from "./settings-store";
 //   fither/dev-billing-v1     dev-billing.ts          the dev fake receipt
 //   fither/active-session-v1  active-session-store.ts crash-safe session snapshot
 //   fither/first-movement-v1  first-movement-store.ts Gate 3 timing recordings
+//   fither/care-notes-v1      care-note-store.ts      local-only heavy-day notes
 const persistedStores = [
   useProfileStore,
   useLedgerStore,
@@ -44,6 +46,7 @@ const persistedStores = [
   useDevReceiptStore,
   useActiveSessionStore,
   useFirstMovementStore,
+  useCareNoteStore,
 ] as const;
 
 /** The persisted keys, read from the stores' own persist configs. */

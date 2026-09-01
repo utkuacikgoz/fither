@@ -16,6 +16,7 @@ import {
 import {
   DEV_TIMING_TITLE,
 } from "../../dev-timing/first-movement-readout";
+import { useCareNoteStore } from "../../../state/care-note-store";
 import { useFirstMovementStore } from "../../../state/first-movement-store";
 import { DailyPromptScreen } from "../daily-prompt-screen";
 
@@ -38,6 +39,11 @@ beforeEach(() => {
   useEntitlementStore.setState({
     trialStartDate: null,
     purchase: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useCareNoteStore.setState({
+    entries: [],
     hydrated: true,
     hydrationFailed: false,
   });
@@ -181,6 +187,95 @@ describe("DailyPromptScreen", () => {
       expect.anything(),
       expect.any(Number),
     );
+  });
+
+  it("shows selection affordances on soreness picks: checkmark and live count", () => {
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-okay"));
+    fireEvent.press(screen.getByTestId("quiet-no"));
+
+    // Nothing selected yet: no checks, no count cue.
+    expect(screen.queryByTestId("soreness-wrists-check")).toBeNull();
+    expect(screen.queryByTestId("soreness-count")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("soreness-wrists"));
+    expect(screen.getByTestId("soreness-wrists-check")).toBeTruthy();
+    expect(screen.getByText(strings.prompt.soreness.areasNoted(1))).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("soreness-knees"));
+    expect(screen.getByTestId("soreness-knees-check")).toBeTruthy();
+    expect(screen.getByText(strings.prompt.soreness.areasNoted(2))).toBeTruthy();
+
+    // Deselecting removes the check and updates the count.
+    fireEvent.press(screen.getByTestId("soreness-knees"));
+    expect(screen.queryByTestId("soreness-knees-check")).toBeNull();
+    expect(screen.getByText(strings.prompt.soreness.areasNoted(1))).toBeTruthy();
+  });
+
+  it("leads the can't-build state with care when sore areas caused it", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-back"));
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+
+    // The acknowledgment leads; the plain line and the way out stay.
+    expect(screen.getByTestId("care-acknowledgment")).toBeTruthy();
+    expect(screen.getByText(strings.care.acknowledgment)).toBeTruthy();
+    expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
+    expect(screen.getByText(strings.care.notePrompt)).toBeTruthy();
+    expect(screen.getByText(strings.care.notePrivacy)).toBeTruthy();
+    expect(screen.getByTestId("prompt-adjust-answers")).toBeTruthy();
+  });
+
+  it("keeps the plain can't-build state when no body areas were involved", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+
+    expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
+    expect(screen.queryByTestId("care-acknowledgment")).toBeNull();
+    expect(screen.queryByTestId("care-note")).toBeNull();
+  });
+
+  it("saves an optional note to the local store when she writes one, skippable otherwise", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-back"));
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+
+    fireEvent.changeText(screen.getByTestId("care-note"), "  long day  ");
+    fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+
+    expect(useCareNoteStore.getState().entries).toEqual([
+      {
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) as unknown as string,
+        text: "long day",
+      },
+    ]);
+    // And she is back at the start, with the moment behind her.
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+
+    // Leaving the field empty saves nothing — completely skippable.
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-back"));
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+    fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+    expect(useCareNoteStore.getState().entries).toHaveLength(1);
   });
 
   it("dev-only timing readout: long-press entry, prompt state survives", () => {

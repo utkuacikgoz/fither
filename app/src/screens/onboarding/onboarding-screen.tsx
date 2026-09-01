@@ -111,7 +111,9 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         </AppText>
         <RowButton
           testID="onboarding-avoid-nothing"
-          label={strings.onboarding.avoid.nothing}
+          // One shared string with the daily prompt's soreness default —
+          // the same warm "All good" she'll tap every day from tomorrow.
+          label={strings.prompt.soreness.allGood}
           onPress={() => finish([])}
         />
         {BODY_AREAS.map((area) => (
@@ -120,11 +122,19 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
             testID={`onboarding-avoid-${area}`}
             label={strings.prompt.soreness.areas[area]}
             selected={avoid.includes(area)}
+            multiSelect
             onPress={() => toggleArea(area)}
           />
         ))}
         {avoid.length > 0 && (
           <View style={styles.confirm}>
+            <AppText
+              variant="caption"
+              style={styles.countCue}
+              testID="onboarding-avoid-count"
+            >
+              {strings.prompt.soreness.areasNoted(avoid.length)}
+            </AppText>
             <PrimaryButton
               testID="onboarding-avoid-confirm"
               label={strings.onboarding.avoid.confirm}
@@ -156,6 +166,10 @@ const styles = StyleSheet.create({
   },
   confirm: {
     marginTop: spacing.md,
+  },
+  countCue: {
+    marginBottom: spacing.sm,
+    textAlign: "center",
   },
   scrollContent: {
     paddingBottom: spacing.xl,

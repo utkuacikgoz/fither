@@ -1,11 +1,15 @@
+import { useState } from "react";
 import type { Adaptation } from "@fither/engine";
 import { StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { Screen } from "../../design/primitives/screen";
 import { spacing } from "../../design/tokens";
+import { needsCareMoment } from "../../lib/care-moment";
+import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 
 function adaptationText(adaptation: Adaptation): string {
@@ -35,13 +39,51 @@ interface SessionPreviewScreenProps {
 
 export function SessionPreviewScreen({ onStart }: SessionPreviewScreenProps) {
   const session = useSessionStore((state) => state.session);
+  const prompt = useSessionStore((state) => state.prompt);
+  const appendCareNote = useCareNoteStore((state) => state.append);
+  const [careNoteText, setCareNoteText] = useState("");
 
   if (!session) return <Screen>{null}</Screen>;
 
+  // The "everything hurts" moment when the engine could still build: the
+  // preview leads with care, above the plan. The threshold reads only the
+  // prompt the engine already saw — no session rules re-derived here.
+  const care =
+    prompt !== null && needsCareMoment(prompt.avoid.length, true);
+
   const explanations = session.adaptations.map(adaptationText);
+
+  const start = () => {
+    // Optional, local-only note: append-only store on this device, never
+    // sent anywhere. Leaving it empty costs nothing.
+    const note = careNoteText.trim();
+    if (care && note.length > 0) {
+      appendCareNote({ date: session.date, text: note });
+    }
+    onStart();
+  };
 
   return (
     <Screen>
+      {care && (
+        <View style={styles.care}>
+          <AppText
+            variant="title"
+            style={styles.careAcknowledgment}
+            testID="care-acknowledgment"
+          >
+            {strings.care.acknowledgment}
+          </AppText>
+          <NoteField
+            testID="care-note"
+            prompt={strings.care.notePrompt}
+            privacyNote={strings.care.notePrivacy}
+            value={careNoteText}
+            onChangeText={setCareNoteText}
+          />
+        </View>
+      )}
+
       <View style={styles.top}>
         <AppText variant="caption">{strings.preview.eyebrow}</AppText>
         <AppText variant="display" style={styles.headline}>
@@ -67,7 +109,7 @@ export function SessionPreviewScreen({ onStart }: SessionPreviewScreenProps) {
         <PrimaryButton
           testID="preview-start"
           label={strings.preview.start}
-          onPress={onStart}
+          onPress={start}
         />
       </View>
     </Screen>
@@ -75,6 +117,12 @@ export function SessionPreviewScreen({ onStart }: SessionPreviewScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  care: {
+    marginTop: spacing.xl,
+  },
+  careAcknowledgment: {
+    marginBottom: spacing.md,
+  },
   top: {
     marginTop: spacing.xl,
   },

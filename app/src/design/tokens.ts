@@ -89,6 +89,13 @@ export const fontFamily = {
 export const hairline = 1;
 export const minTouchTarget = 44;
 
+// Decorative glyphs — visual affordances, not copy. Anything a screen
+// reader must convey (e.g. selection) is exposed via accessibility
+// state, never via these characters.
+export const glyph = {
+  check: "✓",
+} as const;
+
 // Motion is breath, not fireworks: 250–350ms ease-out. Nothing bounces.
 export const motion = {
   fadeMs: 300,
