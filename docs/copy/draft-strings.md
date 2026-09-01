@@ -1,3 +1,10 @@
+> STATUS (2026-09-01): the app-facing sections (onboarding, resume,
+> paywall incl. expired variants, notifications, adaptation lines) are
+> WIRED into app/src/copy/strings.ts — that file is now the source of
+> truth for them; edit there, not here. The store-facing sections
+> (App Store listing, review responses) remain staged here until
+> docs/store/ opens in Phase 4.
+
 # FITHER — draft strings for wiring
 
 Drafted by copy-writer, 2026-08-31. Written to fither-voice; every string

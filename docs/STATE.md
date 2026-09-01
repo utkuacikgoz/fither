@@ -11,7 +11,7 @@ node scripts/validate-movements.mjs  OK — 60 movements, ladders complete,
                                      constrained tiers 1-4 intact
 engine + app typecheck               pass
 engine tests                         63/63
-app tests                            92/92
+app tests                            175/175
 simulation (seed 20260831, 500 users, 26 weeks, 36755 sessions)
   G1 PASS  84/84 4x-week users at push tier >=4 by week 12, median week 8
   G2 PASS  0 tier regressions; low-capability difficult blocks 752/28303
@@ -66,6 +66,21 @@ failures.
   outcomes.
 - First adversarial review remains at `docs/review/2026-08-31.md`.
 
+**Phase 2.5 — onboarding, monetization, Gate 3 instrumentation**
+
+- Three-screen onboarding (one decision per screen), persisted once-only,
+  slotted after the resume decision.
+- Billing behind a typed port with a dev-only implementation; trial from
+  first completed session (7 full days); expired trial gates only new
+  generation; paywall renders honest expired-state copy and
+  distinguishes nothing-to-restore from restore failure.
+- Crash-safe active-session persistence with same-day resume /
+  finish-early.
+- Time-to-first-movement instrumentation (first mount → first work
+  phase), dev readout via long-press on the prompt's day label, and a
+  dev-only full first-run reset (storage-level, two-tap confirm) so
+  Gate 3 testers share one phone. Protocol: docs/gate-3-protocol.md.
+
 ## Next, in order
 
 1. **GATE 2 — owner's physical test.** `pnpm install && pnpm ios` from a
@@ -88,12 +103,13 @@ Recently closed: ADR-0009 onboarding + dev-mode monetization (three
 onboarding screens; billing behind a typed port with a dev-only
 implementation; trial stamps at first completed session, 7 full free
 days; expired trial gates only new-session generation; paywall is the
-drafted honest letter; app tests 132). Open flags from that build, for
-copy/product: expired-state paywall copy still says "Start my free
-week"; no "nothing to restore" string; "Just me and the floor" maps to
-none+wall (confirm); persistent avoid areas merge silently into the
-daily prompt; restore/dev-reset live on the paywall until a settings
-screen exists. Also closed: ADR-0008 ladder pacing (time floors 7/14/28/42/56 days;
+drafted honest letter). Remaining open flags for copy/product:
+"Just me and the floor" maps to none+wall (confirm); persistent avoid
+areas merge silently into the daily prompt (pre-locked display is a
+design decision); restore and the dev controls live on the paywall and
+dev readout until a settings screen exists. Resolved since: expired-
+state paywall copy, nothing-to-restore message, dev-billing hydration-
+failure hang. Also closed: ADR-0008 ladder pacing (time floors 7/14/28/42/56 days;
 exhaustion moved from week 8-12 to 22-23, first unlock week 8, G5
 ceiling gate added) and points parity (20/25/30 by length, base 15 + 5
 per ten minutes; tenMin users now earn 74% of consistent4 at equal
