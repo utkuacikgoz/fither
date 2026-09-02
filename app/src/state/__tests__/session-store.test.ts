@@ -3,7 +3,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { firstMovementTracker } from "../../lib/first-movement-timer";
 import { applyResult } from "../../session/apply-result";
 import { createSession } from "../../session/create-session";
-import { createPlayer, reduce } from "../../session/player-machine";
+import {
+  createPlayer,
+  finishEarly,
+  reduce,
+  sessionCeilingMs,
+} from "../../session/player-machine";
 import { useActiveSessionStore } from "../active-session-store";
 import { useEntitlementStore } from "../entitlement-store";
 import { useFirstMovementStore } from "../first-movement-store";
@@ -115,6 +120,8 @@ describe("session store", () => {
     expect(finish?.unlockedSkills).toEqual([
       { pattern: "push", tier: 4, movementName: "Full Push-Up" },
     ]);
+    // A natural end closes as plain completed.
+    expect(finish?.close).toEqual({ reason: "completed" });
     // Profile/history/ledger updated only from the ApplyResult.
     expect(useProfileStore.getState().profile.patterns.push.tier).toBe(4);
     expect(totalPoints(useLedgerStore.getState().events)).toBe(35);
@@ -450,18 +457,263 @@ describe("finishSessionEarly", () => {
     dispatch({ type: "feedback", outcome: "completed" });
 
     useSessionStore.getState().finishSessionEarly();
-    const { player } = useSessionStore.getState();
+    const { player, pendingClose } = useSessionStore.getState();
     expect(player?.phase).toEqual({ kind: "done" });
     expect(player?.outcomes).toEqual(["completed", "skipped"]);
+    // The close reason is captured HERE, where the close happened, and
+    // persisted so a crash before the apply keeps the same honest state.
+    expect(pendingClose).toBe("endedEarly");
     expect(useActiveSessionStore.getState().snapshot?.player.phase).toEqual({
       kind: "done",
     });
+    expect(useActiveSessionStore.getState().snapshot?.pendingClose).toBe(
+      "endedEarly",
+    );
 
     // The normal apply path earns whatever the engine grants for it.
     await useSessionStore.getState().completeSession();
     expect(mockedApply).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
       session: fixtureSession,
       outcomes: ["completed", "skipped"],
+    });
+    expect(useSessionStore.getState().finish?.close).toEqual({
+      reason: "endedEarly",
+    });
+  });
+
+  it("an ended-early session with nothing completed closes as nothingDone", async () => {
+    const base = fixtureApplyResult();
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+    });
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().finishSessionEarly();
+    await useSessionStore.getState().completeSession();
+    const { finish } = useSessionStore.getState();
+    expect(finish?.completedAnything).toBe(false);
+    expect(finish?.close).toEqual({ reason: "nothingDone" });
+  });
+});
+
+describe("time-budget ceiling (ADR-0012 §2)", () => {
+  // Elapsed time is derived from wall-clock anchors, never JS timers, so
+  // these tests drive Date.now directly. fixtureSession is 10 minutes:
+  // ceiling = 10 × 60 × 1000 × 1.1 (one source: sessionCeilingMs).
+  const CEILING_MS = sessionCeilingMs(fixtureSession.minutes);
+  let now = 0;
+
+  beforeEach(() => {
+    now = 1_000_000;
+    jest.spyOn(Date, "now").mockImplementation(() => now);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const dispatch = (event: Parameters<typeof reduce>[1]) =>
+    useSessionStore.getState().dispatchPlayer(event);
+
+  it("anchors elapsed time at the first work phase, not at the intro", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    expect(useSessionStore.getState().workStartedAt).toBeNull();
+
+    // Time spent reading the intro never spends the budget: even far past
+    // the ceiling, skipping through intros wraps nothing.
+    now += CEILING_MS * 2;
+    dispatch({ type: "skipBlock" });
+    expect(useSessionStore.getState().player?.phase).toEqual({
+      kind: "blockIntro",
+      blockIndex: 1,
+    });
+
+    dispatch({ type: "begin" });
+    expect(useSessionStore.getState().workStartedAt).toBe(now);
+    expect(useActiveSessionStore.getState().snapshot?.workStartedAt).toBe(now);
+  });
+
+  it("wraps at the next phase boundary once elapsed exceeds minutes×60×1.1", async () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    dispatch({ type: "begin" }); // first work — the anchor
+    now += CEILING_MS + 1_000;
+    dispatch({ type: "advance" }); // set 1 done → would rest: wraps instead
+
+    const state = useSessionStore.getState();
+    expect(state.player?.phase).toEqual({ kind: "done" });
+    // Remaining blocks recorded skipped — progression-neutral (§1).
+    expect(state.player?.outcomes).toEqual(["skipped", "skipped"]);
+    expect(state.pendingClose).toBe("outOfTime");
+    // Survives process death: the close travels with the snapshot.
+    expect(useActiveSessionStore.getState().snapshot?.pendingClose).toBe(
+      "outOfTime",
+    );
+
+    await useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().finish?.close).toEqual(
+      // The default mocked apply has a "session" event, so
+      // completedAnything holds and outOfTime stands, naming her minutes.
+      { reason: "outOfTime", minutes: fixtureSession.minutes },
+    );
+  });
+
+  it("lets a finished block answer its question first — completed work counts", async () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    dispatch({ type: "begin" });
+    dispatch({ type: "advance" }); // set 1 → rest
+    dispatch({ type: "advance" }); // rest → set 2
+    now += CEILING_MS + 1_000;
+    dispatch({ type: "advance" }); // set 2 done → feedback, NOT a wrap boundary
+    expect(useSessionStore.getState().player?.phase).toEqual({
+      kind: "feedback",
+      blockIndex: 0,
+    });
+
+    dispatch({ type: "feedback", outcome: "completed" }); // → wraps at next intro
+    const { player, pendingClose } = useSessionStore.getState();
+    expect(player?.phase).toEqual({ kind: "done" });
+    expect(player?.outcomes).toEqual(["completed", "skipped"]);
+    expect(pendingClose).toBe("outOfTime");
+
+    await useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().finish?.close).toEqual({
+      reason: "outOfTime",
+      minutes: fixtureSession.minutes,
+    });
+  });
+
+  it("never wraps mid-count: a running hold ticks to its own end first", () => {
+    mockedCreate.mockReturnValue({
+      ok: true,
+      value: {
+        session: fixtureSession,
+        playerBlocks: [
+          {
+            movementId: "plank",
+            name: "Plank",
+            cues: ["Breathe steadily."],
+            unilateral: false,
+            sets: 1,
+            amount: 3,
+            restSeconds: 0,
+            timingType: "seconds",
+          },
+        ],
+      },
+    });
+    useSessionStore.getState().startSession(fixturePrompt);
+    dispatch({ type: "begin" }); // hold counting down from 3
+    now += CEILING_MS + 1_000;
+
+    dispatch({ type: "tick" }); // mid-count: same position, no wrap
+    expect(useSessionStore.getState().player?.phase).toMatchObject({
+      kind: "work",
+      remainingSeconds: 2,
+    });
+
+    dispatch({ type: "tick" });
+    dispatch({ type: "tick" }); // hold ends → feedback (excluded boundary)
+    expect(useSessionStore.getState().player?.phase).toEqual({
+      kind: "feedback",
+      blockIndex: 0,
+    });
+  });
+
+  it("holds across backgrounding: wall-clock reconciliation fires the wrap at the boundary", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    dispatch({ type: "begin" });
+    dispatch({ type: "advance" }); // set 1 done → rest (30s countdown persisted)
+    expect(useSessionStore.getState().countdownEndsAt).toBe(now + 30_000);
+
+    // She backgrounds; the app returns long past the ceiling. The rest
+    // ran out while away — reconciliation reaches the next boundary
+    // (rep work) and the wrap lands there, from persisted anchors only.
+    now += CEILING_MS + 60_000;
+    useSessionStore.getState().reconcileTimer(now);
+
+    const state = useSessionStore.getState();
+    expect(state.player?.phase).toEqual({ kind: "done" });
+    expect(state.pendingClose).toBe("outOfTime");
+    expect(state.countdownEndsAt).toBeNull();
+    expect(useActiveSessionStore.getState().snapshot?.pendingClose).toBe(
+      "outOfTime",
+    );
+  });
+
+  it("survives process death: the persisted anchor drives the wrap after restore", () => {
+    const player = reduce(createPlayer(fixturePlayerBlocks), { type: "begin" });
+    useActiveSessionStore.setState({
+      snapshot: {
+        sessionId: "ceiling-restore",
+        prompt: fixturePrompt,
+        session: fixtureSession,
+        player,
+        countdownEndsAt: null,
+        workStartedAt: 500_000, // long before "now"
+      },
+    });
+    now = 500_000 + CEILING_MS + 1_000;
+
+    const result = useSessionStore
+      .getState()
+      .restoreActiveSession(fixtureSession.date);
+    expect(result).toBe("inProgress");
+    expect(useSessionStore.getState().workStartedAt).toBe(500_000);
+
+    dispatch({ type: "advance" }); // her next transition wraps
+    expect(useSessionStore.getState().player?.phase).toEqual({ kind: "done" });
+    expect(useSessionStore.getState().pendingClose).toBe("outOfTime");
+  });
+
+  it("restores a crash-persisted early close and keeps its reason through the apply", async () => {
+    let player = createPlayer(fixturePlayerBlocks);
+    player = reduce(player, { type: "begin" });
+    player = reduce(player, { type: "advance" });
+    player = reduce(player, { type: "advance" });
+    player = reduce(player, { type: "advance" });
+    player = reduce(player, { type: "feedback", outcome: "completed" });
+    player = finishEarly(player);
+    useActiveSessionStore.setState({
+      snapshot: {
+        sessionId: "ended-early-restore",
+        prompt: fixturePrompt,
+        session: fixtureSession,
+        player,
+        countdownEndsAt: null,
+        pendingClose: "endedEarly",
+      },
+    });
+
+    const result = useSessionStore
+      .getState()
+      .restoreActiveSession(fixtureSession.date);
+    expect(result).toBe("completedUnsaved");
+    expect(useSessionStore.getState().pendingClose).toBe("endedEarly");
+
+    await useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().finish?.close).toEqual({
+      reason: "endedEarly",
+    });
+  });
+
+  it("a session finished inside its budget never wraps and closes completed", async () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    dispatch({ type: "begin" });
+    now += 60_000; // one minute in — well inside the ceiling
+    dispatch({ type: "advance" });
+    dispatch({ type: "advance" });
+    dispatch({ type: "advance" });
+    dispatch({ type: "feedback", outcome: "completed" });
+    dispatch({ type: "begin" });
+    for (let i = 0; i < 20; i += 1) dispatch({ type: "tick" });
+    dispatch({ type: "feedback", outcome: "completed" });
+
+    expect(useSessionStore.getState().player?.phase).toEqual({ kind: "done" });
+    expect(useSessionStore.getState().pendingClose).toBeNull();
+
+    await useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().finish?.close).toEqual({
+      reason: "completed",
     });
   });
 });

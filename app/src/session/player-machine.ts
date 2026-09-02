@@ -257,6 +257,36 @@ export function finishEarly(state: PlayerState): PlayerState {
   };
 }
 
+// ---------- Time-budget ceiling (ADR-0012 §2) ----------
+
+/**
+ * The session length is a promise the player enforces, with +10% tolerance
+ * (ADR-0012 §2 — the documented number Gate 3 and QA test against).
+ * Player-layer contract by decision: generation already budgets to the
+ * length engine-side; this covers the tap-paced reality.
+ */
+export const SESSION_CEILING_TOLERANCE = 1.1;
+
+/** Elapsed work-time milliseconds past which the session must wrap up. */
+export function sessionCeilingMs(minutes: number): number {
+  return Math.round(minutes * 60 * 1000 * SESSION_CEILING_TOLERANCE);
+}
+
+/**
+ * Whether the time-budget wrap may land on this state. The wrap is only
+ * ever evaluated on a phase TRANSITION (a countdown mid-flight keeps its
+ * machine position, so ticks can never fire it mid-hold or mid-count),
+ * and two phases are additionally excluded:
+ * - "feedback": her work on that block is already done — the one calm
+ *   question gets its answer first, so completed work counts before the
+ *   wrap lands on the following boundary;
+ * - "done": the session ended on its own; there is nothing to wrap.
+ */
+export function isWrapBoundary(state: PlayerState): boolean {
+  const { kind } = state.phase;
+  return kind !== "feedback" && kind !== "done";
+}
+
 // ---------- Selectors (display math only; no rules) ----------
 
 export function totalSets(state: PlayerState): number {

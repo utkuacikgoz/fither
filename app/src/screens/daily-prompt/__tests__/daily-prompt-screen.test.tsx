@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import React from "react";
 
 import { strings } from "../../../copy/strings";
+import { todayIso } from "../../../lib/dates";
 import { createSession } from "../../../session/create-session";
 import { useSessionStore } from "../../../state/session-store";
 import { useActiveSessionStore } from "../../../state/active-session-store";
@@ -10,6 +11,10 @@ import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { useSettingsStore } from "../../../state/settings-store";
+import {
+  collectStringValues,
+  renderedTextLeaves,
+} from "../../../test-utils/copy-audit";
 import {
   fixturePlayerBlocks,
   fixtureSession,
@@ -24,9 +29,26 @@ import { DailyPromptScreen } from "../daily-prompt-screen";
 jest.mock("../../../session/create-session", () => ({ createSession: jest.fn() }));
 const mockedCreate = jest.mocked(createSession);
 
+/** Applied sessions recorded for today — the done-state's only input. */
+function seedTodayHistory(minutesEach: number[]) {
+  useProfileStore.setState({
+    history: {
+      entries: minutesEach.map((minutes) => ({
+        date: todayIso(),
+        minutes: minutes as 10 | 20 | 30,
+        blocks: [],
+      })),
+    },
+  });
+}
+
 beforeEach(() => {
   useLedgerStore.setState({ hydrated: true, hydrationFailed: false });
-  useProfileStore.setState({ hydrated: true, hydrationFailed: false });
+  useProfileStore.setState({
+    history: { entries: [] },
+    hydrated: true,
+    hydrationFailed: false,
+  });
   useSettingsStore.setState({
     hydrated: true,
     hydrationFailed: false,
@@ -294,12 +316,14 @@ describe("DailyPromptScreen", () => {
     fireEvent.changeText(screen.getByTestId("care-note"), "  long day  ");
     fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
 
-    expect(useCareNoteStore.getState().entries).toEqual([
-      {
-        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) as unknown as string,
-        text: "long day",
-      },
-    ]);
+    // Shape-matched, not deep-equal: the care-note store (owned by the
+    // care-journal surface) may attach its own identity fields; this
+    // screen's contract is only that date + text were captured.
+    expect(useCareNoteStore.getState().entries).toHaveLength(1);
+    expect(useCareNoteStore.getState().entries[0]).toMatchObject({
+      date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) as unknown as string,
+      text: "long day",
+    });
     // And she is back at the start, with the moment behind her.
     expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
 
@@ -358,6 +382,70 @@ describe("DailyPromptScreen", () => {
 
     fireEvent.press(screen.getByTestId("open-progress"));
     expect(router.push).toHaveBeenCalledWith("/progress");
+  });
+
+  it("shows the completed-today state instead of the questions once today holds an applied session", () => {
+    seedTodayHistory([20]);
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    expect(screen.getByText(strings.prompt.completedToday.headline)).toBeTruthy();
+    expect(
+      screen.getByText(strings.prompt.completedToday.line(20)),
+    ).toBeTruthy();
+    expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
+    // The corner doors stay hers.
+    expect(screen.getByTestId("open-progress")).toBeTruthy();
+    expect(screen.getByTestId("open-settings")).toBeTruthy();
+  });
+
+  it("sums every applied session from today into the minutes-trained line", () => {
+    seedTodayHistory([10, 20]);
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    expect(
+      screen.getByText(strings.prompt.completedToday.line(30)),
+    ).toBeTruthy();
+  });
+
+  it("'Another session' reopens the normal four questions, and they still work", () => {
+    seedTodayHistory([10]);
+    const onSessionReady = jest.fn();
+    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+
+    fireEvent.press(screen.getByTestId("another-session"));
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    expect(
+      screen.queryByText(strings.prompt.completedToday.headline),
+    ).toBeNull();
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-okay"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+    expect(onSessionReady).toHaveBeenCalledTimes(1);
+  });
+
+  it("a previous day's history never triggers the done-state", () => {
+    useProfileStore.setState({
+      history: {
+        entries: [{ date: "2026-08-01", minutes: 30, blocks: [] }],
+      },
+    });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    expect(
+      screen.queryByText(strings.prompt.completedToday.headline),
+    ).toBeNull();
+  });
+
+  it("completed-today renders no user-facing text outside strings.ts", () => {
+    seedTodayHistory([10, 20]);
+    const allowed = collectStringValues(strings);
+    // Parameterised strings.ts values, explicitly enumerated.
+    allowed.add(strings.prompt.completedToday.line(30));
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    for (const leaf of renderedTextLeaves(screen.toJSON())) {
+      expect(allowed.has(leaf)).toBe(true);
+    }
   });
 
   it("shows the onboarding handoff atop the first question only", () => {
