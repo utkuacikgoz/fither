@@ -110,9 +110,10 @@ completion and lifecycle-aware timers. Completion is now journaled under a
 stable per-session ID before profile, history, ledger, trial, and active-session
 state are changed. A retry or relaunch replays that exact result, so a hard kill
 cannot award twice; the finish screen withholds success until the committed
-write and active-session cleanup land. Next is elapsed-time restoration across
-backgrounding and process death, followed by honest ended-early and
-completed-today states.
+write and active-session cleanup land. Countdown deadlines now persist and
+reconcile elapsed wall-clock time across backgrounding and process death.
+Next is the total-session time-budget contract, followed by honest ended-early,
+zero-completion, and completed-today states.
 
 1. ~~GATE 2~~ **PASSED 2026-09-01.** The owner ran the app from a device
    build, trained with it, and called it good after the live-testing UX

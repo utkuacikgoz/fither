@@ -221,6 +221,24 @@ export function reduce(state: PlayerState, event: PlayerEvent): PlayerState {
 }
 
 /**
+ * Reconcile wall-clock time after suspension. Countdown phases may flow
+ * into another countdown (rest → timed work), but stop at any phase that
+ * needs a human decision: side switch, feedback, intro, rep work, or done.
+ */
+export function advanceCountdownBy(
+  state: PlayerState,
+  elapsedSeconds: number,
+): PlayerState {
+  let next = state;
+  let remaining = Math.max(0, Math.floor(elapsedSeconds));
+  while (remaining > 0 && isCountingDown(next)) {
+    next = reduce(next, { type: "tick" });
+    remaining -= 1;
+  }
+  return next;
+}
+
+/**
  * End the session now, keeping every outcome already captured. Blocks not
  * yet concluded — including one mid-set or awaiting its feedback answer —
  * record "skipped": we only report what she actually told us. Used by the

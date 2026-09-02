@@ -356,6 +356,87 @@ describe("restoreActiveSession", () => {
     );
     expect(useSessionStore.getState().session).toBeNull();
   });
+
+  it("restores a timed set from its wall-clock deadline instead of restarting it", async () => {
+    const player = reduce(
+      createPlayer([
+        {
+          movementId: "plank",
+          name: "Plank",
+          cues: ["Breathe steadily."],
+          unilateral: false,
+          sets: 1,
+          amount: 20,
+          restSeconds: 0,
+          timingType: "seconds",
+        },
+      ]),
+      { type: "begin" },
+    );
+    useActiveSessionStore.setState({
+      snapshot: {
+        sessionId: "timer-restore",
+        prompt: fixturePrompt,
+        session: fixtureSession,
+        player,
+        countdownEndsAt: 21_000,
+      },
+    });
+    jest.spyOn(Date, "now").mockReturnValue(8_000);
+
+    useSessionStore.getState().restoreActiveSession(fixtureSession.date);
+
+    expect(useSessionStore.getState().player?.phase).toMatchObject({
+      kind: "work",
+      remainingSeconds: 13,
+    });
+    expect(useSessionStore.getState().countdownEndsAt).toBe(21_000);
+    jest.restoreAllMocks();
+  });
+});
+
+describe("lifecycle-aware countdowns", () => {
+  it("catches up from the deadline when the app returns to foreground", async () => {
+    mockedCreate.mockReturnValue({
+      ok: true,
+      value: {
+        session: fixtureSession,
+        playerBlocks: [
+          {
+            movementId: "plank",
+            name: "Plank",
+            cues: ["Breathe steadily."],
+            unilateral: false,
+            sets: 1,
+            amount: 5,
+            restSeconds: 0,
+            timingType: "seconds",
+          },
+        ],
+      },
+    });
+    jest.spyOn(Date, "now").mockReturnValue(1_000);
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().dispatchPlayer({ type: "begin" });
+    expect(useSessionStore.getState().countdownEndsAt).toBe(6_000);
+
+    useSessionStore.getState().reconcileTimer(4_000);
+    expect(useSessionStore.getState().player?.phase).toMatchObject({
+      kind: "work",
+      remainingSeconds: 2,
+    });
+    expect(useActiveSessionStore.getState().snapshot?.player.phase).toMatchObject({
+      remainingSeconds: 2,
+    });
+
+    useSessionStore.getState().reconcileTimer(6_000);
+    expect(useSessionStore.getState().player?.phase).toEqual({
+      kind: "feedback",
+      blockIndex: 0,
+    });
+    expect(useSessionStore.getState().countdownEndsAt).toBeNull();
+    jest.restoreAllMocks();
+  });
 });
 
 describe("finishSessionEarly", () => {

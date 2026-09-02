@@ -4,6 +4,38 @@ Date: 2026-09-02
 Branch audited: `main` at `a68fa31`  
 Scope: daily prompt, session preview, exercise player, finish/unlock, copy, visual system, accessibility, retention hooks, and production QA. Authentication and sign-in are explicitly out of scope because they are being built in parallel.
 
+## Implementation status (updated 2026-09-02)
+
+Finished:
+
+- Full coaching cues reach the player; unilateral reps and holds explicitly
+  run left → switch → right and survive legacy-session restoration.
+- Skip is confirmed in every active phase and truthfully excludes the block
+  from completion; soreness feedback cannot be submitted as “all good.”
+- Preview shows generated blocks and prescriptions, leads with one primary
+  adaptation, and supports editing prefilled daily answers.
+- Completion uses a stable session ID and durable replay journal. History,
+  progression, points, unlocks, trial state, and active-session cleanup
+  converge on retry without duplicate awards; success copy waits for commit.
+- Countdown deadlines persist with the active session and reconcile elapsed
+  wall-clock time on foreground and relaunch instead of restarting.
+
+Remaining, in production order:
+
+1. Define and instrument the total-session time-budget contract.
+2. Distinguish full completion, ended early, zero-completion, save failure, and
+   already-completed-today states in product logic and copy.
+3. Add hydrated route guards and preserve owned records through expired-access
+   navigation.
+4. Complete semantic contrast, VoiceOver announcements/focus, Dynamic Type,
+   Reduce Motion, and narrow-device QA.
+5. Complete qualified human-coach review of every exposed movement; only then
+   validate and scale deterministic offline movement animation.
+6. Build capability progress, verified skill milestones, completed-today and
+   history surfaces, then measured opt-in return hooks.
+7. Run the release device matrix, persistence/end-to-end qualification,
+   privacy/store metadata, billing sandbox, and operational sign-off.
+
 ## Executive verdict
 
 FITHER has a coherent product idea and a notably restrained visual foundation, but the exercise experience is not production-ready yet. The primary gap is not polish: important workout meaning is lost between the engine and the player. In particular, unilateral exercises are budgeted for two sides but played as one, and movement instruction is reduced to the first cue. Those two defects must be corrected before expanding animation, gamification, or distribution.
@@ -199,23 +231,23 @@ Also fix singular/plural output for “movement” and “point,” move hardcod
 
 ### Wave 1 — Exercise integrity
 
-1. Add unilateral side state and full-cue transport.
-2. Redesign intro/work/rest/side-switch/feedback states around those truths.
-3. Confirm and clarify skip behavior without changing engine rules silently.
-4. Add full state-machine and screen coverage, including resume.
-5. Complete human coach review for all exposed movements.
+- [x] Add unilateral side state and full-cue transport.
+- [x] Redesign intro/work/rest/side-switch/feedback states around those truths.
+- [x] Confirm and clarify skip behavior without changing engine rules silently.
+- [x] Add full state-machine and screen coverage, including resume.
+- [ ] Complete human coach review for all exposed movements.
 
 Exit criteria: no asymmetric prescription, no missing coaching step, no ambiguous destructive action, all tests and deterministic simulation green.
 
 ### Wave 2 — Session contract and durability
 
-1. Build the real preview and answer-edit path.
-2. Define and instrument the time-budget contract.
-3. Implement idempotent completion and crash-safe timer restoration.
-   - Idempotent, journaled completion shipped 2026-09-02; elapsed-time timer
-     restoration remains.
-4. Build honest finish, ended-early, save-failed, and completed-today states.
-5. Add hydrated route guards and expired-access navigation that preserves owned records.
+- [x] Build the real preview and answer-edit path.
+- [ ] Define and instrument the time-budget contract.
+- [x] Implement idempotent completion and crash-safe timer restoration.
+- [ ] Build honest finish, ended-early, save-failed, and completed-today states.
+  Save-pending and save-failed states are complete; the remaining semantic
+  outcomes are not.
+- [ ] Add hydrated route guards and expired-access navigation that preserves owned records.
 
 Exit criteria: every visible promise survives backgrounding, process death, retry, and offline mode.
 

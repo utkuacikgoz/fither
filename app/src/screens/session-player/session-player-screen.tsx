@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { AppState, StyleSheet, View } from "react-native";
 import { useKeepAwake } from "expo-keep-awake";
 
 import { strings } from "../../copy/strings";
@@ -40,6 +40,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   useKeepAwake();
   const player = useSessionStore((s) => s.player);
   const dispatchPlayer = useSessionStore((s) => s.dispatchPlayer);
+  const reconcileTimer = useSessionStore((s) => s.reconcileTimer);
   const reduceMotion = useReducedMotion();
 
   const counting = player !== null && isCountingDown(player);
@@ -75,6 +76,16 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     const interval = setInterval(() => dispatchPlayer({ type: "tick" }), 1000);
     return () => clearInterval(interval);
   }, [confirmingSkip, counting, dispatchPlayer]);
+
+  useEffect(() => {
+    // Native timers pause or drift while the app is backgrounded. The
+    // persisted wall-clock deadline is authoritative when we return.
+    reconcileTimer();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") reconcileTimer();
+    });
+    return () => subscription.remove();
+  }, [reconcileTimer]);
 
   useEffect(() => {
     if (finished) onFinished();
