@@ -9,6 +9,7 @@ import {
   minTouchTarget,
   radius,
   spacing,
+  trackingWide,
 } from "../../design/tokens";
 
 // The card typesets the shared WORDMARK constant in its own small,
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     marginTop: spacing.xs,
-    letterSpacing: 2,
+    letterSpacing: trackingWide,
   },
   shareRow: {
     minHeight: minTouchTarget,

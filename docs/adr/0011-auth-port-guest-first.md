@@ -47,6 +47,11 @@ must work in airplane mode, and nothing may spend Gate 3's
 
 ## Consequences
 
+- Installs that predate this decision (history exists, identity null)
+  see the sign-in screen once on their next launch — deliberate: one
+  guest tap, the resume decision still wins over it, and pre-launch
+  there are no such users outside the build team.
+
 - A future backend (sync, account deletion email flows per the launch
   checklist) plugs in behind the port; account deletion UI becomes
   mandatory (Apple rule) only once real accounts exist.

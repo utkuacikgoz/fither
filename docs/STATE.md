@@ -163,3 +163,11 @@ session count, was 45%). Erratic users' first unlock is median week 10
 - Share card and ops SDKs. Re-run the offline-lockout review before any
   network SDK ships.
 - Brief 2 still overrides the working engine defaults when it arrives.
+- Busy/in-progress feedback on the sign-in and restore taps (Norman #5):
+  instant with the dev ports; add honest pending states the day real
+  Apple/Google/RevenueCat adapters land (reviewer 2026-09-02 #4).
+- `strings.profile.tier` bakes "of 6" into copy; when the Progress
+  screen lands, the ladder length must come from an engine export
+  (reviewer #6).
+- One-frame gate flash before the resume-offer effect commits —
+  pre-existing pattern, sign-in inherits it (reviewer #8).

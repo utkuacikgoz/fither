@@ -18,6 +18,7 @@ import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 import { useActiveSessionStore } from "../../state/active-session-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
+import { useIdentityStore } from "../../state/identity-store";
 import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useSettingsStore } from "../../state/settings-store";
@@ -59,6 +60,13 @@ export function DailyPromptScreen({
   const activeFailed = useActiveSessionStore((s) => s.hydrationFailed);
   const entitlementHydrated = useEntitlementStore((s) => s.hydrated);
   const entitlementFailed = useEntitlementStore((s) => s.hydrationFailed);
+  // Identity belongs to the same hydration set: the launch surface gates
+  // on it, so the prompt waiting on it too means a slow identity key can
+  // never flash an interactive prompt that sign-in then yanks away, and a
+  // corrupt one surfaces the same honest storage state as every other
+  // store instead of silently disabling launch's gates.
+  const identityHydrated = useIdentityStore((s) => s.hydrated);
+  const identityFailed = useIdentityStore((s) => s.hydrationFailed);
 
   const appendCareNote = useCareNoteStore((s) => s.append);
 
@@ -124,13 +132,15 @@ export function DailyPromptScreen({
     profileHydrated &&
     ledgerHydrated &&
     activeHydrated &&
-    entitlementHydrated;
+    entitlementHydrated &&
+    identityHydrated;
   const hydrationFailed =
     settingsFailed ||
     profileFailed ||
     ledgerFailed ||
     activeFailed ||
-    entitlementFailed;
+    entitlementFailed ||
+    identityFailed;
 
   if (!hydrated) {
     return (
