@@ -287,12 +287,32 @@ export const strings = {
       allow: "Sounds good",
       decline: "Not now",
     },
+    // These four are the NOTIFICATION BODIES of the one daily invitation —
+    // the ui-engineer rotates or picks among them when scheduling. Keep
+    // them interchangeable: any of them must stand alone on a lock screen.
     daily: {
       fourAnswers:
         "Today's session is four answers away. Ten, twenty or thirty minutes — your call.",
       quietTen: "Ten quiet minutes, whenever you are.",
       fitsToday: "A workout that fits today. Ready when you are.",
       yourMinutes: "Somewhere in today there are ten minutes. They're yours.",
+    },
+    // COPY-WRITER: new keys (2026-09-02, owner decision). After she allows
+    // notifications, one more tap picks the slot for the daily invitation.
+    // This is HER convenience — when the note suits her day — not our
+    // engagement lever, so the question asks what she'd like, nothing
+    // about habits or consistency. The labels name the hour (8:00, 12:30,
+    // 18:30 local — fixed by the scheduler) because the tap sets a real
+    // arrival time and she deserves to know it before choosing: "Evening"
+    // alone could mean bedtime. 24-hour clock: British-neutral, compact,
+    // unambiguous, consistent across all three. If the scheduled hours
+    // ever change, these labels must change with them — they state a fact.
+    // Settings reuses these three labels for changing the slot.
+    time: {
+      question: "When would you like your daily note?",
+      morning: "Morning (8:00)",
+      midday: "Midday (12:30)",
+      evening: "Evening (18:30)",
     },
   },
   resume: {
@@ -382,6 +402,19 @@ export const strings = {
     },
     restore: {
       title: "Subscription",
+    },
+    // COPY-WRITER: new keys (2026-09-02, owner decision). The Settings
+    // section for the daily invitation: change the slot (reuse
+    // notifications.time.morning/midday/evening for the option labels —
+    // never duplicate them) or turn it off. `off` sits as a fourth option
+    // with equal dignity: it names the plain state, no loss framing, no
+    // "are you sure", nothing about what she'd be missing. The title
+    // says "Daily invitation", the framing notifications.rationale
+    // already established — not "Reminders": a reminder implies she
+    // forgot; an invitation implies she's welcome.
+    reminders: {
+      title: "Daily invitation",
+      off: "No invitation",
     },
     // COPY-WRITER: care journal (2026-09-02, ADR-0012 §4). Her heavy-day
     // notes, listed with delete. The privacy line is care.notePrivacy —

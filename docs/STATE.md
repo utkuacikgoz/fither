@@ -216,3 +216,9 @@ session count, was 45%). Erratic users' first unlock is median week 10
 - Progress screen renders without its own hydration gate — fine as a
   pushed route today, matters if a cold deep-link to /progress ever
   exists (wave-2 #6, matches the settings-screen pattern).
+- A permanently-denied OS notification permission makes a Settings slot
+  tap end at the instant OS denial with no in-app explanation — needs a
+  "turn it on in iOS Settings" copy key + line (wave-C flag).
+- Dark-mode danger token (#A65746 on #171614 = 3.5:1) is below AA —
+  unused as text today; the first screen to render danger text in dark
+  needs a dark danger value (a11y-wave flag).
