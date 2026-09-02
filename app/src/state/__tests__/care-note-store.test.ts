@@ -90,6 +90,30 @@ describe("care-note store", () => {
     expect(persisted).not.toContain("delete me");
   });
 
+  it("updates exactly the targeted entry, persists it, and no-ops on blank text", async () => {
+    useCareNoteStore.getState().append({ date: "2026-09-01", text: "original" });
+    useCareNoteStore.getState().append({ date: "2026-09-02", text: "untouched" });
+    const target = useCareNoteStore.getState().entries[0];
+    expect(target).toBeDefined();
+    if (!target) return;
+
+    useCareNoteStore.getState().update(target, "revised words");
+    expect(useCareNoteStore.getState().entries).toMatchObject([
+      { date: "2026-09-01", text: "revised words" },
+      { date: "2026-09-02", text: "untouched" },
+    ]);
+
+    // A blanked note is kept as-is: deleting has its own confirmed path.
+    const revised = useCareNoteStore.getState().entries[0];
+    if (revised) useCareNoteStore.getState().update(revised, "   ");
+    expect(useCareNoteStore.getState().entries[0]?.text).toBe("revised words");
+
+    await flushPersistence();
+    const persisted = await AsyncStorage.getItem(STORAGE_KEY);
+    expect(persisted).toContain("revised words");
+    expect(persisted).not.toContain("original");
+  });
+
   it("removing an entry that is not there is a no-op", () => {
     useCareNoteStore.getState().append({ date: "2026-09-01", text: "only note" });
     const ghost: CareNoteEntry = { id: "nope", date: "2026-09-01", text: "only note" };
