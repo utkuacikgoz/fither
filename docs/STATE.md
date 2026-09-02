@@ -171,3 +171,12 @@ session count, was 45%). Erratic users' first unlock is median week 10
   (reviewer #6).
 - One-frame gate flash before the resume-offer effect commits —
   pre-existing pattern, sign-in inherits it (reviewer #8).
+- Library-absent fallback renders raw pattern ids (progress screen,
+  degraded-build state only) — wants a strings.errors-shaped fallback
+  (reviewer wave-2 #4).
+- useReducedMotion returns false until the async read lands, so a
+  Reduce Motion user can catch the first frames of a fade (paywall
+  letterhead) before the snap (wave-2 #5).
+- Progress screen renders without its own hydration gate — fine as a
+  pushed route today, matters if a cold deep-link to /progress ever
+  exists (wave-2 #6, matches the settings-screen pattern).

@@ -81,9 +81,9 @@ describe("SettingsScreen", () => {
   it("toggling an avoid area shows the check and persists to the settings store", async () => {
     const screen = render(<SettingsScreen />);
 
-    expect(screen.queryByTestId("avoid-knees-check")).toBeNull();
+    expect(screen.queryByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeNull();
     fireEvent.press(screen.getByTestId("avoid-knees"));
-    expect(screen.getByTestId("avoid-knees-check")).toBeTruthy();
+    expect(screen.getByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeTruthy();
     expect(useSettingsStore.getState().alwaysAvoid).toEqual(["knees"]);
 
     // Persisted immediately via the store layer (offline-safe disk write).
@@ -93,7 +93,7 @@ describe("SettingsScreen", () => {
 
     // Toggling off removes it — from the screen, the store and disk.
     fireEvent.press(screen.getByTestId("avoid-knees"));
-    expect(screen.queryByTestId("avoid-knees-check")).toBeNull();
+    expect(screen.queryByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeNull();
     expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
     await flushPersistence();
     const cleared = await AsyncStorage.getItem("fither/settings-v1");
@@ -103,9 +103,9 @@ describe("SettingsScreen", () => {
   it("shows areas already on the persistent list as selected", () => {
     useSettingsStore.setState({ alwaysAvoid: ["wrists", "back"] });
     const screen = render(<SettingsScreen />);
-    expect(screen.getByTestId("avoid-wrists-check")).toBeTruthy();
-    expect(screen.getByTestId("avoid-back-check")).toBeTruthy();
-    expect(screen.queryByTestId("avoid-knees-check")).toBeNull();
+    expect(screen.getByTestId("avoid-wrists-check", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId("avoid-back-check", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeNull();
   });
 
   it("restore succeeds when the (dev) store account has a receipt — no notice", async () => {

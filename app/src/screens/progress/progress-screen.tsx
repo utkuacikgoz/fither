@@ -25,14 +25,10 @@ import { useProfileStore } from "../../state/profile-store";
 // uses), points summed by the ledger module's own totalPoints. No rule,
 // threshold or derived value is computed on this screen.
 
-// COPY GAP (flagged for copy-writer, single-owner strings.ts): there is
-// no strings.profile.patterns.names key carrying display nouns for the
-// five patterns. Until it exists, each ladder row is labelled with the
-// library's canonical movement at her CURRENT tier — capability language
-// straight from the data ("Wall Push-Up"), never a literal in this file.
-
-/** The canonical ladder-step name at (pattern, tier) — display only. */
-function ladderLabel(
+/** The canonical ladder-step name at (pattern, tier) — skill rows only.
+ * Ladder rows use strings.profile.patterns.names; this resolves earned
+ * skills to their movement names, the same lookup ApplyResult uses. */
+function skillLabel(
   library: MovementLibrary | null,
   pattern: Pattern,
   tier: Tier,
@@ -58,6 +54,7 @@ function TierTrack({ pattern, tier }: { pattern: Pattern; tier: Tier }) {
       style={styles.track}
       testID={`tier-track-${pattern}`}
       importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
     >
       {steps.map((step) => (
         <View
@@ -112,10 +109,10 @@ export function ProgressScreen() {
               >
                 <View style={styles.patternLine}>
                   <AppText variant="body" style={styles.patternName}>
-                    {ladderLabel(library, pattern, state.tier)}
+                    {strings.profile.patterns.names[pattern]}
                   </AppText>
                   <AppText variant="caption" testID={`pattern-${pattern}-tier`}>
-                    {strings.profile.tier(state.tier)}
+                    {strings.profile.tier(state.tier, MAX_TIER)}
                   </AppText>
                 </View>
                 <TierTrack pattern={pattern} tier={state.tier} />
@@ -145,11 +142,12 @@ export function ProgressScreen() {
                   variant="body"
                   color={colors.gold}
                   importantForAccessibility="no"
+                  accessibilityElementsHidden
                 >
                   {glyph.check}
                 </AppText>
                 <AppText variant="body" style={styles.skillName}>
-                  {ladderLabel(library, m.pattern, m.tier)}
+                  {skillLabel(library, m.pattern, m.tier)}
                 </AppText>
               </View>
             ))

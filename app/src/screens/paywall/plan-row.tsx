@@ -61,6 +61,7 @@ export function PlanRow({ label, price, note, selected, onPress, testID }: PlanR
               variant="bodyLarge"
               color={colors.accent}
               importantForAccessibility="no"
+              accessibilityElementsHidden
               testID={testID ? `${testID}-check` : undefined}
             >
               {glyph.check}

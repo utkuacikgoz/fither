@@ -57,6 +57,7 @@ export function RowButton({
           variant="bodyLarge"
           color={colors.accent}
           importantForAccessibility="no"
+          accessibilityElementsHidden
           testID={testID ? `${testID}-check` : undefined}
         >
           {glyph.check}
