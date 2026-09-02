@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { AccessibilityInfo, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -51,6 +51,16 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   // A session with zero completed blocks gets the honest close — no
   // "complete", no "counts", no points row (ADR-0012 / audit P0 #5).
   const nothingDone = finish !== null && !finish.completedAnything;
+
+  // VoiceOver hears the close HERE, where the honest reason is known —
+  // the player deliberately says nothing at done (a generic "Session
+  // complete" could contradict "Today didn't fit"). Once per settle.
+  const announcedRef = useRef(false);
+  useEffect(() => {
+    if (!finish || announcedRef.current) return;
+    announcedRef.current = true;
+    AccessibilityInfo.announceForAccessibility(closeCopy(finish).headline);
+  }, [finish]);
   const { headline, note } = finish
     ? closeCopy(finish)
     : saveFailed

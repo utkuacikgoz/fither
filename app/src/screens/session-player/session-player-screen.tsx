@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
-import { AppState, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  AccessibilityInfo,
+  AppState,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useKeepAwake } from "expo-keep-awake";
 
 import { strings } from "../../copy/strings";
@@ -20,6 +26,7 @@ import {
   totalSets,
 } from "../../session/player-machine";
 import { useSessionStore } from "../../state/session-store";
+import { announcementKey, phaseAnnouncement } from "./announcements";
 
 // The session is sacred: movement name, complete setup, one live cue, one
 // huge number, a thin progress line. Nothing else. No points mid-set.
@@ -96,6 +103,28 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     if (finished) onFinished();
   }, [finished, onFinished]);
 
+  // VoiceOver hears each phase TRANSITION exactly once (audit P0 #6):
+  // the key ignores countdown seconds, so ticks and re-renders repeat a
+  // key and stay silent. While the skip confirm is open nothing is
+  // announced — its copy owns the screen; "Keep going" returns to the
+  // same key, so nothing repeats, and a confirmed skip lands on the next
+  // block's fresh key.
+  const phaseKey = player === null ? null : announcementKey(player);
+  const announcedKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (phaseKey === null || confirmingSkip) return;
+    if (announcedKey.current === phaseKey) return;
+    announcedKey.current = phaseKey;
+    const announcement =
+      player === null ? null : phaseAnnouncement(player);
+    if (announcement !== null) {
+      AccessibilityInfo.announceForAccessibility(announcement);
+    }
+    // player is intentionally read, not depended on: ticks change it
+    // without changing the position the key names.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmingSkip, phaseKey]);
+
   if (!player || player.phase.kind === "done") {
     return <Screen>{null}</Screen>;
   }
@@ -147,7 +176,15 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
       {phase.kind === "blockIntro" && !confirmingSkip && (
         <>
-          <View style={styles.center}>
+          {/* The setup reading scrolls at large Dynamic Type sizes: the
+              name + full cue sequence is the one unbounded text stack in
+              the player, and Begin must stay pinned and reachable. When
+              everything fits, flexGrow centers it exactly as before. */}
+          <ScrollView
+            style={styles.introScroll}
+            contentContainerStyle={styles.introContent}
+            showsVerticalScrollIndicator={false}
+          >
             <AppText variant="display" accessibilityRole="header">{block.name}</AppText>
             <AppText variant="bodySoft" style={styles.subline}>
               {strings.player.blockPlan(
@@ -166,7 +203,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
                 ))}
               </View>
             )}
-          </View>
+          </ScrollView>
           <View style={styles.bottom}>
             <PrimaryButton
               testID="player-begin"
@@ -348,6 +385,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
+  },
+  introScroll: {
+    flex: 1,
+  },
+  introContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
   },
   bottom: {
     gap: spacing.sm,
