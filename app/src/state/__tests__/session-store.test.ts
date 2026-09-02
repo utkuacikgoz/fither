@@ -11,6 +11,11 @@ import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
 import { useSessionStore } from "../session-store";
+import {
+  COMPLETION_STORAGE_KEY,
+  readCompletionRecord,
+  writeCompletionRecord,
+} from "../completion-journal";
 import { useSettingsStore } from "../settings-store";
 import {
   fixtureApplyResult,
@@ -30,7 +35,8 @@ jest.mock("../../session/apply-result", () => ({ applyResult: jest.fn() }));
 const mockedCreate = jest.mocked(createSession);
 const mockedApply = jest.mocked(applyResult);
 
-beforeEach(() => {
+beforeEach(async () => {
+  await AsyncStorage.removeItem(COMPLETION_STORAGE_KEY);
   useLedgerStore.setState({ events: [], hydrated: true, hydrationFailed: false });
   useProfileStore.setState({
     profile: createInitialProfile(),
@@ -79,7 +85,7 @@ function playWholeSession() {
 }
 
 describe("session store", () => {
-  it("startSession stores the generated session and a fresh player", () => {
+  it("startSession stores the generated session and a fresh player", async () => {
     const result = useSessionStore.getState().startSession(fixturePrompt);
     expect(result.ok).toBe(true);
     const state = useSessionStore.getState();
@@ -87,17 +93,17 @@ describe("session store", () => {
     expect(state.player?.phase).toEqual({ kind: "blockIntro", blockIndex: 0 });
   });
 
-  it("startSession surfaces failure without touching state", () => {
+  it("startSession surfaces failure without touching state", async () => {
     mockedCreate.mockReturnValue({ ok: false, reason: "noLibrary" });
     const result = useSessionStore.getState().startSession(fixturePrompt);
     expect(result.ok).toBe(false);
     expect(useSessionStore.getState().session).toBeNull();
   });
 
-  it("completeSession routes outcomes through the engine and stores the summary", () => {
+  it("completeSession routes outcomes through the engine and stores the summary", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
 
     expect(mockedApply).toHaveBeenCalledWith(
       expect.anything(),
@@ -114,42 +120,66 @@ describe("session store", () => {
     expect(totalPoints(useLedgerStore.getState().events)).toBe(35);
   });
 
-  it("completeSession is idempotent", () => {
+  it("completeSession is idempotent", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(mockedApply).toHaveBeenCalledTimes(1);
     expect(useLedgerStore.getState().events).toHaveLength(2);
   });
 
-  it("does nothing before the player is finished", () => {
+  it("replays a journaled completion after a crash without awarding twice", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
-    useSessionStore.getState().completeSession();
+    playWholeSession();
+    const sessionId = useSessionStore.getState().sessionId;
+    if (!sessionId) throw new Error("missing session id");
+    const result = fixtureApplyResult();
+    await writeCompletionRecord({
+      version: 1,
+      status: "pending",
+      sessionId,
+      result,
+      ledgerEvents: result.ledgerEvents,
+      trialStartDate: fixtureSession.date,
+      purchase: null,
+    });
+
+    await useSessionStore.getState().completeSession();
+
+    expect(mockedApply).not.toHaveBeenCalled();
+    expect(useLedgerStore.getState().events).toEqual(result.ledgerEvents);
+    expect((await readCompletionRecord())?.status).toBe("committed");
+    expect(useActiveSessionStore.getState().snapshot).toBeNull();
+  });
+
+  it("does nothing before the player is finished", async () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    await useSessionStore.getState().completeSession();
     expect(mockedApply).not.toHaveBeenCalled();
   });
 
-  it("marks saveFailed calmly when the engine boundary fails", () => {
+  it("marks saveFailed calmly when the engine boundary fails", async () => {
     mockedApply.mockReturnValue({ ok: false, reason: "engineUnavailable" });
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     const state = useSessionStore.getState();
     expect(state.saveFailed).toBe(true);
     expect(state.finish).toBeNull();
     expect(useLedgerStore.getState().events).toHaveLength(0);
   });
 
-  it("retries a failed save without double-applying", () => {
+  it("retries a failed save without double-applying", async () => {
     mockedApply
       .mockReturnValueOnce({ ok: false, reason: "engineUnavailable" })
       .mockReturnValueOnce({ ok: true, value: fixtureApplyResult() });
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
 
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(useSessionStore.getState().saveFailed).toBe(true);
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
 
     expect(mockedApply).toHaveBeenCalledTimes(2);
     expect(useSessionStore.getState().saveFailed).toBe(false);
@@ -157,7 +187,7 @@ describe("session store", () => {
     expect(useLedgerStore.getState().events).toHaveLength(2);
   });
 
-  it("refuses to start before persisted state is hydrated", () => {
+  it("refuses to start before persisted state is hydrated", async () => {
     useProfileStore.setState({ hydrated: false });
     const result = useSessionStore.getState().startSession(fixturePrompt);
     expect(result).toEqual({ ok: false, reason: "notReady" });
@@ -170,14 +200,14 @@ describe("crash-safe persistence (S3)", () => {
     return useActiveSessionStore.getState().snapshot;
   }
 
-  it("snapshots the session when it starts", () => {
+  it("snapshots the session when it starts", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     const snapshot = activeSnapshot();
     expect(snapshot?.session).toEqual(fixtureSession);
     expect(snapshot?.player?.phase).toEqual({ kind: "blockIntro", blockIndex: 0 });
   });
 
-  it("persists on phase transitions and outcome captures, never on ticks", () => {
+  it("persists on phase transitions and outcome captures, never on ticks", async () => {
     // One hold block so the work phase actually counts down.
     mockedCreate.mockReturnValue({
       ok: true,
@@ -237,24 +267,24 @@ describe("crash-safe persistence (S3)", () => {
     expect(persisted.state.snapshot.session.date).toBe(fixtureSession.date);
   });
 
-  it("clears the snapshot once the session is applied", () => {
+  it("clears the snapshot once the session is applied", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(useSessionStore.getState().finish).not.toBeNull();
     expect(activeSnapshot()).toBeNull();
   });
 
-  it("keeps the snapshot when the save fails so a relaunch can retry", () => {
+  it("keeps the snapshot when the save fails so a relaunch can retry", async () => {
     mockedApply.mockReturnValue({ ok: false, reason: "engineUnavailable" });
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(useSessionStore.getState().saveFailed).toBe(true);
     expect(activeSnapshot()).not.toBeNull();
   });
 
-  it("resetSession discards the snapshot", () => {
+  it("resetSession discards the snapshot", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     useSessionStore.getState().resetSession();
     expect(activeSnapshot()).toBeNull();
@@ -269,13 +299,13 @@ describe("restoreActiveSession", () => {
     return player;
   }
 
-  it("returns none when nothing is persisted", () => {
+  it("returns none when nothing is persisted", async () => {
     expect(useSessionStore.getState().restoreActiveSession(fixtureSession.date)).toBe(
       "none",
     );
   });
 
-  it("restores a same-day in-progress session for the resume offer", () => {
+  it("restores a same-day in-progress session for the resume offer", async () => {
     const player = seedSnapshot(
       reduce(createPlayer(fixturePlayerBlocks), { type: "begin" }),
     );
@@ -289,7 +319,7 @@ describe("restoreActiveSession", () => {
     expect(state.finish).toBeNull();
   });
 
-  it("silently discards a snapshot from a previous day — no mention, no restore", () => {
+  it("silently discards a snapshot from a previous day — no mention, no restore", async () => {
     seedSnapshot();
     const result = useSessionStore.getState().restoreActiveSession("2026-09-01");
     expect(result).toBe("none");
@@ -297,7 +327,7 @@ describe("restoreActiveSession", () => {
     expect(useSessionStore.getState().session).toBeNull();
   });
 
-  it("routes a finished-but-unsaved session to the finish path, which applies it", () => {
+  it("routes a finished-but-unsaved session to the finish path, which applies it", async () => {
     let player = createPlayer(fixturePlayerBlocks);
     player = reduce(player, { type: "skipBlock" });
     player = reduce(player, { type: "skipBlock" });
@@ -309,7 +339,7 @@ describe("restoreActiveSession", () => {
     expect(result).toBe("completedUnsaved");
 
     // The finish screen's normal save path now applies it (retries too).
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(mockedApply).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
       session: fixtureSession,
       outcomes: ["skipped", "skipped"],
@@ -318,7 +348,7 @@ describe("restoreActiveSession", () => {
     expect(useActiveSessionStore.getState().snapshot).toBeNull();
   });
 
-  it("refuses to restore before the stores hydrate", () => {
+  it("refuses to restore before the stores hydrate", async () => {
     seedSnapshot();
     useActiveSessionStore.setState({ hydrated: false });
     expect(useSessionStore.getState().restoreActiveSession(fixtureSession.date)).toBe(
@@ -329,7 +359,7 @@ describe("restoreActiveSession", () => {
 });
 
 describe("finishSessionEarly", () => {
-  it("banks captured outcomes, marks the rest skipped, and snapshots done", () => {
+  it("banks captured outcomes, marks the rest skipped, and snapshots done", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     const dispatch = useSessionStore.getState().dispatchPlayer;
     dispatch({ type: "begin" });
@@ -347,7 +377,7 @@ describe("finishSessionEarly", () => {
     });
 
     // The normal apply path earns whatever the engine grants for it.
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(mockedApply).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
       session: fixtureSession,
       outcomes: ["completed", "skipped"],
@@ -375,7 +405,7 @@ describe("Gate 3 capture at the dispatch boundary", () => {
     return useFirstMovementStore.getState().runs;
   }
 
-  it("records exactly one labelled run, at the first work entry only", () => {
+  it("records exactly one labelled run, at the first work entry only", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     expect(recordedRuns()).toHaveLength(0); // blockIntro is not moving
 
@@ -390,7 +420,7 @@ describe("Gate 3 capture at the dispatch boundary", () => {
     expect(recordedRuns()).toHaveLength(1);
   });
 
-  it("never writes on countdown ticks after the capture", () => {
+  it("never writes on countdown ticks after the capture", async () => {
     // One hold block so work actually counts down.
     mockedCreate.mockReturnValue({
       ok: true,
@@ -429,7 +459,7 @@ describe("Gate 3 capture at the dispatch boundary", () => {
     expect(timingWrites()).toBe(writesAfterCapture);
   });
 
-  it("labels a non-first-run launch as such", () => {
+  it("labels a non-first-run launch as such", async () => {
     firstMovementTracker.reset();
     firstMovementTracker.markLaunch(T0);
     firstMovementTracker.markFirstRun(false);
@@ -441,7 +471,7 @@ describe("Gate 3 capture at the dispatch boundary", () => {
     ]);
   });
 
-  it("records nothing when the session is skipped through without moving", () => {
+  it("records nothing when the session is skipped through without moving", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     useSessionStore.getState().dispatchPlayer({ type: "skipBlock" });
     useSessionStore.getState().dispatchPlayer({ type: "skipBlock" });
@@ -449,7 +479,7 @@ describe("Gate 3 capture at the dispatch boundary", () => {
     expect(recordedRuns()).toHaveLength(0);
   });
 
-  it("a restored mid-session launch captures at its next work entry", () => {
+  it("a restored mid-session launch captures at its next work entry", async () => {
     // She relaunched mid-workout: the snapshot restores directly into a
     // work phase without a dispatch, so the capture lands on the first
     // dispatch that finds the machine in work again.
@@ -469,30 +499,30 @@ describe("Gate 3 capture at the dispatch boundary", () => {
 });
 
 describe("trial start (ADR-0009 §2 — app-layer policy, never engine)", () => {
-  it("stamps the trial start when the first session is applied", () => {
+  it("stamps the trial start when the first session is applied", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(useEntitlementStore.getState().trialStartDate).toBe(fixtureSession.date);
   });
 
-  it("never moves an already-stamped trial start", () => {
+  it("never moves an already-stamped trial start", async () => {
     useEntitlementStore.setState({ trialStartDate: "2026-08-01" });
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(useEntitlementStore.getState().trialStartDate).toBe("2026-08-01");
   });
 
-  it("a failed save spends no trial — only a landed apply counts", () => {
+  it("a failed save spends no trial — only a landed apply counts", async () => {
     mockedApply.mockReturnValue({ ok: false, reason: "engineUnavailable" });
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
-    useSessionStore.getState().completeSession();
+    await useSessionStore.getState().completeSession();
     expect(useEntitlementStore.getState().trialStartDate).toBeNull();
   });
 
-  it("refuses to start a session before the entitlement store hydrates", () => {
+  it("refuses to start a session before the entitlement store hydrates", async () => {
     useEntitlementStore.setState({ hydrated: false });
     const result = useSessionStore.getState().startSession(fixturePrompt);
     expect(result).toEqual({ ok: false, reason: "notReady" });

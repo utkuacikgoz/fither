@@ -16,6 +16,18 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   const completeSession = useSessionStore((s) => s.completeSession);
   const finish = useSessionStore((s) => s.finish);
   const saveFailed = useSessionStore((s) => s.saveFailed);
+  const saving = useSessionStore((s) => s.saving);
+
+  const headline = finish
+    ? strings.finish.headline
+    : saveFailed
+      ? strings.finish.failedHeadline
+      : strings.finish.savingHeadline;
+  const note = finish
+    ? strings.finish.note
+    : saveFailed
+      ? strings.errors.saveUnavailable
+      : strings.finish.savingNote;
 
   // Apply the session through the engine boundary once, on arrival.
   useEffect(() => {
@@ -25,9 +37,9 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   return (
     <Screen>
       <View style={styles.center}>
-        <AppText variant="title">{strings.finish.headline}</AppText>
+        <AppText variant="title">{headline}</AppText>
         <AppText variant="bodySoft" style={styles.note}>
-          {strings.finish.note}
+          {note}
         </AppText>
         {finish && (
           <View style={styles.points}>
@@ -37,18 +49,15 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
             <AppText variant="caption">{strings.finish.pointsLabel}</AppText>
           </View>
         )}
-        {saveFailed && (
-          <AppText variant="bodySoft" style={styles.note} testID="finish-save-failed">
-            {strings.errors.saveUnavailable}
-          </AppText>
-        )}
       </View>
       <View style={styles.bottom}>
-        <PrimaryButton
-          testID={saveFailed ? "finish-retry" : "finish-continue"}
-          label={saveFailed ? strings.errors.tryAgain : strings.finish.continueLabel}
-          onPress={saveFailed ? completeSession : onContinue}
-        />
+        {(finish || saveFailed) && !saving && (
+          <PrimaryButton
+            testID={saveFailed ? "finish-retry" : "finish-continue"}
+            label={saveFailed ? strings.errors.tryAgain : strings.finish.continueLabel}
+            onPress={saveFailed ? completeSession : onContinue}
+          />
+        )}
       </View>
     </Screen>
   );

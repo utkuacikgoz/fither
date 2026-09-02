@@ -13,6 +13,8 @@ import type { PlayerState } from "../session/player-machine";
  * session is applied or explicitly discarded.
  */
 export interface ActiveSessionSnapshot {
+  /** Stable apply key. Optional only so pre-upgrade snapshots remain recoverable. */
+  sessionId?: string;
   prompt: DailyPrompt;
   session: Session;
   /** Full machine state: blocks with display info, phase, outcomes so far. */

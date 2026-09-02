@@ -1,5 +1,6 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { strings } from "../../../copy/strings";
 import { applyResult } from "../../../session/apply-result";
@@ -10,6 +11,7 @@ import { useLedgerStore } from "../../../state/ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../../../state/profile-store";
 import { useSessionStore } from "../../../state/session-store";
+import { COMPLETION_STORAGE_KEY } from "../../../state/completion-journal";
 import { useSettingsStore } from "../../../state/settings-store";
 import {
   fixtureApplyResult,
@@ -26,14 +28,17 @@ function seedFinishedSession() {
   player = reduce(player, { type: "skipBlock" });
   player = reduce(player, { type: "skipBlock" });
   useSessionStore.setState({
+    sessionId: `finish-test:${Date.now()}:${Math.random()}`,
     session: fixtureSession,
     player,
     finish: null,
     saveFailed: false,
+    saving: false,
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await AsyncStorage.removeItem(COMPLETION_STORAGE_KEY);
   useLedgerStore.setState({ events: [], hydrated: true, hydrationFailed: false });
   useProfileStore.setState({
     profile: createInitialProfile(),
@@ -58,36 +63,37 @@ beforeEach(() => {
 });
 
 describe("FinishScreen", () => {
-  it("applies the session once on arrival and shows the points earned", () => {
+  it("applies the session once on arrival and shows the points earned", async () => {
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
-    expect(mockedApply).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(strings.finish.headline)).toBeTruthy();
+    expect(screen.getByText(strings.finish.savingHeadline)).toBeTruthy();
+    await waitFor(() => expect(mockedApply).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
     expect(screen.getByText("+35")).toBeTruthy();
     expect(screen.getByText(strings.finish.pointsLabel)).toBeTruthy();
   });
 
-  it("continues via the single button", () => {
+  it("continues via the single button", async () => {
     const onContinue = jest.fn();
     const screen = render(<FinishScreen onContinue={onContinue} />);
-    fireEvent.press(screen.getByTestId("finish-continue"));
+    fireEvent.press(await screen.findByTestId("finish-continue"));
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
 
-  it("stays calm when saving is unavailable — no points shown, no crash", () => {
+  it("stays calm when saving is unavailable — no points shown, no crash", async () => {
     mockedApply.mockReturnValue({ ok: false, reason: "engineUnavailable" });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
-    expect(screen.getByText(strings.errors.saveUnavailable)).toBeTruthy();
+    expect(await screen.findByText(strings.errors.saveUnavailable)).toBeTruthy();
     expect(screen.queryByTestId("finish-points")).toBeNull();
     expect(screen.getByTestId("finish-retry")).toBeTruthy();
   });
 
-  it("retries saving from the recovery action", () => {
+  it("retries saving from the recovery action", async () => {
     mockedApply
       .mockReturnValueOnce({ ok: false, reason: "engineUnavailable" })
       .mockReturnValueOnce({ ok: true, value: fixtureApplyResult() });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("finish-retry"));
-    expect(mockedApply).toHaveBeenCalledTimes(2);
-    expect(screen.getByTestId("finish-continue")).toBeTruthy();
+    fireEvent.press(await screen.findByTestId("finish-retry"));
+    await waitFor(() => expect(mockedApply).toHaveBeenCalledTimes(2));
+    expect(await screen.findByTestId("finish-continue")).toBeTruthy();
   });
 });

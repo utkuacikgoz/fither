@@ -266,6 +266,9 @@ export const strings = {
   finish: {
     headline: "Session complete",
     note: "That counts.",
+    savingHeadline: "Saving your session",
+    savingNote: "Keeping your progress safe.",
+    failedHeadline: "Your session is safe",
     pointsLabel: "points",
     continueLabel: "Continue",
   },
