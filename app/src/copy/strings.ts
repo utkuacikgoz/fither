@@ -3,7 +3,7 @@
 // short sentences, no guilt, forbidden list respected. Polished by
 // copy-writer (2026-08-31); flag any new keys for review before release.
 
-import type { BodyArea, Energy, SessionMinutes } from "@fither/engine";
+import type { BodyArea, Energy, Pattern, SessionMinutes } from "@fither/engine";
 
 export const strings = {
   prompt: {
@@ -307,6 +307,17 @@ export const strings = {
     title: "Progress",
     patterns: {
       title: "Patterns",
+      // Row labels for the five ladders. "Hip hinge", not bare "Hinge":
+      // to a non-gym reader "Hinge" alone is ambiguous (it's also a
+      // dating app), and "Hip hinge" names exactly what the pattern
+      // trains — a movement, never a body-shape word.
+      names: {
+        push: "Push",
+        pull: "Pull",
+        squat: "Squat",
+        hinge: "Hip hinge",
+        core: "Core",
+      } satisfies Record<Pattern, string>,
     },
     skills: {
       title: "Skills",
@@ -322,8 +333,9 @@ export const strings = {
       // this is the full ledger line.
       total: (points: number) => `${points} points earned`,
     },
-    // Six tiers per pattern is fixed product truth (fither-domain).
-    tier: (tier: number) => `Tier ${tier} of 6`,
+    // Ladder length comes from the engine's MAX_TIER at the callsite —
+    // copy never hardcodes product structure.
+    tier: (tier: number, max: number) => `Tier ${tier} of ${max}`,
   },
   errors: {
     // Shown while the session engine or movement library is unavailable

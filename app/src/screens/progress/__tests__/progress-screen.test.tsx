@@ -75,19 +75,23 @@ describe("ProgressScreen", () => {
       expect(screen.getByTestId(`pattern-${pattern}`)).toBeTruthy();
     }
 
-    // Tier strings come from strings.profile.tier over store state: push
-    // sits at 4, the other four ladders at 1.
-    expect(screen.getByText(strings.profile.tier(4))).toBeTruthy();
-    expect(screen.getAllByText(strings.profile.tier(1))).toHaveLength(
+    // Tier strings come from strings.profile.tier over store state, the
+    // ladder length from the engine's MAX_TIER: push sits at 4, the
+    // other four ladders at 1.
+    expect(screen.getByText(strings.profile.tier(4, MAX_TIER))).toBeTruthy();
+    expect(screen.getAllByText(strings.profile.tier(1, MAX_TIER))).toHaveLength(
       PATTERNS.length - 1,
     );
 
-    // Row labels resolve through the library's canonical ladder step at
-    // her current tier (see the flagged patterns.names copy gap). The
-    // push name appears twice by design: the ladder row and, since tier 4
-    // is her unlocked milestone here, the skill row too.
-    expect(screen.getAllByText(ladderName("push", 4))).toHaveLength(2);
-    expect(screen.getByText(ladderName("pull", 1))).toBeTruthy();
+    // Ladder rows carry the pattern nouns from strings.ts; the movement
+    // name appears exactly once, on the earned skill row — never doubled
+    // as a ladder label.
+    for (const pattern of PATTERNS) {
+      expect(
+        screen.getByText(strings.profile.patterns.names[pattern]),
+      ).toBeTruthy();
+    }
+    expect(screen.getAllByText(ladderName("push", 4))).toHaveLength(1);
   });
 
   it("fills the tier track to the current tier, length from MAX_TIER", () => {
@@ -168,7 +172,7 @@ describe("ProgressScreen", () => {
     const allowed = collectStringValues(strings);
     // Parameterised strings.ts values, explicitly enumerated.
     for (let tier = 1; tier <= MAX_TIER; tier += 1) {
-      allowed.add(strings.profile.tier(tier));
+      allowed.add(strings.profile.tier(tier, MAX_TIER));
     }
     allowed.add(strings.profile.points.total(20));
     // Library-sourced movement names are data, like the player's.

@@ -197,20 +197,20 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("quiet-no"));
 
     // Nothing selected yet: no checks, no count cue.
-    expect(screen.queryByTestId("soreness-wrists-check")).toBeNull();
+    expect(screen.queryByTestId("soreness-wrists-check", { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByTestId("soreness-count")).toBeNull();
 
     fireEvent.press(screen.getByTestId("soreness-wrists"));
-    expect(screen.getByTestId("soreness-wrists-check")).toBeTruthy();
+    expect(screen.getByTestId("soreness-wrists-check", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText(strings.prompt.soreness.areasNoted(1))).toBeTruthy();
 
     fireEvent.press(screen.getByTestId("soreness-knees"));
-    expect(screen.getByTestId("soreness-knees-check")).toBeTruthy();
+    expect(screen.getByTestId("soreness-knees-check", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText(strings.prompt.soreness.areasNoted(2))).toBeTruthy();
 
     // Deselecting removes the check and updates the count.
     fireEvent.press(screen.getByTestId("soreness-knees"));
-    expect(screen.queryByTestId("soreness-knees-check")).toBeNull();
+    expect(screen.queryByTestId("soreness-knees-check", { includeHiddenElements: true })).toBeNull();
     expect(screen.getByText(strings.prompt.soreness.areasNoted(1))).toBeTruthy();
   });
 

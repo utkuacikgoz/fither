@@ -118,12 +118,12 @@ describe("PaywallScreen", () => {
 
   it("marks the selected plan with the check glyph, and it follows the choice", () => {
     const screen = render(<PaywallScreen />);
-    expect(screen.getByTestId("paywall-plan-annual-check")).toBeTruthy();
-    expect(screen.queryByTestId("paywall-plan-monthly-check")).toBeNull();
+    expect(screen.getByTestId("paywall-plan-annual-check", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId("paywall-plan-monthly-check", { includeHiddenElements: true })).toBeNull();
 
     fireEvent.press(screen.getByTestId("paywall-plan-monthly"));
-    expect(screen.getByTestId("paywall-plan-monthly-check")).toBeTruthy();
-    expect(screen.queryByTestId("paywall-plan-annual-check")).toBeNull();
+    expect(screen.getByTestId("paywall-plan-monthly-check", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId("paywall-plan-annual-check", { includeHiddenElements: true })).toBeNull();
     expect(
       screen.getByTestId("paywall-plan-monthly").props.accessibilityState.selected,
     ).toBe(true);
