@@ -7,6 +7,9 @@
 
 export type Pattern = "push" | "pull" | "squat" | "hinge" | "core";
 export type Tier = 1 | 2 | 3 | 4 | 5 | 6;
+/** The ladder's length, as a value: UI that shows "tier N of M" reads M
+ * here rather than baking the number into copy. Tier 6 is terminal. */
+export const MAX_TIER: Tier = 6;
 export type Equipment = "none" | "chair" | "wall";
 export type BodyArea =
   | "shoulders"
