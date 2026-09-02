@@ -156,6 +156,8 @@ describe("session store", () => {
 
     expect(mockedApply).not.toHaveBeenCalled();
     expect(useLedgerStore.getState().events).toEqual(result.ledgerEvents);
+    // The journaled trial decision replays verbatim — same stamp, once.
+    expect(useEntitlementStore.getState().trialStartDate).toBe(fixtureSession.date);
     expect((await readCompletionRecord())?.status).toBe("committed");
     expect(useActiveSessionStore.getState().snapshot).toBeNull();
   });
@@ -515,22 +517,42 @@ describe("time-budget ceiling (ADR-0012 §2)", () => {
   const dispatch = (event: Parameters<typeof reduce>[1]) =>
     useSessionStore.getState().dispatchPlayer(event);
 
-  it("anchors elapsed time at the first work phase, not at the intro", () => {
+  it("anchors active time at the first work phase, not at the intro", () => {
     useSessionStore.getState().startSession(fixturePrompt);
-    expect(useSessionStore.getState().workStartedAt).toBeNull();
+    expect(useSessionStore.getState().workResumedAt).toBeNull();
+    expect(useSessionStore.getState().activeMs).toBe(0);
 
     // Time spent reading the intro never spends the budget: even far past
-    // the ceiling, skipping through intros wraps nothing.
+    // the ceiling, skipping through intros wraps nothing and banks nothing.
     now += CEILING_MS * 2;
     dispatch({ type: "skipBlock" });
     expect(useSessionStore.getState().player?.phase).toEqual({
       kind: "blockIntro",
       blockIndex: 1,
     });
+    expect(useSessionStore.getState().activeMs).toBe(0);
 
     dispatch({ type: "begin" });
-    expect(useSessionStore.getState().workStartedAt).toBe(now);
-    expect(useActiveSessionStore.getState().snapshot?.workStartedAt).toBe(now);
+    expect(useSessionStore.getState().workResumedAt).toBe(now);
+    expect(useSessionStore.getState().activeMs).toBe(0);
+    // The snapshot carries banked active time only — never a wall anchor.
+    expect(useActiveSessionStore.getState().snapshot?.activeMs).toBe(0);
+  });
+
+  it("banks active time at snapshot boundaries as she trains", () => {
+    useSessionStore.getState().startSession(fixturePrompt);
+    dispatch({ type: "begin" });
+    now += 60_000; // one minute of set 1
+    dispatch({ type: "advance" }); // set 1 done → rest: folds the stretch
+    expect(useSessionStore.getState().activeMs).toBe(60_000);
+    expect(useActiveSessionStore.getState().snapshot?.activeMs).toBe(60_000);
+
+    now += 30_000; // the rest counts while the session is live
+    dispatch({ type: "advance" }); // rest ended early → set 2
+    expect(useSessionStore.getState().activeMs).toBe(90_000);
+    expect(useActiveSessionStore.getState().snapshot?.activeMs).toBe(90_000);
+    // The live anchor restarts at each fold; elapsed time never doubles.
+    expect(useSessionStore.getState().workResumedAt).toBe(now);
   });
 
   it("wraps at the next phase boundary once elapsed exceeds minutes×60×1.1", async () => {
@@ -640,16 +662,66 @@ describe("time-budget ceiling (ADR-0012 §2)", () => {
     );
   });
 
-  it("survives process death: the persisted anchor drives the wrap after restore", () => {
+  it("interrupted at three active minutes, restored hours later: she trains her remaining budget", async () => {
+    // Three minutes of actual training, then the process dies at a rest.
+    useSessionStore.getState().startSession(fixturePrompt);
+    dispatch({ type: "begin" });
+    now += 3 * 60_000;
+    dispatch({ type: "advance" }); // set 1 done → rest: 3 min banked
+    expect(useActiveSessionStore.getState().snapshot?.activeMs).toBe(180_000);
+    const snapshot = useActiveSessionStore.getState().snapshot;
+
+    // Relaunch hours later; the resume offer's "Keep going" restores it.
+    useSessionStore.getState().resetSession();
+    useActiveSessionStore.setState({ snapshot });
+    now += 5 * 60 * 60 * 1000;
+    const result = useSessionStore
+      .getState()
+      .restoreActiveSession(fixtureSession.date);
+    expect(result).toBe("inProgress");
+    // Banked time only: the five away hours never spend her budget, and
+    // no live anchor runs until she moves again.
+    expect(useSessionStore.getState().activeMs).toBe(180_000);
+    expect(useSessionStore.getState().workResumedAt).toBeNull();
+
+    // She trains on — no instant "that's your 10 minutes", no wrap.
+    dispatch({ type: "advance" }); // finishes the restored set → feedback
+    dispatch({ type: "feedback", outcome: "completed" }); // → next intro
+    expect(useSessionStore.getState().player?.phase).toEqual({
+      kind: "blockIntro",
+      blockIndex: 1,
+    });
+    expect(useSessionStore.getState().pendingClose).toBeNull();
+
+    // The wrap lands only once ACTIVE time passes the ceiling: 3 banked
+    // minutes plus the rest of the budget, plus one second over.
+    now += CEILING_MS - 180_000 + 1_000;
+    dispatch({ type: "begin" }); // intro → work would start: wraps instead
+    expect(useSessionStore.getState().player?.phase).toEqual({ kind: "done" });
+    expect(useSessionStore.getState().player?.outcomes).toEqual([
+      "completed",
+      "skipped",
+    ]);
+    expect(useSessionStore.getState().pendingClose).toBe("outOfTime");
+
+    await useSessionStore.getState().completeSession();
+    expect(useSessionStore.getState().finish?.close).toEqual({
+      reason: "outOfTime",
+      minutes: fixtureSession.minutes,
+    });
+  });
+
+  it("a legacy snapshot (wall-clock anchor, no activeMs) restores generously and trains on", () => {
     const player = reduce(createPlayer(fixturePlayerBlocks), { type: "begin" });
     useActiveSessionStore.setState({
       snapshot: {
-        sessionId: "ceiling-restore",
+        sessionId: "legacy-anchor-restore",
         prompt: fixturePrompt,
         session: fixtureSession,
         player,
         countdownEndsAt: null,
-        workStartedAt: 500_000, // long before "now"
+        // Pre-active-time shape: one wall anchor, hours before "now".
+        workStartedAt: 500_000,
       },
     });
     now = 500_000 + CEILING_MS + 1_000;
@@ -658,11 +730,19 @@ describe("time-budget ceiling (ADR-0012 §2)", () => {
       .getState()
       .restoreActiveSession(fixtureSession.date);
     expect(result).toBe("inProgress");
-    expect(useSessionStore.getState().workStartedAt).toBe(500_000);
+    // The anchor can't tell training from hours away, so it banks
+    // NOTHING — the generous reading that preserves her session.
+    expect(useSessionStore.getState().activeMs).toBe(0);
+    expect(useSessionStore.getState().workResumedAt).toBeNull();
+    // The re-persisted snapshot converges on the new shape.
+    expect(useActiveSessionStore.getState().snapshot?.activeMs).toBe(0);
+    expect(useActiveSessionStore.getState().snapshot?.workStartedAt).toBeNull();
 
-    dispatch({ type: "advance" }); // her next transition wraps
-    expect(useSessionStore.getState().player?.phase).toEqual({ kind: "done" });
-    expect(useSessionStore.getState().pendingClose).toBe("outOfTime");
+    dispatch({ type: "advance" }); // set 1 done → rest: continues, no wrap
+    expect(useSessionStore.getState().player?.phase).toMatchObject({
+      kind: "rest",
+    });
+    expect(useSessionStore.getState().pendingClose).toBeNull();
   });
 
   it("restores a crash-persisted early close and keeps its reason through the apply", async () => {
@@ -832,11 +912,75 @@ describe("Gate 3 capture at the dispatch boundary", () => {
 });
 
 describe("trial start (ADR-0009 §2 — app-layer policy, never engine)", () => {
-  it("stamps the trial start when the first session is applied", async () => {
+  it("stamps the trial start when the first COMPLETED session is applied", async () => {
     useSessionStore.getState().startSession(fixturePrompt);
     playWholeSession();
     await useSessionStore.getState().completeSession();
     expect(useEntitlementStore.getState().trialStartDate).toBe(fixtureSession.date);
+  });
+
+  it("an all-skipped session spends no trial — nothing was completed", async () => {
+    // The engine's evidence for "completed anything" is its "session"
+    // ledger event; an all-skipped apply carries none, so the trial
+    // stays unstarted (ADR-0009 §2: an unused install spends no trial,
+    // and skipping through a session is not using it).
+    const base = fixtureApplyResult();
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+    });
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().finishSessionEarly();
+    await useSessionStore.getState().completeSession();
+
+    expect(useSessionStore.getState().finish?.completedAnything).toBe(false);
+    expect(useEntitlementStore.getState().trialStartDate).toBeNull();
+  });
+
+  it("the first genuinely completed session after an all-skipped one stamps it", async () => {
+    const base = fixtureApplyResult();
+    mockedApply.mockReturnValueOnce({
+      ok: true,
+      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+    });
+    useSessionStore.getState().startSession(fixturePrompt);
+    useSessionStore.getState().finishSessionEarly();
+    await useSessionStore.getState().completeSession();
+    expect(useEntitlementStore.getState().trialStartDate).toBeNull();
+
+    // Later, a session with real completed work: the trial starts here.
+    useSessionStore.getState().resetSession();
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    await useSessionStore.getState().completeSession();
+    expect(useEntitlementStore.getState().trialStartDate).toBe(
+      fixtureSession.date,
+    );
+  });
+
+  it("replaying a journaled all-skipped completion reaches the same no-trial decision", async () => {
+    // Crash-replay path: the record's STORED decision is replayed
+    // verbatim — never re-derived from ambient state — so a retry can
+    // neither invent nor lose a trial start.
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    const sessionId = useSessionStore.getState().sessionId;
+    if (!sessionId) throw new Error("missing session id");
+    const base = fixtureApplyResult();
+    await writeCompletionRecord({
+      version: 1,
+      status: "pending",
+      sessionId,
+      result: { ...base, ledgerEvents: [], unlockedSkills: [] },
+      ledgerEvents: [],
+      trialStartDate: null,
+      purchase: null,
+    });
+
+    await useSessionStore.getState().completeSession();
+    expect(mockedApply).not.toHaveBeenCalled();
+    expect(useEntitlementStore.getState().trialStartDate).toBeNull();
+    expect(useSessionStore.getState().finish?.completedAnything).toBe(false);
   });
 
   it("never moves an already-stamped trial start", async () => {

@@ -29,17 +29,28 @@ import { DailyPromptScreen } from "../daily-prompt-screen";
 jest.mock("../../../session/create-session", () => ({ createSession: jest.fn() }));
 const mockedCreate = jest.mocked(createSession);
 
-/** Applied sessions recorded for today — the done-state's only input. */
-function seedTodayHistory(minutesEach: number[]) {
-  useProfileStore.setState({
-    history: {
-      entries: minutesEach.map((minutes) => ({
-        date: todayIso(),
-        minutes: minutes as 10 | 20 | 30,
-        blocks: [],
-      })),
-    },
-  });
+/**
+ * An applied session recorded for today, with its engine-written per-block
+ * outcomes — the done-state's only input. Detection and the minutes claim
+ * both read these outcomes, so every seed states them explicitly.
+ */
+function todayEntry(
+  minutes: number,
+  outcomes: Array<"completed" | "struggled" | "skipped">,
+) {
+  return {
+    date: todayIso(),
+    minutes: minutes as 10 | 20 | 30,
+    blocks: outcomes.map((outcome, index) => ({
+      movementId: `movement-${index}`,
+      pattern: "push" as const,
+      outcome,
+    })),
+  };
+}
+
+function seedTodayHistory(entries: Array<ReturnType<typeof todayEntry>>) {
+  useProfileStore.setState({ history: { entries } });
 }
 
 beforeEach(() => {
@@ -384,8 +395,8 @@ describe("DailyPromptScreen", () => {
     expect(router.push).toHaveBeenCalledWith("/progress");
   });
 
-  it("shows the completed-today state instead of the questions once today holds an applied session", () => {
-    seedTodayHistory([20]);
+  it("shows the completed-today state once today holds a fully completed session", () => {
+    seedTodayHistory([todayEntry(20, ["completed", "completed"])]);
     const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
 
     expect(screen.getByText(strings.prompt.completedToday.headline)).toBeTruthy();
@@ -398,16 +409,77 @@ describe("DailyPromptScreen", () => {
     expect(screen.getByTestId("open-settings")).toBeTruthy();
   });
 
-  it("sums every applied session from today into the minutes-trained line", () => {
-    seedTodayHistory([10, 20]);
+  it("sums every fully completed session from today into the minutes-trained line", () => {
+    seedTodayHistory([
+      todayEntry(10, ["completed"]),
+      todayEntry(20, ["completed", "completed"]),
+    ]);
     const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
     expect(
       screen.getByText(strings.prompt.completedToday.line(30)),
     ).toBeTruthy();
   });
 
+  it("an all-skipped session is not training: the four questions render", () => {
+    // The entry exists in history (the engine records it), but nothing
+    // completed — today is not "done" and no done-state may claim it is.
+    seedTodayHistory([todayEntry(10, ["skipped", "skipped"])]);
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    expect(
+      screen.queryByText(strings.prompt.completedToday.headline),
+    ).toBeNull();
+  });
+
+  it("a partial session shows the no-minutes-claim line, never planned minutes", () => {
+    // She completed one block and the rest were skipped (ended early or
+    // out of time): "done for today" holds, but claiming the full 20
+    // planned minutes would be false — lineSome claims none.
+    seedTodayHistory([todayEntry(20, ["completed", "skipped", "skipped"])]);
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    expect(screen.getByText(strings.prompt.completedToday.headline)).toBeTruthy();
+    expect(
+      screen.getByText(strings.prompt.completedToday.lineSome),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(strings.prompt.completedToday.line(20)),
+    ).toBeNull();
+  });
+
+  it("a partial session alongside a full one keeps the claim honest: lineSome", () => {
+    seedTodayHistory([
+      todayEntry(10, ["completed"]),
+      todayEntry(20, ["completed", "struggled", "skipped"]),
+    ]);
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    expect(
+      screen.getByText(strings.prompt.completedToday.lineSome),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(strings.prompt.completedToday.line(30)),
+    ).toBeNull();
+    expect(
+      screen.queryByText(strings.prompt.completedToday.line(10)),
+    ).toBeNull();
+  });
+
+  it("an all-skipped entry never dilutes a full session's true minutes claim", () => {
+    seedTodayHistory([
+      todayEntry(10, ["completed", "completed"]),
+      todayEntry(20, ["skipped", "skipped"]),
+    ]);
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    // The skipped session trained nothing, so it neither adds minutes
+    // nor turns the honest full-session line into lineSome.
+    expect(
+      screen.getByText(strings.prompt.completedToday.line(10)),
+    ).toBeTruthy();
+  });
+
   it("'Another session' reopens the normal four questions, and they still work", () => {
-    seedTodayHistory([10]);
+    seedTodayHistory([todayEntry(10, ["completed"])]);
     const onSessionReady = jest.fn();
     const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
 
@@ -438,7 +510,10 @@ describe("DailyPromptScreen", () => {
   });
 
   it("completed-today renders no user-facing text outside strings.ts", () => {
-    seedTodayHistory([10, 20]);
+    seedTodayHistory([
+      todayEntry(10, ["completed"]),
+      todayEntry(20, ["completed", "completed"]),
+    ]);
     const allowed = collectStringValues(strings);
     // Parameterised strings.ts values, explicitly enumerated.
     allowed.add(strings.prompt.completedToday.line(30));

@@ -15,7 +15,13 @@ export interface CompletionRecord {
   sessionId: string;
   result: ApplyResult;
   ledgerEvents: LedgerEvent[];
-  trialStartDate: string;
+  /**
+   * The trial decision AS JOURNALED (ADR-0009 §2): null when no trial had
+   * started and this session completed nothing — an all-skipped first
+   * session spends no trial. Replaying the record replays this stored
+   * decision verbatim, never re-deriving it from ambient state.
+   */
+  trialStartDate: string | null;
   purchase: PurchaseRecord | null;
 }
 
