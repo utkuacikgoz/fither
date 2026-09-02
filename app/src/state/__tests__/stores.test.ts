@@ -50,11 +50,32 @@ describe("profile store", () => {
     for (const pattern of ["push", "pull", "squat", "hinge", "core"] as const) {
       expect(profile.patterns[pattern]).toEqual({
         tier: 1,
-        cleanStreak: 0,
-        struggledStreak: 0,
+        cleanCount: 0,
+        struggleCount: 0,
         volumeReduced: false,
       });
     }
+  });
+
+  it("migrates v0 persisted profiles: *Streak fields become *Count, values kept", () => {
+    const migrate = useProfileStore.persist.getOptions().migrate!;
+    const v0 = {
+      profile: {
+        patterns: {
+          push: { tier: 3, cleanStreak: 2, struggledStreak: 1, volumeReduced: true },
+        },
+      },
+      history: { entries: [] },
+    };
+    const migrated = migrate(v0, 0) as typeof v0 & {
+      profile: { patterns: { push: Record<string, unknown> } };
+    };
+    expect(migrated.profile.patterns.push).toEqual({
+      tier: 3,
+      cleanCount: 2,
+      struggleCount: 1,
+      volumeReduced: true,
+    });
   });
 
   it("updates profile and history only via the engine's ApplyResult", () => {

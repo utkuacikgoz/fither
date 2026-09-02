@@ -257,14 +257,20 @@ export const strings = {
   },
   // Notifications — docs/copy/draft-strings.md §4. Strings only for now;
   // no notification code exists yet. Invitations, never nags.
+  // TRUTH RULE (audit, 2026-09-02): a session does not exist until she
+  // answers the four questions, so no line may claim one is ready. Lines
+  // invite her to build it, or speak of her minutes — never a built thing
+  // waiting. Never reference absence or missed days. Renamed `daily.ready`
+  // → `daily.fourAnswers`; the old key name itself made the false claim.
   notifications: {
     rationale: {
-      line: "One quiet note a day when your session is ready. That's all we'd ever send.",
+      line: "One quiet note a day, an invitation to build today's session. That's all we'd ever send.",
       allow: "Sounds good",
       decline: "Not now",
     },
     daily: {
-      ready: "Today's session is ready. Ten, twenty or thirty minutes — your call.",
+      fourAnswers:
+        "Today's session is four answers away. Ten, twenty or thirty minutes — your call.",
       quietTen: "Ten quiet minutes, whenever you are.",
       fitsToday: "A workout that fits today. Ready when you are.",
       yourMinutes: "Somewhere in today there are ten minutes. They're yours.",
@@ -366,6 +372,10 @@ export const strings = {
     careNotes: {
       title: "Your notes",
       empty: "No notes yet. Anything you write on a heavy day is kept here.",
+      // Editing her own note is mundane (ADR-0012 §4): a quiet affordance
+      // and a plain commit, no ceremony, no confirmation.
+      editAction: "Edit note",
+      saveEdit: "Save",
       deleteAction: "Delete note",
       deleteConfirmTitle: "Delete this note?",
       deleteConfirmBody: "This removes the only copy.",

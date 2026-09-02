@@ -70,11 +70,17 @@ export interface DailyPrompt {
 
 export interface PatternState {
   tier: Tier;
-  /** Clean sessions at this tier. Advances at CLEAN_SESSIONS_TO_ADVANCE. */
-  cleanStreak: number;
+  // Naming note (S2 rename): these two counters are internal progression
+  // bookkeeping — consecutive clean/struggled sessions at the current
+  // tier. "Streak" is a forbidden-list-adjacent word this product never
+  // wants near its vocabulary, even internally; "count" says what they
+  // are. Hence cleanCount / struggleCount, never *Streak.
+  /** Consecutive clean sessions at this tier. Advances at
+   * CLEAN_SESSIONS_TO_ADVANCE. */
+  cleanCount: number;
   /** Consecutive struggled sessions (skips are neutral, ADR-0012).
    * Volume drops at 2, tier at 3. */
-  struggledStreak: number;
+  struggleCount: number;
   /** True while in the reduced-volume soft landing. */
   volumeReduced: boolean;
   /**
@@ -211,7 +217,7 @@ export const MAX_PATTERN_ABSENCE_DAYS = 7;
 /**
  * Time floor per ladder step (ADR-0008), keyed by the CURRENT tier (the
  * step's start). A pattern advances only when BOTH hold: the clean-session
- * streak (ADR-0002) AND at least this many calendar days since the tier
+ * count (ADR-0002) AND at least this many calendar days since the tier
  * was reached (`tierSince`). Adaptation is time-bound, not session-bound;
  * the floor paces frequent and infrequent users nearly equally. Tier 6 is
  * terminal and has no floor. Cumulative minimum: tier 4 at day 49, tier 6

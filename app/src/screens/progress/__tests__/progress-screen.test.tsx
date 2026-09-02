@@ -40,8 +40,8 @@ function tier4Profile(): Profile {
   const profile = createInitialProfile();
   profile.patterns.push = {
     tier: 4,
-    cleanStreak: 0,
-    struggledStreak: 0,
+    cleanCount: 0,
+    struggleCount: 0,
     volumeReduced: false,
   };
   profile.unlockedMilestones = [{ pattern: "push", tier: 4 }];

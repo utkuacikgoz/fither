@@ -106,11 +106,11 @@ describe("applySessionResult — advancement with time floors (ADR-0008)", () =>
     for (const day of [0, 1, 2, 3, 4]) profile = cleanOn(profile, day);
     expect(profile.patterns.push.tier).toBe(1);
     // Cleans keep banking while the floor is unmet.
-    expect(profile.patterns.push.cleanStreak).toBe(5);
+    expect(profile.patterns.push.cleanCount).toBe(5);
     expect(profile.patterns.push.tierSince).toBe(dayIso(0));
   });
 
-  it("advancement fires on the first clean session where streak AND floor hold", () => {
+  it("advancement fires on the first clean session where count AND floor hold", () => {
     let profile = createInitialProfile();
     for (const day of [0, 1, 2, 3, 4]) profile = cleanOn(profile, day);
     // Day 6 is still < 7 days since day 0.
@@ -119,7 +119,7 @@ describe("applySessionResult — advancement with time floors (ADR-0008)", () =>
     // Day 7 meets DAYS_AT_TIER_TO_ADVANCE[1] = 7; banked cleans >= 3.
     profile = cleanOn(profile, 7);
     expect(profile.patterns.push.tier).toBe(2);
-    expect(profile.patterns.push.cleanStreak).toBe(0);
+    expect(profile.patterns.push.cleanCount).toBe(0);
     expect(profile.patterns.push.tierSince).toBe(dayIso(7));
   });
 
@@ -143,31 +143,31 @@ describe("applySessionResult — advancement with time floors (ADR-0008)", () =>
   it("3 clean sessions alone do not advance when the floor is unmet", () => {
     const profile = profileAtTier(3);
     profile.patterns.push.tierSince = dayIso(0);
-    profile.patterns.push.cleanStreak = 2;
+    profile.patterns.push.cleanCount = 2;
     // 27 days at tier 3 < the 28-day floor.
     const result = apply(profile, pushSession(profile, dayIso(27)), [
       "completed",
     ]);
     expect(result.profile.patterns.push.tier).toBe(3);
-    expect(result.profile.patterns.push.cleanStreak).toBe(3);
+    expect(result.profile.patterns.push.cleanCount).toBe(3);
     expect(result.unlockedSkills).toHaveLength(0);
   });
 
-  it("a struggled block resets the clean streak", () => {
+  it("a struggled block resets the clean count", () => {
     let profile = createInitialProfile();
     profile = cleanOn(profile, 0);
     profile = cleanOn(profile, 1);
     profile = apply(profile, pushSession(profile, dayIso(2)), ["struggled"])
       .profile;
-    expect(profile.patterns.push.cleanStreak).toBe(0);
+    expect(profile.patterns.push.cleanCount).toBe(0);
     expect(profile.patterns.push.tier).toBe(1);
-    expect(profile.patterns.push.struggledStreak).toBe(1);
+    expect(profile.patterns.push.struggleCount).toBe(1);
   });
 
   it("unlocks a named skill at milestone tiers", () => {
     const profile = profileAtTier(3);
     profile.patterns.push.tierSince = dayIso(-28); // floor met
-    profile.patterns.push.cleanStreak = 2; // next clean session advances to 4
+    profile.patterns.push.cleanCount = 2; // next clean session advances to 4
     const result = apply(profile, pushSession(profile), ["completed"]);
     expect(result.profile.patterns.push.tier).toBe(4);
     expect(SKILL_MILESTONE_TIERS).toContain(4);
@@ -189,7 +189,7 @@ describe("applySessionResult — legacy profiles without tierSince (ADR-0008)", 
     // A profile persisted before tierSince existed, one clean short of
     // advancing under ADR-0002 alone.
     const legacy = profileAtTier(3);
-    legacy.patterns.push.cleanStreak = 2;
+    legacy.patterns.push.cleanCount = 2;
     expect(legacy.patterns.push.tierSince).toBeUndefined();
     const result = apply(legacy, pushSession(legacy, dayIso(0)), ["completed"]);
     expect(result.profile.patterns.push.tier).toBe(4); // old rule, once
@@ -202,16 +202,16 @@ describe("applySessionResult — legacy profiles without tierSince (ADR-0008)", 
     expect(profile.patterns.push.tier).toBe(5);
   });
 
-  it("a legacy profile mid-streak gets stamped on its next apply even without advancing", () => {
+  it("a legacy profile with banked cleans gets stamped on its next apply even without advancing", () => {
     const legacy = profileAtTier(3);
     expect(legacy.patterns.push.tierSince).toBeUndefined();
-    let profile = cleanOn(legacy, 0); // cleanStreak 1, no advance
+    let profile = cleanOn(legacy, 0); // cleanCount 1, no advance
     expect(profile.patterns.push.tier).toBe(3);
     expect(profile.patterns.push.tierSince).toBe(dayIso(0));
     // Floor now real: 3 banked cleans before day 28 do not advance.
     profile = cleanOn(profile, 1);
     profile = cleanOn(profile, 2);
-    expect(profile.patterns.push.cleanStreak).toBe(3);
+    expect(profile.patterns.push.cleanCount).toBe(3);
     expect(profile.patterns.push.tier).toBe(3);
   });
 
@@ -232,7 +232,7 @@ describe("applySessionResult — struggle and regression", () => {
       .profile;
     expect(profile.patterns.push).toMatchObject({
       tier: 3,
-      struggledStreak: 1,
+      struggleCount: 1,
       volumeReduced: false,
     });
 
@@ -240,7 +240,7 @@ describe("applySessionResult — struggle and regression", () => {
       .profile;
     expect(profile.patterns.push).toMatchObject({
       tier: 3,
-      struggledStreak: 2,
+      struggleCount: 2,
       volumeReduced: true,
     });
 
@@ -248,8 +248,8 @@ describe("applySessionResult — struggle and regression", () => {
       .profile;
     expect(profile.patterns.push).toMatchObject({
       tier: 2,
-      struggledStreak: 0,
-      cleanStreak: 0,
+      struggleCount: 0,
+      cleanCount: 0,
       volumeReduced: true, // soft landing at the lower tier
     });
   });
@@ -279,14 +279,14 @@ describe("applySessionResult — struggle and regression", () => {
   it("a skipped block is progression-neutral (ADR-0012): no struggle signal", () => {
     let profile = profileAtTier(3);
     profile = apply(profile, pushSession(profile), ["skipped"]).profile;
-    expect(profile.patterns.push.struggledStreak).toBe(0);
-    expect(profile.patterns.push.cleanStreak).toBe(0);
+    expect(profile.patterns.push.struggleCount).toBe(0);
+    expect(profile.patterns.push.cleanCount).toBe(0);
   });
 
   it("an all-skipped session leaves pattern state untouched — like absence", () => {
     const profile = profileAtTier(3);
-    profile.patterns.push.cleanStreak = 2;
-    profile.patterns.push.struggledStreak = 2;
+    profile.patterns.push.cleanCount = 2;
+    profile.patterns.push.struggleCount = 2;
     profile.patterns.push.volumeReduced = true;
     const result = apply(profile, pushSession(profile), ["skipped"]);
     // Neutral in BOTH directions: no clean credit, no struggle count, no
@@ -299,25 +299,25 @@ describe("applySessionResult — struggle and regression", () => {
     expect(result.history.entries[0]?.blocks[0]?.outcome).toBe("skipped");
   });
 
-  it("skips never complete a struggle streak into a regression", () => {
+  it("skips never complete a struggle count into a regression", () => {
     let profile = profileAtTier(3);
     profile.patterns.push.tierSince = dayIso(-30);
     profile = apply(profile, pushSession(profile, dayIso(0)), ["struggled"])
       .profile;
     profile = apply(profile, pushSession(profile, dayIso(1)), ["struggled"])
       .profile;
-    expect(profile.patterns.push.struggledStreak).toBe(2);
-    // Third session skipped: no regression, streak untouched either way.
+    expect(profile.patterns.push.struggleCount).toBe(2);
+    // Third session skipped: no regression, count untouched either way.
     profile = apply(profile, pushSession(profile, dayIso(2)), ["skipped"])
       .profile;
     expect(profile.patterns.push.tier).toBe(3);
-    expect(profile.patterns.push.struggledStreak).toBe(2);
+    expect(profile.patterns.push.struggleCount).toBe(2);
   });
 
   it("completed + skipped blocks for a pattern classify as a clean session", () => {
     const profile = profileAtTier(3);
     profile.patterns.push.tierSince = dayIso(-30);
-    profile.patterns.push.struggledStreak = 2;
+    profile.patterns.push.struggleCount = 2;
     profile.patterns.push.volumeReduced = true;
     const kneeling = block("kneeling-push-up", "push"); // tier 3 = current
     const result = apply(profile, session([kneeling, { ...kneeling }]), [
@@ -326,8 +326,8 @@ describe("applySessionResult — struggle and regression", () => {
     ]);
     expect(result.profile.patterns.push).toMatchObject({
       tier: 3,
-      cleanStreak: 1,
-      struggledStreak: 0,
+      cleanCount: 1,
+      struggleCount: 0,
       volumeReduced: false,
     });
   });
@@ -339,26 +339,26 @@ describe("applySessionResult — struggle and regression", () => {
       "struggled",
       "skipped",
     ]);
-    expect(result.profile.patterns.push.struggledStreak).toBe(1);
-    expect(result.profile.patterns.push.cleanStreak).toBe(0);
+    expect(result.profile.patterns.push.struggleCount).toBe(1);
+    expect(result.profile.patterns.push.cleanCount).toBe(0);
   });
 
-  it("any clean session resets the struggled streak and volume reduction", () => {
+  it("any clean session resets the struggle count and volume reduction", () => {
     let profile = profileAtTier(3);
-    profile.patterns.push.struggledStreak = 2;
+    profile.patterns.push.struggleCount = 2;
     profile.patterns.push.volumeReduced = true;
     profile = apply(profile, pushSession(profile), ["completed"]).profile;
     expect(profile.patterns.push).toMatchObject({
       tier: 3,
-      struggledStreak: 0,
+      struggleCount: 0,
       volumeReduced: false,
-      cleanStreak: 1,
+      cleanCount: 1,
     });
   });
 
   it("absence NEVER regresses: untouched patterns keep their exact state", () => {
     const profile = profileAtTier(3);
-    profile.patterns.pull.struggledStreak = 2;
+    profile.patterns.pull.struggleCount = 2;
     profile.patterns.pull.volumeReduced = true;
     // Session contains only push — pull is absent, one struggle away from
     // regression, and must stay exactly where it is (not even a tierSince
@@ -366,8 +366,8 @@ describe("applySessionResult — struggle and regression", () => {
     const result = apply(profile, pushSession(profile), ["completed"]);
     expect(result.profile.patterns.pull).toStrictEqual({
       tier: 3,
-      cleanStreak: 0,
-      struggledStreak: 2,
+      cleanCount: 0,
+      struggleCount: 2,
       volumeReduced: true,
     });
   });
@@ -384,7 +384,7 @@ describe("applySessionResult — struggle and regression", () => {
   it("a struggled next-tier taste block does not touch progression state", () => {
     const profile = profileAtTier(2);
     profile.patterns.push.tierSince = dayIso(-14);
-    profile.patterns.push.cleanStreak = 2;
+    profile.patterns.push.cleanCount = 2;
     const incline = block("incline-push-up", "push"); // tier 2 = current
     const taste = block("kneeling-push-up", "push", true); // tier 3 taste
     const result = apply(profile, session([incline, taste]), [
@@ -393,13 +393,13 @@ describe("applySessionResult — struggle and regression", () => {
     ]);
     // Clean at current tier despite the struggled taste: advances to 3.
     expect(result.profile.patterns.push.tier).toBe(3);
-    expect(result.profile.patterns.push.struggledStreak).toBe(0);
+    expect(result.profile.patterns.push.struggleCount).toBe(0);
   });
 
   it("fallback work below the current tier is progression-neutral", () => {
     const profile = profileAtTier(3);
-    profile.patterns.push.cleanStreak = 2;
-    profile.patterns.push.struggledStreak = 1;
+    profile.patterns.push.cleanCount = 2;
+    profile.patterns.push.struggleCount = 1;
 
     const completed = apply(
       profile,
@@ -436,7 +436,7 @@ describe("applySessionResult — tier 6 is terminal", () => {
       expect(profile.patterns.push.tier).toBe(6);
       expect(result.unlockedSkills).toHaveLength(0);
     }
-    expect(profile.patterns.push.cleanStreak).toBe(5);
+    expect(profile.patterns.push.cleanCount).toBe(5);
   });
 });
 
@@ -549,7 +549,7 @@ describe("applySessionResult — lifetime unlock memory", () => {
   it("unlocks each pattern milestone only once across regress and re-advance", () => {
     let profile = profileAtTier(3);
     profile.patterns.push.tierSince = dayIso(-28); // floor met
-    profile.patterns.push.cleanStreak = 2;
+    profile.patterns.push.cleanCount = 2;
 
     const first = apply(profile, pushSession(profile, dayIso(0)), [
       "completed",
