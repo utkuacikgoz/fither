@@ -15,8 +15,13 @@ values. One hardcoded hex in a screen is a bug.
    movement, the count/timer, the cue. Nothing else. No chrome, no tab
    bar, no points ticking up mid-set.
 3. **Big, warm, unhurried type.** Body 17pt minimum. Timers and counts
-   are huge (48–72pt). Never more than two type sizes visible at once
-   outside settings.
+   are huge (48–72pt). One type hierarchy per screen: an eyebrow
+   caption, one title, body — never two competing titles or two
+   competing captions in one content group; numerals live on their own
+   scale. (Amended 2026-09-02: the earlier "two sizes per screen" rule
+   contradicted every shipped screen's caption/title/body rhythm — the
+   rhythm is the standard, so the rule now names it instead of
+   forbidding it.)
 4. **Motion is breath, not fireworks.** 250–350ms ease-out fades and
    gentle slides. Nothing bounces. One exception: the skill-unlock moment
    gets one considered, generous animation — it's the emotional payoff.

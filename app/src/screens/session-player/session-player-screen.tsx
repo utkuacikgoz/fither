@@ -41,6 +41,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const player = useSessionStore((s) => s.player);
   const dispatchPlayer = useSessionStore((s) => s.dispatchPlayer);
   const reconcileTimer = useSessionStore((s) => s.reconcileTimer);
+  const rebaseCountdown = useSessionStore((s) => s.rebaseCountdown);
   const reduceMotion = useReducedMotion();
 
   const counting = player !== null && isCountingDown(player);
@@ -79,13 +80,17 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
   useEffect(() => {
     // Native timers pause or drift while the app is backgrounded. The
-    // persisted wall-clock deadline is authoritative when we return.
+    // persisted wall-clock deadline is authoritative when we return —
+    // except while the skip confirm holds the count: reconciling then
+    // would eat the pause the confirm promised. The rebase on "Keep
+    // going" re-anchors the deadline the moment the pause ends.
+    if (confirmingSkip) return;
     reconcileTimer();
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") reconcileTimer();
     });
     return () => subscription.remove();
-  }, [reconcileTimer]);
+  }, [confirmingSkip, reconcileTimer]);
 
   useEffect(() => {
     if (finished) onFinished();
@@ -122,7 +127,14 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             <PrimaryButton
               testID="player-skip-keep"
               label={strings.player.skipConfirm.keepGoing}
-              onPress={() => setConfirmingSkip(false)}
+              onPress={() => {
+                // The confirm paused the visible count; re-anchor the
+                // wall-clock deadline so the seconds she saw are the
+                // seconds she gets (audit polish — the stale deadline
+                // would eat the pause on the next reconcile).
+                rebaseCountdown();
+                setConfirmingSkip(false);
+              }}
             />
             <QuietButton
               testID="player-skip-confirm"
@@ -263,7 +275,12 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
         <>
           <View style={styles.center}>
             <AppText variant="title">{strings.player.rest}</AppText>
-            <AppText variant="numeral" testID="player-numeral" style={styles.restNumeral}>
+            <AppText
+              variant="numeral"
+              testID="player-numeral"
+              style={styles.restNumeral}
+              accessibilityLabel={`${phase.remainingSeconds} ${strings.player.holdLabel}`}
+            >
               {phase.remainingSeconds}
             </AppText>
             <AppText variant="caption">{strings.player.holdLabel}</AppText>

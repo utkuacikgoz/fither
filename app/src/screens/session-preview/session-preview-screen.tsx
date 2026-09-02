@@ -65,13 +65,20 @@ export function SessionPreviewScreen({
     ? adaptationText(primaryAdaptation)
     : strings.preview.defaultFit;
 
-  const start = () => {
-    // Optional, local-only note: append-only store on this device, never
-    // sent anywhere. Leaving it empty costs nothing.
+  // Optional, local-only note: append-only store on this device, never
+  // sent anywhere. Leaving it empty costs nothing. Saved on EVERY way off
+  // this screen (audit polish) — words she wrote on a heavy day are never
+  // dropped because she went back to adjust an answer.
+  const saveCareNote = () => {
     const note = careNoteText.trim();
     if (care && note.length > 0) {
       appendCareNote({ date: session.date, text: note });
+      setCareNoteText("");
     }
+  };
+
+  const start = () => {
+    saveCareNote();
     onStart();
   };
 
@@ -149,6 +156,7 @@ export function SessionPreviewScreen({
           testID="preview-change-answers"
           label={strings.preview.changeAnswers}
           onPress={() => {
+            saveCareNote();
             prepareSessionEdit();
             onChangeAnswers();
           }}

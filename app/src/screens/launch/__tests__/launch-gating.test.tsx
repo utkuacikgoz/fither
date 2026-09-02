@@ -125,8 +125,9 @@ describe("sign-in placement (ADR-0011)", () => {
     useIdentityStore.setState({ identity: null });
     const screen = render(<LaunchScreen {...callbacks()} />);
     expect(screen.getByText(strings.auth.guest)).toBeTruthy();
-    // auth.welcome reuses the tagline that is also onboarding's headline,
-    // so onboarding's absence is asserted via its body line.
+    // Onboarding's absence is asserted via its body line (historically
+    // the headline text was shared with sign-in; the assertion stays on
+    // the unambiguous string).
     expect(screen.queryByText(strings.onboarding.welcome.body)).toBeNull();
     expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
   });
