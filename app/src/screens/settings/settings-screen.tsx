@@ -17,7 +17,9 @@ import {
   seedTrialExpiredForDev,
   seedUnlockPreviewForDev,
 } from "../../state/dev-preview";
+import { REMINDER_SLOTS } from "../../notifications/notifications";
 import { useEntitlementStore } from "../../state/entitlement-store";
+import { useReminderStore } from "../../state/reminder-store";
 import { useSettingsStore } from "../../state/settings-store";
 import {
   DEV_TIMING_TITLE,
@@ -75,6 +77,11 @@ export function SettingsScreen({
   const setEquipment = useSettingsStore((s) => s.setEquipment);
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
   const resetEntitlementForDev = useEntitlementStore((s) => s.resetForDev);
+  const reminderSlot = useReminderStore((s) => s.slot);
+  const chooseSlotWithPermission = useReminderStore(
+    (s) => s.chooseSlotWithPermission,
+  );
+  const disableReminders = useReminderStore((s) => s.disable);
 
   const [busy, setBusy] = useState(false);
   const [restoreNotice, setRestoreNotice] = useState<RestoreNotice>("none");
@@ -181,6 +188,40 @@ export function SettingsScreen({
               {strings.paywall.restoreEmpty}
             </AppText>
           )}
+        </View>
+
+        {/* The daily invitation (launch-checklist rules): three slots +
+            "No invitation", all equal-dignity rows, current state
+            selected. Selection state is per-option, on the option
+            (mapping). If the OS permission was never granted and she
+            picks a slot HERE, the store requests it right then — she is
+            literally asking for the notification, which is the most
+            in-context a permission ask gets. On an OS denial nothing
+            schedules and "No invitation" honestly stays selected — the
+            OS dialog she just answered is the feedback. */}
+        <View style={styles.section}>
+          <AppText variant="caption" style={styles.sectionHeading}>
+            {strings.settings.reminders.title}
+          </AppText>
+          {REMINDER_SLOTS.map((slot) => (
+            <RowButton
+              key={slot}
+              testID={`reminder-${slot}`}
+              label={strings.notifications.time[slot]}
+              selected={reminderSlot === slot}
+              onPress={() => {
+                void chooseSlotWithPermission(slot);
+              }}
+            />
+          ))}
+          <RowButton
+            testID="reminder-off"
+            label={strings.settings.reminders.off}
+            selected={reminderSlot === null}
+            onPress={() => {
+              void disableReminders();
+            }}
+          />
         </View>
 
         <View style={styles.section}>

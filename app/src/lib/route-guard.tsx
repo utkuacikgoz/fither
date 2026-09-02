@@ -32,6 +32,7 @@ import { useEntitlementStore } from "../state/entitlement-store";
 import { useIdentityStore } from "../state/identity-store";
 import { useLedgerStore } from "../state/ledger-store";
 import { useProfileStore } from "../state/profile-store";
+import { useReminderStore } from "../state/reminder-store";
 import { useSessionStore } from "../state/session-store";
 import { useSettingsStore } from "../state/settings-store";
 
@@ -46,7 +47,13 @@ export type RouteRequirement =
   /** /finish: a finished session to apply, or an applied summary. */
   | "finishedSession"
   /** /unlock: at least one skill actually unlocked this session. */
-  | "pendingUnlock";
+  | "pendingUnlock"
+  /**
+   * /reminder-ask: a close with completed work behind it AND the one
+   * in-context ask still owed. A cold open (or any re-entry once
+   * `asked` persisted) redirects home — the ask can never run twice.
+   */
+  | "reminderAsk";
 
 /**
  * The persisted-store hydration set — the same six stores the launch
@@ -103,6 +110,19 @@ function requirementMet(requirement: RouteRequirement): boolean {
       return finish !== null || (player !== null && isFinished(player));
     case "pendingUnlock":
       return finish !== null && finish.unlockedSkills.length > 0;
+    case "reminderAsk": {
+      // The reminder store is deliberately NOT in the shared hydration
+      // set (no other route needs it); an unhydrated read fails SAFE
+      // toward not asking — a skipped ask costs nothing, a double ask
+      // would be a nag.
+      const reminders = useReminderStore.getState();
+      return (
+        finish !== null &&
+        finish.completedAnything &&
+        reminders.hydrated &&
+        !reminders.asked
+      );
+    }
   }
 }
 

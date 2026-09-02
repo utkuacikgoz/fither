@@ -1,0 +1,85 @@
+// The expo-notifications adapter behind the notifications port. Local
+// notifications only — scheduling, permission and cancellation all run
+// on-device with zero network, so airplane mode changes nothing here.
+//
+// Deliberately NO foreground presentation handler: the invitation exists
+// to open the app; while she is already inside it, showing a banner over
+// a session would be noise (the session is sacred). If she is in the app
+// at the slot time, the notification simply doesn't present.
+
+import { PermissionStatus } from "expo";
+import * as Notifications from "expo-notifications";
+
+import { strings } from "../copy/strings";
+import {
+  SLOT_TIMES,
+  type NotificationsPort,
+  type PermissionState,
+  type ReminderSlot,
+} from "./notifications";
+
+/**
+ * The four interchangeable invitation bodies (copy-written; each stands
+ * alone on a lock screen). Rotation happens via the schedule below — no
+ * runtime logic needs to run on delivery day.
+ */
+export const DAILY_BODIES: readonly string[] = [
+  strings.notifications.daily.fourAnswers,
+  strings.notifications.daily.quietTen,
+  strings.notifications.daily.fitsToday,
+  strings.notifications.daily.yourMinutes,
+];
+
+/** iOS weekday numbers for weekly triggers: 1 (Sunday) through 7. */
+const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+
+function toPermissionState(
+  response: Notifications.NotificationPermissionsStatus,
+): PermissionState {
+  if (response.granted) return "granted";
+  if (response.status === PermissionStatus.UNDETERMINED) return "undetermined";
+  return "denied";
+}
+
+export const expoNotificationsPort: NotificationsPort = {
+  async getPermission() {
+    return toPermissionState(await Notifications.getPermissionsAsync());
+  },
+
+  async requestPermission() {
+    // Default options: alert + sound + badge-free defaults are fine; no
+    // provisional/ephemeral asks — the in-context rationale already ran.
+    return toPermissionState(await Notifications.requestPermissionsAsync());
+  },
+
+  async scheduleDaily(slot: ReminderSlot) {
+    // One invitation a day, full stop: replace whatever was scheduled.
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    const { hour, minute } = SLOT_TIMES[slot];
+    // Rotation via the schedule: seven repeating weekly triggers, one per
+    // weekday at the same slot time, cycling the four bodies. Any given
+    // week shows all four; no code has to run between deliveries, so the
+    // rotation survives the app never being opened. No title — the lock
+    // screen already names the app; the body carries the invitation.
+    for (const weekday of WEEKDAYS) {
+      // The modulo keeps the index in range; the fallback only satisfies
+      // the checked-index type and can never fire.
+      const body =
+        DAILY_BODIES[(weekday - 1) % DAILY_BODIES.length] ??
+        strings.notifications.daily.fitsToday;
+      await Notifications.scheduleNotificationAsync({
+        content: { body },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday,
+          hour,
+          minute,
+        },
+      });
+    }
+  },
+
+  async cancelAll() {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  },
+};

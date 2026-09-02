@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
+import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 
 import { strings } from "../../../copy/strings";
@@ -13,6 +14,7 @@ import {
 import { useCareNoteStore } from "../../../state/care-note-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useFirstMovementStore } from "../../../state/first-movement-store";
+import { useReminderStore } from "../../../state/reminder-store";
 import { useSessionStore } from "../../../state/session-store";
 import { useSettingsStore } from "../../../state/settings-store";
 import {
@@ -38,6 +40,18 @@ const VERSION_LINE = strings.settings.version("1.2.3");
 
 async function flushPersistence() {
   await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/** A minimal OS permission response in the shape the adapter reads. */
+function permissionResponse(
+  status: "undetermined" | "granted" | "denied",
+): Notifications.NotificationPermissionsStatus {
+  return {
+    status,
+    granted: status === "granted",
+    canAskAgain: status !== "denied",
+    expires: "never",
+  } as unknown as Notifications.NotificationPermissionsStatus;
 }
 
 beforeEach(async () => {
@@ -68,6 +82,20 @@ beforeEach(async () => {
     hydrated: true,
     hydrationFailed: false,
   });
+  useReminderStore.setState({
+    asked: false,
+    slot: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  // OS notification permission: undetermined, granting on request (the
+  // jest-setup defaults, restated so overrides in one test can't leak).
+  jest
+    .mocked(Notifications.getPermissionsAsync)
+    .mockResolvedValue(permissionResponse("undetermined"));
+  jest
+    .mocked(Notifications.requestPermissionsAsync)
+    .mockResolvedValue(permissionResponse("granted"));
   useSessionStore.setState({
     prompt: null,
     sessionId: null,
@@ -84,7 +112,7 @@ beforeEach(async () => {
 });
 
 describe("SettingsScreen", () => {
-  it("renders every section in order: avoid, subscription, notes, dev tools, version", () => {
+  it("renders every section in order: avoid, subscription, invitation, notes, dev tools, version", () => {
     const screen = render(<SettingsScreen />);
     expect(screen.getByText(strings.settings.title)).toBeTruthy();
     expect(screen.getByText(strings.settings.avoid.title)).toBeTruthy();
@@ -94,6 +122,7 @@ describe("SettingsScreen", () => {
     }
     expect(screen.getByText(strings.settings.restore.title)).toBeTruthy();
     expect(screen.getByText(strings.paywall.restore)).toBeTruthy();
+    expect(screen.getByText(strings.settings.reminders.title)).toBeTruthy();
     expect(screen.getByText(strings.settings.careNotes.title)).toBeTruthy();
     expect(screen.getByText(strings.settings.dev.title)).toBeTruthy();
     expect(screen.getByText(VERSION_LINE)).toBeTruthy();
@@ -103,6 +132,7 @@ describe("SettingsScreen", () => {
     const order = [
       strings.settings.avoid.title,
       strings.settings.restore.title,
+      strings.settings.reminders.title,
       strings.settings.careNotes.title,
       strings.settings.dev.title,
       VERSION_LINE,
@@ -388,6 +418,114 @@ describe("SettingsScreen care journal (ADR-0012 §4)", () => {
     fireEvent.press(screen.getByTestId("care-journal-confirm-delete-legacy-0"));
     expect(useCareNoteStore.getState().entries).toEqual([]);
     expect(screen.getByTestId("care-journal-empty")).toBeTruthy();
+  });
+});
+
+describe("SettingsScreen daily invitation", () => {
+  it("shows the three real hours plus 'No invitation', current state selected", () => {
+    const screen = render(<SettingsScreen />);
+    expect(screen.getByText(strings.settings.reminders.title)).toBeTruthy();
+    expect(screen.getByText(strings.notifications.time.morning)).toBeTruthy();
+    expect(screen.getByText(strings.notifications.time.midday)).toBeTruthy();
+    expect(screen.getByText(strings.notifications.time.evening)).toBeTruthy();
+    expect(screen.getByText(strings.settings.reminders.off)).toBeTruthy();
+    // No slot chosen: "No invitation" is the honest selected state.
+    expect(screen.getByTestId("reminder-off")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: true }),
+    );
+    expect(screen.getByTestId("reminder-morning")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: false }),
+    );
+  });
+
+  it("shows the scheduled slot as selected", () => {
+    useReminderStore.setState({ slot: "evening", asked: true });
+    const screen = render(<SettingsScreen />);
+    expect(screen.getByTestId("reminder-evening")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: true }),
+    );
+    expect(screen.getByTestId("reminder-off")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: false }),
+    );
+  });
+
+  it("picking a slot with permission never granted requests it then, in context", async () => {
+    const screen = render(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId("reminder-midday"));
+    await waitFor(() =>
+      expect(useReminderStore.getState().slot).toBe("midday"),
+    );
+    expect(Notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    // Scheduled for real through the port's adapter (one per weekday).
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(7);
+    // The selected state moves to her pick.
+    expect(screen.getByTestId("reminder-midday")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: true }),
+    );
+    expect(screen.getByTestId("reminder-off")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: false }),
+    );
+  });
+
+  it("changing the slot reschedules at the new hour", async () => {
+    useReminderStore.setState({ slot: "morning", asked: true });
+    jest
+      .mocked(Notifications.getPermissionsAsync)
+      .mockResolvedValue(permissionResponse("granted"));
+    const screen = render(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId("reminder-evening"));
+    await waitFor(() =>
+      expect(useReminderStore.getState().slot).toBe("evening"),
+    );
+    // Already granted: no OS dialog, straight to the reschedule.
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    // Replace-not-stack: the old schedule is cancelled first.
+    expect(
+      Notifications.cancelAllScheduledNotificationsAsync,
+    ).toHaveBeenCalled();
+    const triggers = jest
+      .mocked(Notifications.scheduleNotificationAsync)
+      .mock.calls.map(([request]) => request.trigger);
+    for (const trigger of triggers) {
+      expect(trigger).toMatchObject({ hour: 18, minute: 30 });
+    }
+  });
+
+  it("an OS denial schedules nothing and 'No invitation' honestly stays selected", async () => {
+    jest
+      .mocked(Notifications.requestPermissionsAsync)
+      .mockResolvedValue(permissionResponse("denied"));
+    const screen = render(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId("reminder-morning"));
+    await waitFor(() =>
+      expect(Notifications.requestPermissionsAsync).toHaveBeenCalled(),
+    );
+    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+    expect(useReminderStore.getState().slot).toBeNull();
+    expect(screen.getByTestId("reminder-off")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: true }),
+    );
+  });
+
+  it("'No invitation' cancels the schedule and clears the slot", async () => {
+    useReminderStore.setState({ slot: "midday", asked: true });
+    const screen = render(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId("reminder-off"));
+    await waitFor(() => expect(useReminderStore.getState().slot).toBeNull());
+    expect(
+      Notifications.cancelAllScheduledNotificationsAsync,
+    ).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("reminder-off")).toHaveProp(
+      "accessibilityState",
+      expect.objectContaining({ selected: true }),
+    );
   });
 });
 
