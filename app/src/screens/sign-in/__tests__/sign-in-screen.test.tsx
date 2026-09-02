@@ -1,0 +1,78 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import React from "react";
+
+import { useDevAuthSessionStore } from "../../../auth/dev-auth";
+import { strings } from "../../../copy/strings";
+import { useIdentityStore } from "../../../state/identity-store";
+import {
+  collectStringValues,
+  renderedTextLeaves,
+} from "../../../test-utils/copy-audit";
+import { WORDMARK } from "../../../design/primitives/wordmark";
+import { SignInScreen } from "../sign-in-screen";
+
+// The one first-run decision (ADR-0011): three options with equal
+// dignity, guest one tap and infallible, honest notes about what an
+// account does, and a calm error path that always leaves guest open.
+
+beforeEach(() => {
+  useIdentityStore.setState({
+    identity: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useDevAuthSessionStore.setState({
+    session: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+});
+
+it("renders all three ways to continue, with the honest notes", () => {
+  const screen = render(<SignInScreen />);
+  expect(screen.getByText(strings.auth.welcome)).toBeTruthy();
+  expect(screen.getByText(strings.auth.apple)).toBeTruthy();
+  expect(screen.getByText(strings.auth.google)).toBeTruthy();
+  expect(screen.getByText(strings.auth.guest)).toBeTruthy();
+  expect(screen.getByText(strings.auth.accountNote)).toBeTruthy();
+  expect(screen.getByText(strings.auth.guestNote)).toBeTruthy();
+  // No error copy before anything went wrong.
+  expect(screen.queryByText(strings.auth.error)).toBeNull();
+});
+
+it.each([
+  ["sign-in-apple", "apple"],
+  ["sign-in-google", "google"],
+  ["sign-in-guest", "guest"],
+] as const)("%s lands the %s identity and calls onDone", async (testID, kind) => {
+  const onDone = jest.fn();
+  const screen = render(<SignInScreen onDone={onDone} />);
+  fireEvent.press(screen.getByTestId(testID));
+  await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+  expect(useIdentityStore.getState().identity?.kind).toBe(kind);
+});
+
+it("a failed provider sign-in shows the calm error and keeps guest open", async () => {
+  // The dev port's stand-in for a provider failure.
+  useDevAuthSessionStore.setState({ hydrated: false, hydrationFailed: true });
+  const onDone = jest.fn();
+  const screen = render(<SignInScreen onDone={onDone} />);
+  fireEvent.press(screen.getByTestId("sign-in-apple"));
+  await waitFor(() => expect(screen.getByTestId("sign-in-error")).toBeTruthy());
+  expect(onDone).not.toHaveBeenCalled();
+  expect(useIdentityStore.getState().identity).toBeNull();
+
+  // Guest never fails (ADR-0011): the error clears and she continues.
+  fireEvent.press(screen.getByTestId("sign-in-guest"));
+  await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+  expect(useIdentityStore.getState().identity?.kind).toBe("guest");
+});
+
+it("every rendered string comes from strings.ts", () => {
+  const allowed = collectStringValues(strings);
+  allowed.add(WORDMARK);
+  const screen = render(<SignInScreen />);
+  for (const leaf of renderedTextLeaves(screen.toJSON())) {
+    expect(allowed.has(leaf) ? true : leaf).toBe(true);
+  }
+});

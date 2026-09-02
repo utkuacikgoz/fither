@@ -9,6 +9,7 @@ import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { createInitialProfile } from "@fither/engine";
+import { useIdentityStore } from "../../../state/identity-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { useSessionStore } from "../../../state/session-store";
 import { useSettingsStore } from "../../../state/settings-store";
@@ -61,6 +62,13 @@ beforeEach(() => {
   useEntitlementStore.setState({
     trialStartDate: null,
     purchase: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  // This suite exercises the surface past sign-in (launch-gating owns
+  // the sign-in placement), so an identity is always present here.
+  useIdentityStore.setState({
+    identity: { kind: "guest", date: "2026-08-01" },
     hydrated: true,
     hydrationFailed: false,
   });

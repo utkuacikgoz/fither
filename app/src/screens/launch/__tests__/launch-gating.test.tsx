@@ -1,9 +1,11 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
+import { useDevAuthSessionStore } from "../../../auth/dev-auth";
 import { strings } from "../../../copy/strings";
 import { todayIso } from "../../../lib/dates";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
+import { useIdentityStore } from "../../../state/identity-store";
 import { createPlayer, reduce } from "../../../session/player-machine";
 import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
@@ -102,6 +104,54 @@ beforeEach(() => {
     player: null,
     finish: null,
     saveFailed: false,
+  });
+  // Most tests exercise gates BEYOND sign-in, so an identity is seeded;
+  // the sign-in placement suite below clears it per test.
+  useIdentityStore.setState({
+    identity: { kind: "guest", date: "2026-08-01" },
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useDevAuthSessionStore.setState({
+    session: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+});
+
+describe("sign-in placement (ADR-0011)", () => {
+  it("no identity opens into sign-in, before onboarding", () => {
+    useIdentityStore.setState({ identity: null });
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    expect(screen.getByText(strings.auth.guest)).toBeTruthy();
+    // auth.welcome reuses the tagline that is also onboarding's headline,
+    // so onboarding's absence is asserted via its body line.
+    expect(screen.queryByText(strings.onboarding.welcome.body)).toBeNull();
+    expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
+  });
+
+  it("guest is one tap and continues into onboarding, store-driven", async () => {
+    useIdentityStore.setState({ identity: null });
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    fireEvent.press(screen.getByTestId("sign-in-guest"));
+    await waitFor(() =>
+      expect(screen.getByText(strings.onboarding.welcome.body)).toBeTruthy(),
+    );
+    expect(useIdentityStore.getState().identity?.kind).toBe("guest");
+  });
+
+  it("an existing identity never sees sign-in again", () => {
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    expect(screen.queryByText(strings.auth.guest)).toBeNull();
+    expect(screen.getByText(strings.onboarding.welcome.body)).toBeTruthy();
+  });
+
+  it("the resume decision wins over sign-in", () => {
+    useIdentityStore.setState({ identity: null });
+    seedTodaySnapshot();
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    expect(screen.getByText(strings.resume.continueLabel)).toBeTruthy();
+    expect(screen.queryByText(strings.auth.guest)).toBeNull();
   });
 });
 
