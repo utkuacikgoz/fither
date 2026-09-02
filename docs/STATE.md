@@ -97,6 +97,15 @@ that cannot write Watchman's LaunchAgent.
 
 ## Next, in order
 
+Exercise-experience production work is now tracked by
+`docs/review/2026-09-02-exercise-experience-audit.md`. Its first integrity
+slice is implemented on `codex/exercise-integrity-wave-1`: the player carries
+all movement cues, bilateral and unilateral prescriptions are distinct,
+unilateral sets explicitly run left → switch → right, skip is confirmed and
+truthfully named in every active phase, old active-session shapes upgrade on
+restore, and the progress line exposes a screen-reader value. The next slice
+is the preview/session contract, followed by durable idempotent completion.
+
 1. ~~GATE 2~~ **PASSED 2026-09-01.** The owner ran the app from a device
    build, trained with it, and called it good after the live-testing UX
    pack (three-option feedback, quiet skip, selection cues, care moment)

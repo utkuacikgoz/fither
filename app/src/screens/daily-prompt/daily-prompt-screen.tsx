@@ -282,11 +282,13 @@ export function DailyPromptScreen({
           <AppText variant="title" style={styles.title}>
             {strings.prompt.soreness.question}
           </AppText>
-          <RowButton
-            testID="soreness-all-good"
-            label={strings.prompt.soreness.allGood}
-            onPress={() => finish([])}
-          />
+          {avoid.length === 0 && (
+            <RowButton
+              testID="soreness-all-good"
+              label={strings.prompt.soreness.allGood}
+              onPress={() => finish([])}
+            />
+          )}
           {BODY_AREAS.map((area) => (
             <RowButton
               key={area}

@@ -52,7 +52,8 @@ describe("createSession boundary (integration)", () => {
       const movement = findMovement(library!, block.movementId);
       expect(movement).not.toBeNull();
       expect(block.name).toBe(movement!.name);
-      expect(block.cue).toBe(movement!.cues[0]);
+      expect(block.cues).toEqual(movement!.cues);
+      expect(block.unilateral).toBe(movement!.unilateral);
       expect(block.timingType).toBe(movement!.timing.type);
     }
   });
@@ -79,6 +80,11 @@ describe("toPlayerBlocks", () => {
       blocks: [{ ...fixtureSession.blocks[0]!, movementId: "ghost" }],
     };
     const [block] = toPlayerBlocks(session, fixtureLibrary);
-    expect(block).toMatchObject({ movementId: "ghost", name: "ghost", cue: "" });
+    expect(block).toMatchObject({
+      movementId: "ghost",
+      name: "ghost",
+      cues: [],
+      unilateral: false,
+    });
   });
 });

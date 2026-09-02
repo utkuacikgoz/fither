@@ -7,6 +7,7 @@ import {
   isFinished,
   progressFraction,
   reduce,
+  restorePlayerBlocks,
   samePosition,
   totalSets,
   type PlayerEvent,
@@ -35,6 +36,23 @@ describe("createPlayer", () => {
   });
 });
 
+describe("restorePlayerBlocks", () => {
+  it("upgrades legacy work to the first side without inventing completion", () => {
+    const blocks = [{ ...fixturePlayerBlocks[0]!, unilateral: true }];
+    const current = run(createPlayer(blocks), { type: "begin" });
+    const legacy = {
+      ...current,
+      blocks: [{ ...blocks[0], unilateral: undefined, cues: undefined }],
+      phase: { kind: "work", blockIndex: 0, setIndex: 0, remainingSeconds: null },
+    } as unknown as PlayerState;
+
+    const restored = restorePlayerBlocks(legacy, blocks);
+    expect(restored.blocks).toEqual(blocks);
+    expect(restored.phase).toMatchObject({ kind: "work", side: "left" });
+    expect(restored.outcomes).toEqual([]);
+  });
+});
+
 describe("rep work flow", () => {
   it("intro -> work with no countdown for rep blocks", () => {
     const state = run(createPlayer(fixturePlayerBlocks), { type: "begin" });
@@ -43,6 +61,7 @@ describe("rep work flow", () => {
       blockIndex: 0,
       setIndex: 0,
       remainingSeconds: null,
+      side: null,
     });
     expect(isCountingDown(state)).toBe(false);
   });
@@ -108,6 +127,7 @@ describe("rest timing", () => {
       blockIndex: 0,
       setIndex: 1,
       remainingSeconds: null,
+      side: null,
     });
   });
 
@@ -125,7 +145,52 @@ describe("rest timing", () => {
       blockIndex: 0,
       setIndex: 1,
       remainingSeconds: null,
+      side: null,
     });
+  });
+});
+
+describe("unilateral work flow", () => {
+  const unilateralRep = [{ ...fixturePlayerBlocks[0]!, sets: 1, unilateral: true }];
+  const unilateralHold = [{ ...fixturePlayerBlocks[1]!, unilateral: true }];
+
+  it("requires both sides before a rep set is complete", () => {
+    let state = run(createPlayer(unilateralRep), { type: "begin" });
+    expect(state.phase).toMatchObject({ kind: "work", side: "left", setIndex: 0 });
+
+    state = reduce(state, { type: "advance" });
+    expect(state.phase).toEqual({ kind: "sideSwitch", blockIndex: 0, setIndex: 0 });
+    expect(completedSets(state)).toBe(0);
+
+    state = reduce(state, { type: "advance" });
+    expect(state.phase).toMatchObject({ kind: "work", side: "right", setIndex: 0 });
+
+    state = reduce(state, { type: "advance" });
+    expect(state.phase).toEqual({ kind: "feedback", blockIndex: 0 });
+    expect(completedSets(state)).toBe(1);
+  });
+
+  it("runs a fresh full countdown on each side of a hold", () => {
+    let state = run(createPlayer(unilateralHold), { type: "begin" }, ...ticks(20));
+    expect(state.phase).toEqual({ kind: "sideSwitch", blockIndex: 0, setIndex: 0 });
+
+    state = reduce(state, { type: "advance" });
+    expect(state.phase).toMatchObject({
+      kind: "work",
+      side: "right",
+      remainingSeconds: 20,
+    });
+
+    state = run(state, ...ticks(20));
+    expect(state.phase).toEqual({ kind: "feedback", blockIndex: 0 });
+  });
+
+  it("persists both side-switch transitions as distinct positions", () => {
+    const left = run(createPlayer(unilateralRep), { type: "begin" });
+    const switching = reduce(left, { type: "advance" });
+    const right = reduce(switching, { type: "advance" });
+    expect(samePosition(left, switching)).toBe(false);
+    expect(samePosition(switching, right)).toBe(false);
   });
 });
 

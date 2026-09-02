@@ -203,6 +203,7 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("soreness-wrists"));
     expect(screen.getByTestId("soreness-wrists-check", { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText(strings.prompt.soreness.areasNoted(1))).toBeTruthy();
+    expect(screen.queryByTestId("soreness-all-good")).toBeNull();
 
     fireEvent.press(screen.getByTestId("soreness-knees"));
     expect(screen.getByTestId("soreness-knees-check", { includeHiddenElements: true })).toBeTruthy();
@@ -212,6 +213,9 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("soreness-knees"));
     expect(screen.queryByTestId("soreness-knees-check", { includeHiddenElements: true })).toBeNull();
     expect(screen.getByText(strings.prompt.soreness.areasNoted(1))).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("soreness-wrists"));
+    expect(screen.getByTestId("soreness-all-good")).toBeTruthy();
   });
 
   it("leads the can't-build state with care when sore areas caused it", () => {
