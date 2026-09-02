@@ -124,15 +124,31 @@ export interface FinishSummary {
 /** An early close captured before the apply lands ("completed" = none). */
 type PendingClose = "endedEarly" | "outOfTime" | null;
 
-/** ADR-0012 §2: past minutes×60×1.1 of elapsed work time, wrap up. */
+/**
+ * ACTIVE session time so far: the banked milliseconds plus the live
+ * stretch since the anchor. This — never wall-clock-since-start — is what
+ * the time-budget ceiling spends, so an interruption can't eat her budget:
+ * pause at minute three, come back hours later, and she still has every
+ * remaining minute of actual training ahead of her.
+ */
+function elapsedActiveMs(
+  activeMs: number,
+  workResumedAt: number | null,
+  now: number,
+): number {
+  return activeMs + (workResumedAt === null ? 0 : Math.max(0, now - workResumedAt));
+}
+
+/** ADR-0012 §2: past minutes×60×1.1 of ACTIVE work time, wrap up. */
 function ceilingWrapDue(
   session: Session,
-  workStartedAt: number | null,
+  activeMs: number,
+  workResumedAt: number | null,
   now: number,
 ): boolean {
   return (
-    workStartedAt !== null &&
-    now - workStartedAt > sessionCeilingMs(session.minutes)
+    elapsedActiveMs(activeMs, workResumedAt, now) >
+    sessionCeilingMs(session.minutes)
   );
 }
 
@@ -149,12 +165,21 @@ interface SessionFlowState {
   player: PlayerState | null;
   countdownEndsAt: number | null;
   /**
-   * Wall-clock anchor of the session's first work phase (ADR-0012 §2).
-   * Elapsed session time is always `now - workStartedAt` — recomputed
-   * from this persisted stamp, never accumulated by a JS timer — so
-   * backgrounding and process death cannot lose or reset it.
+   * ACTIVE training milliseconds banked so far (ADR-0012 §2). Folded
+   * forward from the live anchor at every dispatch/reconcile, and it is
+   * the only part of elapsed time that survives a restore — away time
+   * between a snapshot and a resume never spends her budget.
    */
-  workStartedAt: number | null;
+  activeMs: number;
+  /**
+   * Wall-clock anchor of the CURRENT live stretch. Null before her first
+   * work phase and again after a restore (the anchor restarts at her next
+   * work dispatch, so the resume offer's "Keep going" is always
+   * meaningful). While the process lives, backgrounding does NOT null it:
+   * a brief background mid-hold keeps spending both clocks honestly,
+   * matching the countdown reconciliation.
+   */
+  workResumedAt: number | null;
   /** Early close already decided (ceiling wrap / "Finish here"). */
   pendingClose: PendingClose;
   finish: FinishSummary | null;
@@ -195,7 +220,8 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   session: null,
   player: null,
   countdownEndsAt: null,
-  workStartedAt: null,
+  activeMs: 0,
+  workResumedAt: null,
   pendingClose: null,
   finish: null,
   saveFailed: false,
@@ -217,7 +243,8 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         session: result.value.session,
         player,
         countdownEndsAt: null,
-        workStartedAt: null,
+        activeMs: 0,
+        workResumedAt: null,
         pendingClose: null,
         finish: null,
         saveFailed: false,
@@ -231,7 +258,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           session: result.value.session,
           player,
           countdownEndsAt: null,
-          workStartedAt: null,
+          activeMs: 0,
           pendingClose: null,
         });
     }
@@ -246,28 +273,36 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       player,
       finish,
       countdownEndsAt,
-      workStartedAt,
+      activeMs,
+      workResumedAt,
       pendingClose,
     } = get();
     if (!player) return;
     const now = Date.now();
     let next = reduce(player, event);
-    // Anchor the session's elapsed clock at its first work entry — one
-    // wall-clock stamp, persisted with the snapshot below. Intros don't
-    // count: her time promise spends from the moment she starts moving.
-    const anchoredWorkStart =
-      workStartedAt === null && next.phase.kind === "work" ? now : workStartedAt;
-    // Time-budget ceiling (ADR-0012 §2): past the promise +10% the session
-    // wraps at the NEXT phase boundary. Only on a real transition (a tick
-    // mid-count keeps its position), never at feedback (a finished block
-    // gets its answer so completed work counts) — see isWrapBoundary.
-    // Remaining blocks record "skipped": progression-neutral (§1).
+    // Anchor the live stretch whenever a dispatch touches a work phase
+    // with no anchor running — the session's first work entry, and again
+    // after a restore (which may land directly INSIDE a work phase, so
+    // the current phase counts too). Intros don't count: her time promise
+    // spends from the moment she starts moving. The stretch before a
+    // post-restore anchor arms is deliberately uncounted — generous,
+    // because it is indistinguishable from time reading the resume offer.
+    const anchoredResumedAt =
+      workResumedAt === null &&
+      (player.phase.kind === "work" || next.phase.kind === "work")
+        ? now
+        : workResumedAt;
+    // Time-budget ceiling (ADR-0012 §2): past the promise +10% of ACTIVE
+    // time the session wraps at the NEXT phase boundary. Only on a real
+    // transition (a tick mid-count keeps its position), never at feedback
+    // (a finished block gets its answer so completed work counts) — see
+    // isWrapBoundary. Remaining blocks record "skipped": neutral (§1).
     let nextPendingClose = pendingClose;
     if (
       session !== null &&
       !samePosition(player, next) &&
       isWrapBoundary(next) &&
-      ceilingWrapDue(session, anchoredWorkStart, now)
+      ceilingWrapDue(session, activeMs, anchoredResumedAt, now)
     ) {
       next = finishEarly(next);
       nextPendingClose = "outOfTime";
@@ -277,10 +312,17 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         ? countdownEndsAt
         : deadlineFor(next, now)
       : null;
+    // Fold the live stretch into the bank and restart the anchor at now:
+    // elapsed time is unchanged by the fold, but the persisted snapshot
+    // below always carries banked-active-time only — the number a restore
+    // resumes from without counting the away time.
+    const foldedActiveMs = elapsedActiveMs(activeMs, anchoredResumedAt, now);
+    const foldedResumedAt = anchoredResumedAt === null ? null : now;
     set({
       player: next,
       countdownEndsAt: nextDeadline,
-      workStartedAt: anchoredWorkStart,
+      activeMs: foldedActiveMs,
+      workResumedAt: foldedResumedAt,
       pendingClose: nextPendingClose,
     });
     // Gate 3 t1, captured at the dispatch boundary (never in the player's
@@ -309,7 +351,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         session,
         player: next,
         countdownEndsAt: nextDeadline,
-        workStartedAt: anchoredWorkStart,
+        activeMs: foldedActiveMs,
         pendingClose: nextPendingClose,
       });
     }
@@ -323,7 +365,8 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       player,
       finish,
       countdownEndsAt,
-      workStartedAt,
+      activeMs,
+      workResumedAt,
       pendingClose,
     } = get();
     if (!prompt || !sessionId || !session || !player || finish) return;
@@ -331,23 +374,30 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     let nextPlayer = reconciled.player;
     let nextDeadline = reconciled.countdownEndsAt;
     let nextPendingClose = pendingClose;
-    // The ceiling holds across backgrounding: elapsed time is re-derived
-    // from the persisted wall-clock anchor, so a countdown that ran out
-    // while she was away wraps here, at the same boundary rule the live
-    // dispatch path uses (ADR-0012 §2).
+    // Within-process backgrounding continues both clocks: the live anchor
+    // keeps running (this is the same continuing session, only the screen
+    // went dark), so a countdown that ran out while she was briefly away
+    // wraps here, at the same boundary rule the live dispatch path uses
+    // (ADR-0012 §2). Only a RESTORE — process death, resume offer — resets
+    // the anchor and refuses to count away time.
     if (
       !samePosition(player, nextPlayer) &&
       isWrapBoundary(nextPlayer) &&
-      ceilingWrapDue(session, workStartedAt, now)
+      ceilingWrapDue(session, activeMs, workResumedAt, now)
     ) {
       nextPlayer = finishEarly(nextPlayer);
       nextDeadline = null;
       nextPendingClose = "outOfTime";
     }
     if (nextPlayer === player && nextDeadline === countdownEndsAt) return;
+    // Fold at the persist boundary, exactly like dispatchPlayer.
+    const foldedActiveMs = elapsedActiveMs(activeMs, workResumedAt, now);
+    const foldedResumedAt = workResumedAt === null ? null : now;
     set({
       player: nextPlayer,
       countdownEndsAt: nextDeadline,
+      activeMs: foldedActiveMs,
+      workResumedAt: foldedResumedAt,
       pendingClose: nextPendingClose,
     });
     useActiveSessionStore.getState().save({
@@ -356,7 +406,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       session,
       player: nextPlayer,
       countdownEndsAt: nextDeadline,
-      workStartedAt,
+      activeMs: foldedActiveMs,
       pendingClose: nextPendingClose,
     });
   },
@@ -387,13 +437,23 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           return;
         }
         const entitlement = useEntitlementStore.getState();
+        // ADR-0009 §2: the trial starts at the first COMPLETED session.
+        // The evidence is the engine's own "session" ledger event — it
+        // fires only when a block actually completed (the same fact
+        // completedAnything reads below) — taken from the result being
+        // journaled, so a crash-replay of this record lands on the
+        // identical decision. An all-skipped session stamps nothing.
+        const sessionCompleted = outcome.value.ledgerEvents.some(
+          (e) => e.type === "session",
+        );
         record = {
           version: 1,
           status: "pending",
           sessionId: stableId,
           result: outcome.value,
           ledgerEvents: [...useLedgerStore.getState().events, ...outcome.value.ledgerEvents],
-          trialStartDate: entitlement.trialStartDate ?? session.date,
+          trialStartDate:
+            entitlement.trialStartDate ?? (sessionCompleted ? session.date : null),
           purchase: entitlement.purchase,
         };
         await writeCompletionRecord(record);
@@ -444,10 +504,20 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   },
 
   finishSessionEarly: () => {
-    const { prompt, sessionId, session, player, finish, workStartedAt } = get();
+    const { prompt, sessionId, session, player, finish, activeMs, workResumedAt } =
+      get();
     if (!prompt || !sessionId || !session || !player || finish) return;
+    const now = Date.now();
     const next = finishEarly(player);
-    set({ player: next, countdownEndsAt: null, pendingClose: "endedEarly" });
+    // Bank the live stretch; the session is done, so no anchor remains.
+    const foldedActiveMs = elapsedActiveMs(activeMs, workResumedAt, now);
+    set({
+      player: next,
+      countdownEndsAt: null,
+      activeMs: foldedActiveMs,
+      workResumedAt: null,
+      pendingClose: "endedEarly",
+    });
     // Snapshot the done-state too — close reason included: a crash before
     // the apply lands must still resolve to the completedUnsaved path AND
     // the same honest "Finished here" close on the next launch.
@@ -457,7 +527,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       session,
       player: next,
       countdownEndsAt: null,
-      workStartedAt,
+      activeMs: foldedActiveMs,
       pendingClose: "endedEarly",
     });
   },
@@ -466,7 +536,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     const { finish } = get();
     if (finish) return;
     useActiveSessionStore.getState().clear();
-    set({ sessionId: null, session: null, player: null, countdownEndsAt: null, workStartedAt: null, pendingClose: null, saveFailed: false, saving: false });
+    set({ sessionId: null, session: null, player: null, countdownEndsAt: null, activeMs: 0, workResumedAt: null, pendingClose: null, saveFailed: false, saving: false });
   },
 
   restoreActiveSession: (todayDate) => {
@@ -490,17 +560,27 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       snapshot.countdownEndsAt ?? null,
       Date.now(),
     );
+    // Only BANKED active time survives a restore — the away time between
+    // the last snapshot and this launch never spends her budget, so
+    // "Keep going" always means every remaining minute of actual
+    // training. The live anchor restarts at her next work dispatch, not
+    // here: time spent reading the resume offer isn't training either.
+    // Legacy tolerance: a pre-active-time snapshot (workStartedAt only,
+    // no activeMs) banks NOTHING — the full budget again. That single
+    // anchor can't tell training from hours away, and the generous
+    // reading is the one that preserves her session; the punitive one
+    // would wrap it the moment she resumed.
+    const restoredActiveMs = snapshot.activeMs ?? 0;
     set({
       prompt: snapshot.prompt,
       sessionId: snapshot.sessionId ?? `legacy:${snapshot.session.date}:${snapshot.session.seed}`,
       session: snapshot.session,
       player: reconciled.player,
       countdownEndsAt: reconciled.countdownEndsAt,
-      // The elapsed anchor and any decided close survive process death —
-      // both restore from the persisted snapshot, never re-derived. A
-      // legacy snapshot without an anchor re-anchors at her next work
-      // dispatch (full budget again — lenient, never punitive).
-      workStartedAt: snapshot.workStartedAt ?? null,
+      activeMs: restoredActiveMs,
+      workResumedAt: null,
+      // Any decided close survives process death — restored from the
+      // persisted snapshot, never re-derived.
       pendingClose: snapshot.pendingClose ?? null,
       finish: null,
       saveFailed: false,
@@ -511,12 +591,16 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       sessionId: snapshot.sessionId ?? `legacy:${snapshot.session.date}:${snapshot.session.seed}`,
       player: reconciled.player,
       countdownEndsAt: reconciled.countdownEndsAt,
+      // Converge legacy snapshots on the new shape: banked time written,
+      // the deprecated wall-clock anchor dropped.
+      activeMs: restoredActiveMs,
+      workStartedAt: null,
     });
     return isFinished(reconciled.player) ? "completedUnsaved" : "inProgress";
   },
 
   resetSession: () => {
     useActiveSessionStore.getState().clear();
-    set({ prompt: null, sessionId: null, session: null, player: null, countdownEndsAt: null, workStartedAt: null, pendingClose: null, finish: null, saveFailed: false, saving: false });
+    set({ prompt: null, sessionId: null, session: null, player: null, countdownEndsAt: null, activeMs: 0, workResumedAt: null, pendingClose: null, finish: null, saveFailed: false, saving: false });
   },
 }));

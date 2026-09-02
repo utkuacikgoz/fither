@@ -71,10 +71,12 @@ export function DailyPromptScreen({
 
   const appendCareNote = useCareNoteStore((s) => s.append);
 
-  // Completed-today detection (audit wave 2): today's date has a history
-  // entry — read from the profile store's engine-written record, never
-  // re-derived. Training again is HER choice: "Another session" flips
-  // this launch back to the normal four questions, nothing pushes her.
+  // Completed-today detection (audit wave 2): today counts as done only
+  // when an entry recorded at least one COMPLETED block — reading the
+  // engine-written outcomes, never re-deriving rules. An all-skipped
+  // session enters history too, and it is not training: it renders the
+  // normal four questions. Training again is HER choice: "Another
+  // session" flips this launch back to the questions, nothing pushes her.
   const historyEntries = useProfileStore((s) => s.history.entries);
   const [anotherSession, setAnotherSession] = useState(false);
 
@@ -222,15 +224,25 @@ export function DailyPromptScreen({
     </View>
   );
 
-  // The calm done-state: today already holds an applied session. States
-  // what she did (minutes come straight off today's history entries) and
-  // offers one quiet action — no reward framing, no urgency. Corner
+  // The calm done-state: today already holds an applied session with real
+  // completed work, and it offers one quiet action — no reward framing,
+  // no urgency. The minutes claim is made only when it is TRUE: every
+  // block of every trained entry completed (genuinely full sessions), so
+  // the entry's planned minutes were actually trained. Any partial entry
+  // means we can't honestly total minutes — lineSome claims none. Corner
   // doors stay; first runs never land here (no history yet), so the
   // handoff eyebrow and Gate 3 instrumentation are untouched.
   const today = todayIso();
-  const todaysEntries = historyEntries.filter((entry) => entry.date === today);
-  if (todaysEntries.length > 0 && !anotherSession) {
-    const minutesToday = todaysEntries.reduce(
+  const trainedToday = historyEntries.filter(
+    (entry) =>
+      entry.date === today &&
+      entry.blocks.some((block) => block.outcome === "completed"),
+  );
+  if (trainedToday.length > 0 && !anotherSession) {
+    const everyBlockCompleted = trainedToday.every((entry) =>
+      entry.blocks.every((block) => block.outcome === "completed"),
+    );
+    const minutesToday = trainedToday.reduce(
       (sum, entry) => sum + entry.minutes,
       0,
     );
@@ -246,7 +258,9 @@ export function DailyPromptScreen({
             style={styles.doneLine}
             testID="completed-today-line"
           >
-            {strings.prompt.completedToday.line(minutesToday)}
+            {everyBlockCompleted
+              ? strings.prompt.completedToday.line(minutesToday)
+              : strings.prompt.completedToday.lineSome}
           </AppText>
         </View>
         <View style={styles.doneAction}>

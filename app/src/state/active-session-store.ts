@@ -22,10 +22,21 @@ export interface ActiveSessionSnapshot {
   /** Wall-clock end of the current countdown; null outside timed phases. */
   countdownEndsAt?: number | null;
   /**
-   * Wall-clock ms when this session's FIRST work phase began — the anchor
-   * the time-budget ceiling (ADR-0012 §2) measures elapsed session time
-   * from. Persisted so backgrounding and process death reconcile against
-   * real time, never a JS timer. Null/absent until she first moves.
+   * ACTIVE training milliseconds banked so far — the time-budget ceiling
+   * (ADR-0012 §2) spends this, never wall-clock-since-start. The session
+   * store folds the live stretch into this number at every snapshot
+   * write; on restore the away time is never counted (the live anchor
+   * restarts at her next work dispatch). Absent on legacy snapshots —
+   * see restoreActiveSession for the tolerant reading.
+   */
+  activeMs?: number;
+  /**
+   * @deprecated Pre-active-time snapshots carried a single wall-clock
+   * anchor here. It is deliberately IGNORED on restore: counting hours
+   * away as training would wrap her session the moment she resumed.
+   * Banking nothing and re-anchoring at her next work dispatch is the
+   * most generous reading, so it is the one we take. Kept in the type
+   * only so persisted legacy JSON stays representable.
    */
   workStartedAt?: number | null;
   /**

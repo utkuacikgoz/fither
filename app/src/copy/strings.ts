@@ -54,10 +54,14 @@ export const strings = {
     // (2026-09-02, ADR-0012 §2 / audit wave 2). States what she did, and
     // offers one quiet action — training again is her choice, never
     // pushed, so the action sits plain, with no urgency and no reward
-    // framing. `line` takes total minutes trained today.
+    // framing. `line` takes total minutes trained today and renders only
+    // when the session completed in full; `lineSome` renders when she did
+    // some work but ended early or ran out of time — no minutes claimed,
+    // no framing of what was left undone.
     completedToday: {
       headline: "Done for today",
       line: (minutes: number) => `${minutes} minutes trained today. It counts.`,
+      lineSome: "You trained today. It counts.",
       action: "Another session",
     },
   },
