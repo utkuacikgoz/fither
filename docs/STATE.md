@@ -103,8 +103,10 @@ slice is implemented on `codex/exercise-integrity-wave-1`: the player carries
 all movement cues, bilateral and unilateral prescriptions are distinct,
 unilateral sets explicitly run left → switch → right, skip is confirmed and
 truthfully named in every active phase, old active-session shapes upgrade on
-restore, and the progress line exposes a screen-reader value. The next slice
-is the preview/session contract, followed by durable idempotent completion.
+restore, and the progress line exposes a screen-reader value. The preview now
+shows its actual block prescription, leads with one primary adaptation, and
+returns to prefilled daily answers for edits. Next is durable idempotent
+completion and lifecycle-aware timers.
 
 1. ~~GATE 2~~ **PASSED 2026-09-01.** The owner ran the app from a device
    build, trained with it, and called it good after the live-testing UX

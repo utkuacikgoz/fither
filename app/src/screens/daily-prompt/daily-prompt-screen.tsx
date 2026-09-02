@@ -48,6 +48,7 @@ export function DailyPromptScreen({
   showHandoff = false,
 }: DailyPromptScreenProps) {
   const startSession = useSessionStore((s) => s.startSession);
+  const previousPrompt = useSessionStore((s) => s.prompt);
   const equipment = useSettingsStore((s) => s.equipment);
   const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
   const settingsHydrated = useSettingsStore((s) => s.hydrated);
@@ -72,10 +73,18 @@ export function DailyPromptScreen({
 
   const [step, setStep] = useState<Step>("time");
   const [devTimingVisible, setDevTimingVisible] = useState(false);
-  const [minutes, setMinutes] = useState<SessionMinutes | null>(null);
-  const [energy, setEnergy] = useState<Energy | null>(null);
-  const [quiet, setQuiet] = useState<boolean | null>(null);
-  const [avoid, setAvoid] = useState<BodyArea[]>([]);
+  const [minutes, setMinutes] = useState<SessionMinutes | null>(
+    previousPrompt?.minutes ?? null,
+  );
+  const [energy, setEnergy] = useState<Energy | null>(
+    previousPrompt?.energy ?? null,
+  );
+  const [quiet, setQuiet] = useState<boolean | null>(
+    previousPrompt?.quiet ?? null,
+  );
+  const [avoid, setAvoid] = useState<BodyArea[]>(
+    previousPrompt?.avoid.filter((area) => !alwaysAvoid.includes(area)) ?? [],
+  );
   const [careNoteText, setCareNoteText] = useState("");
 
   const finish = (avoidAreas: BodyArea[]) => {
@@ -221,6 +230,7 @@ export function DailyPromptScreen({
               key={m}
               testID={`time-${m}`}
               label={strings.prompt.time.minutes[m]}
+              selected={minutes === m}
               onPress={() => {
                 setMinutes(m);
                 setStep("energy");
@@ -240,6 +250,7 @@ export function DailyPromptScreen({
               key={e}
               testID={`energy-${e}`}
               label={strings.prompt.energy.options[e]}
+              selected={energy === e}
               onPress={() => {
                 setEnergy(e);
                 setStep("quiet");
@@ -257,6 +268,7 @@ export function DailyPromptScreen({
           <RowButton
             testID="quiet-yes"
             label={strings.prompt.quiet.yes}
+            selected={quiet === true}
             onPress={() => {
               setQuiet(true);
               setStep("soreness");
@@ -265,6 +277,7 @@ export function DailyPromptScreen({
           <RowButton
             testID="quiet-no"
             label={strings.prompt.quiet.no}
+            selected={quiet === false}
             onPress={() => {
               setQuiet(false);
               setStep("soreness");

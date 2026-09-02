@@ -65,6 +65,8 @@ interface SessionFlowState {
    * never a discard.
    */
   finishSessionEarly: () => void;
+  /** Return to today's questions without carrying an unplayed plan forward. */
+  prepareSessionEdit: () => void;
   /**
    * Restore a crash-persisted session on launch. A snapshot from today is
    * loaded back into the store: "inProgress" means the launch surface
@@ -194,6 +196,13 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     // Snapshot the done-state too: a crash before the apply lands must
     // still resolve to the completedUnsaved path on the next launch.
     useActiveSessionStore.getState().save({ prompt, session, player: next });
+  },
+
+  prepareSessionEdit: () => {
+    const { finish } = get();
+    if (finish) return;
+    useActiveSessionStore.getState().clear();
+    set({ session: null, player: null, saveFailed: false });
   },
 
   restoreActiveSession: (todayDate) => {
