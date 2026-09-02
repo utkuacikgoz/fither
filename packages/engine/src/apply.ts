@@ -74,24 +74,30 @@ export function applySessionResult(
   }
 
   // Per-pattern verdict at the CURRENT tier. Taste blocks above it and
-  // constraint fallbacks below it are both neutral (ADR-0007).
-  const seen = new Set<Pattern>();
+  // constraint fallbacks below it are both neutral (ADR-0007). Skipped
+  // blocks are progression-neutral (ADR-0012): they count neither as
+  // completed nor as struggled, so a pattern whose current-tier blocks
+  // were all skipped is treated exactly like absence — untouched.
+  const completed = new Set<Pattern>();
   const struggled = new Set<Pattern>();
   session.blocks.forEach((block, i) => {
     const movement = byId.get(block.movementId);
     const state = profile.patterns[block.pattern];
     if (!movement || movement.tier !== state.tier) return;
-    seen.add(block.pattern);
-    if (outcomes[i] !== "completed") struggled.add(block.pattern);
+    if (outcomes[i] === "completed") completed.add(block.pattern);
+    else if (outcomes[i] === "struggled") struggled.add(block.pattern);
   });
+  // A pattern participates in progression only if some current-tier block
+  // was actually attempted (completed or struggled).
+  const seen = new Set<Pattern>([...completed, ...struggled]);
 
   const ledgerEvents: LedgerEvent[] = [];
   const unlockedSkills: ApplyResult["unlockedSkills"] = [];
 
   // Session completion points (ADR-0008): base + duration, showing up
   // dominating — 20/25/30 for 10/20/30 minutes. Requires at least one
-  // completed block (PROPOSED) — a fully skipped session earns nothing,
-  // but nothing is ever deducted either.
+  // completed block (decided; engine-spec ADR-0008 bullet) — a fully
+  // skipped session earns nothing, but nothing is ever deducted either.
   if (outcomes.some((o) => o === "completed")) {
     ledgerEvents.push({
       type: "session",

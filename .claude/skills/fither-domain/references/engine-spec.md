@@ -108,8 +108,9 @@ appended taste block.
 ## Progression rules
 
 - **Advance (decided, ADR-0002):** a pattern's tier increases after **3**
-  clean sessions at the current tier (clean = all blocks for that pattern
-  completed without "struggled"). Counter resets on a struggled block.
+  clean sessions at the current tier (clean = at least one current-tier
+  block for the pattern completed, and none struggled — skipped blocks
+  are ignored, ADR-0012). Counter resets on a struggled block.
 - **Time floor (decided, ADR-0008):** advancement ALSO requires
   `DAYS_AT_TIER_TO_ADVANCE[tier]` calendar days since the pattern reached
   its current tier — 1→2: 7, 2→3: 14, 3→4: 28, 4→5: 42, 5→6: 56
@@ -122,11 +123,18 @@ appended taste block.
   engine has no clock), so a new user's tier-1 floor runs from her first
   session. The floor is elapsed calendar time, so absence never delays
   beyond it — and absence still never regresses.
-- **Regress (decided, ADR-0003):** only on repeated in-session failure —
-  2 consecutive sessions with the pattern's blocks marked
-  struggled/skipped reduce volume at the same tier; a 3rd consecutive one
-  drops one tier. Any clean session resets the counter.
-  **Absence never regresses.**
+- **Regress (decided, ADR-0003, inputs revised by ADR-0012):** only on
+  repeated in-session failure — 2 consecutive sessions with a
+  **struggled** block for the pattern reduce volume at the same tier; a
+  3rd consecutive one drops one tier. Any clean session resets the
+  counter. **Absence never regresses.**
+- **Skip is progression-neutral (decided, ADR-0012):** a skipped block
+  counts neither as completed nor as struggled — no clean-session
+  credit, no easing or regression signal, no points. A session where
+  every current-tier block for a pattern was skipped leaves that
+  pattern's state exactly as absence would (not even a `tierSince`
+  stamp), though the session still enters history and still counts for
+  pattern-coverage recency (the pattern was prescribed).
   A 2×/week user who keeps showing up must never lose a tier — this is a
   simulation gate, not a preference.
 - Tier 6 is terminal; continued progress there is volume and density.

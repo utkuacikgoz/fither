@@ -276,10 +276,71 @@ describe("applySessionResult — struggle and regression", () => {
     expect(profile.patterns.push.tierSince).toBe(dayIso(-30));
   });
 
-  it("skipped counts like struggled", () => {
+  it("a skipped block is progression-neutral (ADR-0012): no struggle signal", () => {
     let profile = profileAtTier(3);
     profile = apply(profile, pushSession(profile), ["skipped"]).profile;
-    expect(profile.patterns.push.struggledStreak).toBe(1);
+    expect(profile.patterns.push.struggledStreak).toBe(0);
+    expect(profile.patterns.push.cleanStreak).toBe(0);
+  });
+
+  it("an all-skipped session leaves pattern state untouched — like absence", () => {
+    const profile = profileAtTier(3);
+    profile.patterns.push.cleanStreak = 2;
+    profile.patterns.push.struggledStreak = 2;
+    profile.patterns.push.volumeReduced = true;
+    const result = apply(profile, pushSession(profile), ["skipped"]);
+    // Neutral in BOTH directions: no clean credit, no struggle count, no
+    // reset of either counter, no regression, not even a tierSince stamp.
+    expect(result.profile.patterns.push).toStrictEqual(profile.patterns.push);
+    expect(result.ledgerEvents).toHaveLength(0);
+    // Existing zero-completion rule unchanged: a session WITH blocks still
+    // enters history (only zero-BLOCK generation is a full no-op).
+    expect(result.history.entries).toHaveLength(1);
+    expect(result.history.entries[0]?.blocks[0]?.outcome).toBe("skipped");
+  });
+
+  it("skips never complete a struggle streak into a regression", () => {
+    let profile = profileAtTier(3);
+    profile.patterns.push.tierSince = dayIso(-30);
+    profile = apply(profile, pushSession(profile, dayIso(0)), ["struggled"])
+      .profile;
+    profile = apply(profile, pushSession(profile, dayIso(1)), ["struggled"])
+      .profile;
+    expect(profile.patterns.push.struggledStreak).toBe(2);
+    // Third session skipped: no regression, streak untouched either way.
+    profile = apply(profile, pushSession(profile, dayIso(2)), ["skipped"])
+      .profile;
+    expect(profile.patterns.push.tier).toBe(3);
+    expect(profile.patterns.push.struggledStreak).toBe(2);
+  });
+
+  it("completed + skipped blocks for a pattern classify as a clean session", () => {
+    const profile = profileAtTier(3);
+    profile.patterns.push.tierSince = dayIso(-30);
+    profile.patterns.push.struggledStreak = 2;
+    profile.patterns.push.volumeReduced = true;
+    const kneeling = block("kneeling-push-up", "push"); // tier 3 = current
+    const result = apply(profile, session([kneeling, { ...kneeling }]), [
+      "completed",
+      "skipped",
+    ]);
+    expect(result.profile.patterns.push).toMatchObject({
+      tier: 3,
+      cleanStreak: 1,
+      struggledStreak: 0,
+      volumeReduced: false,
+    });
+  });
+
+  it("struggled + skipped blocks for a pattern classify as a struggled session", () => {
+    const profile = profileAtTier(3);
+    const kneeling = block("kneeling-push-up", "push");
+    const result = apply(profile, session([kneeling, { ...kneeling }]), [
+      "struggled",
+      "skipped",
+    ]);
+    expect(result.profile.patterns.push.struggledStreak).toBe(1);
+    expect(result.profile.patterns.push.cleanStreak).toBe(0);
   });
 
   it("any clean session resets the struggled streak and volume reduction", () => {
