@@ -14,6 +14,10 @@ import { useSessionStore } from "../../../state/session-store";
 import { COMPLETION_STORAGE_KEY } from "../../../state/completion-journal";
 import { useSettingsStore } from "../../../state/settings-store";
 import {
+  collectStringValues,
+  renderedTextLeaves,
+} from "../../../test-utils/copy-audit";
+import {
   fixtureApplyResult,
   fixturePlayerBlocks,
   fixtureSession,
@@ -31,6 +35,8 @@ function seedFinishedSession() {
     sessionId: `finish-test:${Date.now()}:${Math.random()}`,
     session: fixtureSession,
     player,
+    workStartedAt: null,
+    pendingClose: null,
     finish: null,
     saveFailed: false,
     saving: false,
@@ -91,6 +97,88 @@ describe("FinishScreen", () => {
     expect(screen.queryByText(strings.finish.pointsLabel)).toBeNull();
     // She still leaves through the same single button.
     expect(screen.getByTestId("finish-continue")).toBeTruthy();
+  });
+
+  it("ended early ('Finish here') closes as 'Finished here' — saved work, points shown", async () => {
+    // The close reason was set where the close happened (the resume
+    // offer's finishSessionEarly); the screen renders it, never infers.
+    useSessionStore.setState({ pendingClose: "endedEarly" });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+
+    expect(
+      await screen.findByText(strings.finish.endedEarly.headline),
+    ).toBeTruthy();
+    expect(screen.getByText(strings.finish.endedEarly.note)).toBeTruthy();
+    expect(screen.queryByText(strings.finish.headline)).toBeNull();
+    expect(screen.queryByText(strings.finish.nothingDone.headline)).toBeNull();
+    // Completed work counts: the points row stays.
+    expect(screen.getByText("+35")).toBeTruthy();
+  });
+
+  it("out of time closes as the time promise kept, naming her minutes", async () => {
+    useSessionStore.setState({ pendingClose: "outOfTime" });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+
+    expect(
+      await screen.findByText(
+        strings.finish.outOfTime.headline(fixtureSession.minutes),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(strings.finish.outOfTime.note)).toBeTruthy();
+    expect(screen.queryByText(strings.finish.headline)).toBeNull();
+    expect(screen.getByText("+35")).toBeTruthy();
+  });
+
+  it("nothingDone wins over an early close when zero blocks completed", async () => {
+    useSessionStore.setState({ pendingClose: "outOfTime" });
+    const base = fixtureApplyResult();
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+
+    expect(
+      await screen.findByText(strings.finish.nothingDone.headline),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(strings.finish.outOfTime.headline(fixtureSession.minutes)),
+    ).toBeNull();
+    expect(screen.queryByText(strings.finish.endedEarly.headline)).toBeNull();
+    expect(screen.queryByTestId("finish-points")).toBeNull();
+  });
+
+  it("exactly one point renders without the plural unit label", async () => {
+    // strings.finish.pointsLabel is static ("points"); until a singular
+    // exists in strings.ts the unit line is dropped for 1, never false.
+    const base = fixtureApplyResult();
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: {
+        ...base,
+        ledgerEvents: [{ type: "session", points: 1, date: "2026-08-31" }],
+        unlockedSkills: [],
+      },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+
+    expect(await screen.findByText("+1")).toBeTruthy();
+    expect(screen.queryByText(strings.finish.pointsLabel)).toBeNull();
+  });
+
+  it("every close state renders no user-facing text outside strings.ts", async () => {
+    useSessionStore.setState({ pendingClose: "outOfTime" });
+    const allowed = collectStringValues(strings);
+    // Parameterised strings.ts values and dynamic numerals, enumerated.
+    allowed.add(strings.finish.outOfTime.headline(fixtureSession.minutes));
+    allowed.add("+35");
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByText(
+      strings.finish.outOfTime.headline(fixtureSession.minutes),
+    );
+    for (const leaf of renderedTextLeaves(screen.toJSON())) {
+      expect(allowed.has(leaf)).toBe(true);
+    }
   });
 
   it("continues via the single button", async () => {

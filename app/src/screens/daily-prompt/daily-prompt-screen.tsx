@@ -71,6 +71,13 @@ export function DailyPromptScreen({
 
   const appendCareNote = useCareNoteStore((s) => s.append);
 
+  // Completed-today detection (audit wave 2): today's date has a history
+  // entry — read from the profile store's engine-written record, never
+  // re-derived. Training again is HER choice: "Another session" flips
+  // this launch back to the normal four questions, nothing pushes her.
+  const historyEntries = useProfileStore((s) => s.history.entries);
+  const [anotherSession, setAnotherSession] = useState(false);
+
   const [step, setStep] = useState<Step>("time");
   const [devTimingVisible, setDevTimingVisible] = useState(false);
   const [minutes, setMinutes] = useState<SessionMinutes | null>(
@@ -184,36 +191,78 @@ export function DailyPromptScreen({
     </AppText>
   );
 
-  return (
-    <Screen>
-      <View style={styles.header}>
-        {__DEV__ ? (
-          <Pressable
-            testID="dev-timing-entry"
-            onLongPress={() => setDevTimingVisible(true)}
+  const header = (
+    <View style={styles.header}>
+      {__DEV__ ? (
+        <Pressable
+          testID="dev-timing-entry"
+          onLongPress={() => setDevTimingVisible(true)}
+        >
+          {dayLabel}
+        </Pressable>
+      ) : (
+        dayLabel
+      )}
+      {/* The quiet corner doors to progress and settings — pushed
+          routes, so her answers survive the round trip. Deliberately
+          the smallest interactive things here: the day's one decision
+          stays the screen's focal point. */}
+      <View style={styles.headerActions}>
+        <QuietButton
+          testID="open-progress"
+          label={strings.profile.title}
+          onPress={() => router.push("/progress")}
+        />
+        <QuietButton
+          testID="open-settings"
+          label={strings.settings.title}
+          onPress={() => router.push("/settings")}
+        />
+      </View>
+    </View>
+  );
+
+  // The calm done-state: today already holds an applied session. States
+  // what she did (minutes come straight off today's history entries) and
+  // offers one quiet action — no reward framing, no urgency. Corner
+  // doors stay; first runs never land here (no history yet), so the
+  // handoff eyebrow and Gate 3 instrumentation are untouched.
+  const today = todayIso();
+  const todaysEntries = historyEntries.filter((entry) => entry.date === today);
+  if (todaysEntries.length > 0 && !anotherSession) {
+    const minutesToday = todaysEntries.reduce(
+      (sum, entry) => sum + entry.minutes,
+      0,
+    );
+    return (
+      <Screen>
+        {header}
+        <View style={styles.doneState}>
+          <AppText variant="title" accessibilityRole="header">
+            {strings.prompt.completedToday.headline}
+          </AppText>
+          <AppText
+            variant="bodySoft"
+            style={styles.doneLine}
+            testID="completed-today-line"
           >
-            {dayLabel}
-          </Pressable>
-        ) : (
-          dayLabel
-        )}
-        {/* The quiet corner doors to progress and settings — pushed
-            routes, so her answers survive the round trip. Deliberately
-            the smallest interactive things here: the day's one decision
-            stays the screen's focal point. */}
-        <View style={styles.headerActions}>
+            {strings.prompt.completedToday.line(minutesToday)}
+          </AppText>
+        </View>
+        <View style={styles.doneAction}>
           <QuietButton
-            testID="open-progress"
-            label={strings.profile.title}
-            onPress={() => router.push("/progress")}
-          />
-          <QuietButton
-            testID="open-settings"
-            label={strings.settings.title}
-            onPress={() => router.push("/settings")}
+            testID="another-session"
+            label={strings.prompt.completedToday.action}
+            onPress={() => setAnotherSession(true)}
           />
         </View>
-      </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      {header}
       {handoffVisible && (
         <AppText variant="bodySoft" style={styles.handoffLine}>
           {strings.onboarding.handoff.line}
@@ -437,5 +486,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  doneState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doneLine: {
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
+  doneAction: {
+    paddingBottom: spacing.md,
   },
 });

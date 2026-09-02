@@ -21,6 +21,20 @@ export interface ActiveSessionSnapshot {
   player: PlayerState;
   /** Wall-clock end of the current countdown; null outside timed phases. */
   countdownEndsAt?: number | null;
+  /**
+   * Wall-clock ms when this session's FIRST work phase began — the anchor
+   * the time-budget ceiling (ADR-0012 §2) measures elapsed session time
+   * from. Persisted so backgrounding and process death reconcile against
+   * real time, never a JS timer. Null/absent until she first moves.
+   */
+  workStartedAt?: number | null;
+  /**
+   * An early close already decided for this session — "endedEarly" from
+   * the resume offer's "Finish here", "outOfTime" from the time-budget
+   * wrap — so a crash between the close and the apply still lands on the
+   * same honest finish state. Null/absent: no early close.
+   */
+  pendingClose?: "endedEarly" | "outOfTime" | null;
 }
 
 interface ActiveSessionState {

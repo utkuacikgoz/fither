@@ -1,4 +1,9 @@
-import type { ApplyResult, DailyPrompt, Session } from "@fither/engine";
+import type {
+  ApplyResult,
+  DailyPrompt,
+  Session,
+  SessionMinutes,
+} from "@fither/engine";
 import { create } from "zustand";
 
 import { firstMovementTracker } from "../lib/first-movement-timer";
@@ -15,9 +20,11 @@ import {
   finishEarly,
   isFinished,
   isCountingDown,
+  isWrapBoundary,
   reduce,
   restorePlayerBlocks,
   samePosition,
+  sessionCeilingMs,
   type PlayerEvent,
   type PlayerState,
 } from "../session/player-machine";
@@ -81,7 +88,20 @@ function persistentStoresReady(): boolean {
   );
 }
 
-interface FinishSummary {
+/**
+ * How the session closed — set at the point the close happened (the
+ * ceiling wrap, the resume offer's "Finish here", or the natural end)
+ * and carried into the finish summary. The UI renders it verbatim and
+ * never infers a close from player state. "outOfTime" carries the chosen
+ * length so the finish headline can say whose minutes were kept.
+ */
+export type FinishClose =
+  | { reason: "completed" }
+  | { reason: "endedEarly" }
+  | { reason: "outOfTime"; minutes: SessionMinutes }
+  | { reason: "nothingDone" };
+
+export interface FinishSummary {
   pointsEarned: number;
   unlockedSkills: ApplyResult["unlockedSkills"];
   /**
@@ -91,6 +111,29 @@ interface FinishSummary {
    * close: no "complete", no "counts" (ADR-0012 / audit P0 #5).
    */
   completedAnything: boolean;
+  /**
+   * The close state to render. Precedence: "nothingDone" wins over any
+   * early close when zero blocks completed. Optional ONLY because
+   * pre-existing summary literals (unlock-screen tests, outside this
+   * store) predate it — completeSession always sets it; a reader falls
+   * back to the plain completed close.
+   */
+  close?: FinishClose;
+}
+
+/** An early close captured before the apply lands ("completed" = none). */
+type PendingClose = "endedEarly" | "outOfTime" | null;
+
+/** ADR-0012 §2: past minutes×60×1.1 of elapsed work time, wrap up. */
+function ceilingWrapDue(
+  session: Session,
+  workStartedAt: number | null,
+  now: number,
+): boolean {
+  return (
+    workStartedAt !== null &&
+    now - workStartedAt > sessionCeilingMs(session.minutes)
+  );
 }
 
 /** What a persisted in-flight session means for this launch. */
@@ -105,6 +148,15 @@ interface SessionFlowState {
   session: Session | null;
   player: PlayerState | null;
   countdownEndsAt: number | null;
+  /**
+   * Wall-clock anchor of the session's first work phase (ADR-0012 §2).
+   * Elapsed session time is always `now - workStartedAt` — recomputed
+   * from this persisted stamp, never accumulated by a JS timer — so
+   * backgrounding and process death cannot lose or reset it.
+   */
+  workStartedAt: number | null;
+  /** Early close already decided (ceiling wrap / "Finish here"). */
+  pendingClose: PendingClose;
   finish: FinishSummary | null;
   saveFailed: boolean;
   saving: boolean;
@@ -143,6 +195,8 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   session: null,
   player: null,
   countdownEndsAt: null,
+  workStartedAt: null,
+  pendingClose: null,
   finish: null,
   saveFailed: false,
   saving: false,
@@ -163,6 +217,8 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         session: result.value.session,
         player,
         countdownEndsAt: null,
+        workStartedAt: null,
+        pendingClose: null,
         finish: null,
         saveFailed: false,
         saving: false,
@@ -175,21 +231,58 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           session: result.value.session,
           player,
           countdownEndsAt: null,
+          workStartedAt: null,
+          pendingClose: null,
         });
     }
     return result;
   },
 
   dispatchPlayer: (event) => {
-    const { prompt, sessionId, session, player, finish, countdownEndsAt } = get();
+    const {
+      prompt,
+      sessionId,
+      session,
+      player,
+      finish,
+      countdownEndsAt,
+      workStartedAt,
+      pendingClose,
+    } = get();
     if (!player) return;
-    const next = reduce(player, event);
+    const now = Date.now();
+    let next = reduce(player, event);
+    // Anchor the session's elapsed clock at its first work entry — one
+    // wall-clock stamp, persisted with the snapshot below. Intros don't
+    // count: her time promise spends from the moment she starts moving.
+    const anchoredWorkStart =
+      workStartedAt === null && next.phase.kind === "work" ? now : workStartedAt;
+    // Time-budget ceiling (ADR-0012 §2): past the promise +10% the session
+    // wraps at the NEXT phase boundary. Only on a real transition (a tick
+    // mid-count keeps its position), never at feedback (a finished block
+    // gets its answer so completed work counts) — see isWrapBoundary.
+    // Remaining blocks record "skipped": progression-neutral (§1).
+    let nextPendingClose = pendingClose;
+    if (
+      session !== null &&
+      !samePosition(player, next) &&
+      isWrapBoundary(next) &&
+      ceilingWrapDue(session, anchoredWorkStart, now)
+    ) {
+      next = finishEarly(next);
+      nextPendingClose = "outOfTime";
+    }
     const nextDeadline = isCountingDown(next)
       ? samePosition(player, next) && countdownEndsAt !== null
         ? countdownEndsAt
-        : deadlineFor(next, Date.now())
+        : deadlineFor(next, now)
       : null;
-    set({ player: next, countdownEndsAt: nextDeadline });
+    set({
+      player: next,
+      countdownEndsAt: nextDeadline,
+      workStartedAt: anchoredWorkStart,
+      pendingClose: nextPendingClose,
+    });
     // Gate 3 t1, captured at the dispatch boundary (never in the player's
     // render path): the first time this launch lands in a "work" phase —
     // intro and rest don't count as moving. The tracker fires at most
@@ -216,25 +309,55 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         session,
         player: next,
         countdownEndsAt: nextDeadline,
+        workStartedAt: anchoredWorkStart,
+        pendingClose: nextPendingClose,
       });
     }
   },
 
   reconcileTimer: (now = Date.now()) => {
-    const { prompt, sessionId, session, player, finish, countdownEndsAt } = get();
+    const {
+      prompt,
+      sessionId,
+      session,
+      player,
+      finish,
+      countdownEndsAt,
+      workStartedAt,
+      pendingClose,
+    } = get();
     if (!prompt || !sessionId || !session || !player || finish) return;
     const reconciled = reconcileCountdown(player, countdownEndsAt, now);
+    let nextPlayer = reconciled.player;
+    let nextDeadline = reconciled.countdownEndsAt;
+    let nextPendingClose = pendingClose;
+    // The ceiling holds across backgrounding: elapsed time is re-derived
+    // from the persisted wall-clock anchor, so a countdown that ran out
+    // while she was away wraps here, at the same boundary rule the live
+    // dispatch path uses (ADR-0012 §2).
     if (
-      reconciled.player === player &&
-      reconciled.countdownEndsAt === countdownEndsAt
-    ) return;
-    set(reconciled);
+      !samePosition(player, nextPlayer) &&
+      isWrapBoundary(nextPlayer) &&
+      ceilingWrapDue(session, workStartedAt, now)
+    ) {
+      nextPlayer = finishEarly(nextPlayer);
+      nextDeadline = null;
+      nextPendingClose = "outOfTime";
+    }
+    if (nextPlayer === player && nextDeadline === countdownEndsAt) return;
+    set({
+      player: nextPlayer,
+      countdownEndsAt: nextDeadline,
+      pendingClose: nextPendingClose,
+    });
     useActiveSessionStore.getState().save({
       sessionId,
       prompt,
       session,
-      player: reconciled.player,
-      countdownEndsAt: reconciled.countdownEndsAt,
+      player: nextPlayer,
+      countdownEndsAt: nextDeadline,
+      workStartedAt,
+      pendingClose: nextPendingClose,
     });
   },
 
@@ -289,13 +412,26 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       await writeCompletionRecord({ ...record, status: "committed" });
       await clearPersistedActiveSession();
       useActiveSessionStore.setState({ snapshot: null });
+      const completedAnything = record.result.ledgerEvents.some(
+        (e) => e.type === "session",
+      );
+      // The close reason was captured where the close happened (ceiling
+      // wrap / "Finish here" / natural end). Precedence: zero completed
+      // blocks is the honest nothing-done close no matter how it ended.
+      const pending = get().pendingClose;
+      const close: FinishClose = !completedAnything
+        ? { reason: "nothingDone" }
+        : pending === "outOfTime"
+          ? { reason: "outOfTime", minutes: session.minutes }
+          : pending === "endedEarly"
+            ? { reason: "endedEarly" }
+            : { reason: "completed" };
       set({
         finish: {
           pointsEarned: record.result.ledgerEvents.reduce((s, e) => s + e.points, 0),
           unlockedSkills: record.result.unlockedSkills,
-          completedAnything: record.result.ledgerEvents.some(
-            (e) => e.type === "session",
-          ),
+          completedAnything,
+          close,
         },
         saveFailed: false,
         saving: false,
@@ -308,20 +444,29 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   },
 
   finishSessionEarly: () => {
-    const { prompt, sessionId, session, player, finish } = get();
+    const { prompt, sessionId, session, player, finish, workStartedAt } = get();
     if (!prompt || !sessionId || !session || !player || finish) return;
     const next = finishEarly(player);
-    set({ player: next });
-    // Snapshot the done-state too: a crash before the apply lands must
-    // still resolve to the completedUnsaved path on the next launch.
-    useActiveSessionStore.getState().save({ sessionId, prompt, session, player: next });
+    set({ player: next, countdownEndsAt: null, pendingClose: "endedEarly" });
+    // Snapshot the done-state too — close reason included: a crash before
+    // the apply lands must still resolve to the completedUnsaved path AND
+    // the same honest "Finished here" close on the next launch.
+    useActiveSessionStore.getState().save({
+      sessionId,
+      prompt,
+      session,
+      player: next,
+      countdownEndsAt: null,
+      workStartedAt,
+      pendingClose: "endedEarly",
+    });
   },
 
   prepareSessionEdit: () => {
     const { finish } = get();
     if (finish) return;
     useActiveSessionStore.getState().clear();
-    set({ sessionId: null, session: null, player: null, countdownEndsAt: null, saveFailed: false, saving: false });
+    set({ sessionId: null, session: null, player: null, countdownEndsAt: null, workStartedAt: null, pendingClose: null, saveFailed: false, saving: false });
   },
 
   restoreActiveSession: (todayDate) => {
@@ -351,6 +496,12 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       session: snapshot.session,
       player: reconciled.player,
       countdownEndsAt: reconciled.countdownEndsAt,
+      // The elapsed anchor and any decided close survive process death —
+      // both restore from the persisted snapshot, never re-derived. A
+      // legacy snapshot without an anchor re-anchors at her next work
+      // dispatch (full budget again — lenient, never punitive).
+      workStartedAt: snapshot.workStartedAt ?? null,
+      pendingClose: snapshot.pendingClose ?? null,
       finish: null,
       saveFailed: false,
       saving: false,
@@ -366,6 +517,6 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
 
   resetSession: () => {
     useActiveSessionStore.getState().clear();
-    set({ prompt: null, sessionId: null, session: null, player: null, countdownEndsAt: null, finish: null, saveFailed: false, saving: false });
+    set({ prompt: null, sessionId: null, session: null, player: null, countdownEndsAt: null, workStartedAt: null, pendingClose: null, finish: null, saveFailed: false, saving: false });
   },
 }));

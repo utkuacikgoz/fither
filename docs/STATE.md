@@ -13,7 +13,19 @@ pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
 engine + app typecheck               pass
 engine tests                         67/67
-app tests                            263/263 (28 suites)
+app tests                            300/300 (28 suites)
+Latest wave (2026-09-02, session close + settings): the +10% session
+time ceiling (ADR-0012 §2) wraps at the next phase boundary from
+persisted wall-clock anchors; finish distinguishes complete / ended
+early / out of time / nothing done; the daily surface shows the calm
+"Done for today" state with a quiet "Another session"; the care journal
+(view/delete, v1 migration with legacy ids) lives in Settings; and a
+dev-only flow previewer seeds real state to walk paywall (active and
+expired), unlock, and all four finish states on a dev build. Pending
+follow-ups: journal edit-in-place (needs careNotes.editAction copy),
+and a fresh reviewer pass over this wave (machine gates ran green; the
+adversarial pass was cut short by session limits and should run next
+session).
 simulation (seed 20260831, 500 users, 26 weeks, 36767 sessions)
   G1 PASS  84/84 4x-week users at push tier >=4 by week 12, median week 8
   G2 PASS  0 tier regressions; low-capability difficult blocks 767/28270
