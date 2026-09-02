@@ -3,6 +3,8 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
 import { strings } from "../../../copy/strings";
+import { WORDMARK } from "../../../design/primitives/wordmark";
+import { glyph } from "../../../design/tokens";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import {
@@ -40,8 +42,10 @@ beforeEach(async () => {
 });
 
 describe("PaywallScreen", () => {
-  it("reads as the honest letter: copy, both plans, restore, disclosure", () => {
+  it("reads as the honest letter: letterhead, copy, both plans, restore, disclosure", () => {
     const screen = render(<PaywallScreen />);
+    // The letterhead is the shared brand mark, not copy.
+    expect(screen.getByText(WORDMARK)).toBeTruthy();
     expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
     expect(screen.getByText(strings.paywall.letter)).toBeTruthy();
     expect(screen.getByText(strings.paywall.trialLine)).toBeTruthy();
@@ -110,6 +114,19 @@ describe("PaywallScreen", () => {
         strings.paywall.afterTrialNote(strings.paywall.plans.annual.price),
       ),
     ).toBeTruthy();
+  });
+
+  it("marks the selected plan with the check glyph, and it follows the choice", () => {
+    const screen = render(<PaywallScreen />);
+    expect(screen.getByTestId("paywall-plan-annual-check")).toBeTruthy();
+    expect(screen.queryByTestId("paywall-plan-monthly-check")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("paywall-plan-monthly"));
+    expect(screen.getByTestId("paywall-plan-monthly-check")).toBeTruthy();
+    expect(screen.queryByTestId("paywall-plan-annual-check")).toBeNull();
+    expect(
+      screen.getByTestId("paywall-plan-monthly").props.accessibilityState.selected,
+    ).toBe(true);
   });
 
   it("purchases the selected plan through the port and persists the grant", async () => {
@@ -211,6 +228,8 @@ describe("PaywallScreen", () => {
       strings.paywall.expired.afterTrialNote(strings.paywall.plans.monthly.price),
     );
     allowed.add(DEV_RESET_LABEL); // __DEV__-only, never shipped to users
+    allowed.add(WORDMARK); // the brand mark, owned by the design layer
+    allowed.add(glyph.check); // the selection checkmark is a glyph token, not copy
 
     const preTrial = render(<PaywallScreen />);
     for (const leaf of renderedTextLeaves(preTrial.toJSON())) {

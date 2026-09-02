@@ -188,15 +188,22 @@ export function DailyPromptScreen({
         ) : (
           dayLabel
         )}
-        {/* The quiet corner door to settings — a pushed route, so her
-            answers survive the round trip. Deliberately the smallest
-            interactive thing here: the day's one decision stays the
-            screen's focal point. */}
-        <QuietButton
-          testID="open-settings"
-          label={strings.settings.title}
-          onPress={() => router.push("/settings")}
-        />
+        {/* The quiet corner doors to progress and settings — pushed
+            routes, so her answers survive the round trip. Deliberately
+            the smallest interactive things here: the day's one decision
+            stays the screen's focal point. */}
+        <View style={styles.headerActions}>
+          <QuietButton
+            testID="open-progress"
+            label={strings.profile.title}
+            onPress={() => router.push("/progress")}
+          />
+          <QuietButton
+            testID="open-settings"
+            label={strings.settings.title}
+            onPress={() => router.push("/settings")}
+          />
+        </View>
       </View>
       {handoffVisible && (
         <AppText variant="bodySoft" style={styles.handoffLine}>
@@ -381,6 +388,10 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     marginTop: spacing.md,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   handoffLine: {
     marginTop: spacing.xs,

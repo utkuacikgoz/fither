@@ -3,11 +3,15 @@ import { ScrollView, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { FadeIn } from "../../design/primitives/fade-in";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
-import { spacing } from "../../design/tokens";
+import { WORDMARK } from "../../design/primitives/wordmark";
+import { useTheme } from "../../design/theme";
+import { hairline, spacing, trackingWide } from "../../design/tokens";
 import { todayIso } from "../../lib/dates";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { getBilling, type PlanId } from "../../monetization/billing";
 import { entitlementStatus } from "../../monetization/entitlement";
 import { useEntitlementStore } from "../../state/entitlement-store";
@@ -19,6 +23,17 @@ import { PlanRow } from "./plan-row";
 // through the billing port; the screen never talks to a provider
 // directly. Unlocking is store-driven — the launch surface re-renders
 // into the daily prompt the moment the grant lands.
+//
+// The letter is typeset like one: a small letter-spaced wordmark as the
+// letterhead (the share-card treatment — the display-size Wordmark
+// primitive belongs to the launch brand moment, and would compete with
+// the headline here), the letter body, one generous breath of space,
+// then the choice. The non-interactive letter fades in gently (Reduce
+// Motion honoured); plans and buttons are tappable from the first
+// frame. A plan is always selected — annual by default — so the one
+// button below the plans always has an honest referent, and its label
+// names its outcome. A hairline rule separates her actions from the
+// legal print, the way a letter ends.
 //
 // Two copy states, decided by the app-layer entitlement policy (never
 // re-derived here): an expired trial gets the paywall.expired.* letter —
@@ -41,6 +56,8 @@ export function PaywallScreen() {
   const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
   const purchase = useEntitlementStore((s) => s.purchase);
 
+  const colors = useTheme();
+  const reduceMotion = useReducedMotion();
   const offerings = getBilling().getOfferings();
   const [selected, setSelected] = useState<PlanId>("annual");
   const [busy, setBusy] = useState(false);
@@ -85,15 +102,20 @@ export function PaywallScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <AppText variant="title" style={styles.headline}>
-          {copy.headline}
-        </AppText>
-        <AppText variant="body" style={styles.letter}>
-          {copy.letter}
-        </AppText>
-        <AppText variant="bodySoft" style={styles.trialLine}>
-          {copy.trialLine}
-        </AppText>
+        <FadeIn reduceMotion={reduceMotion}>
+          <AppText variant="caption" style={styles.letterhead}>
+            {WORDMARK}
+          </AppText>
+          <AppText variant="title" style={styles.headline}>
+            {copy.headline}
+          </AppText>
+          <AppText variant="body" style={styles.letter}>
+            {copy.letter}
+          </AppText>
+          <AppText variant="bodySoft" style={styles.trialLine}>
+            {copy.trialLine}
+          </AppText>
+        </FadeIn>
 
         <View style={styles.plans}>
           {offerings.map((offering) => (
@@ -149,6 +171,7 @@ export function PaywallScreen() {
           )}
         </View>
 
+        <View style={[styles.rule, { borderTopColor: colors.line }]} />
         <AppText variant="caption" style={styles.legal}>
           {strings.paywall.legal.autoRenew}
         </AppText>
@@ -212,6 +235,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
   },
+  letterhead: {
+    textAlign: "center",
+    letterSpacing: trackingWide,
+    marginBottom: spacing.xl,
+  },
   headline: {
     marginBottom: spacing.md,
   },
@@ -219,25 +247,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   trialLine: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   plans: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   afterTrial: {
     textAlign: "center",
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   restore: {
-    marginTop: spacing.md,
+    marginTop: spacing.xl,
     alignItems: "center",
     gap: spacing.xs,
   },
   restoreError: {
     textAlign: "center",
   },
-  legal: {
+  rule: {
+    borderTopWidth: hairline,
     marginTop: spacing.xl,
+  },
+  legal: {
+    marginTop: spacing.lg,
   },
   legalLinks: {
     flexDirection: "row",

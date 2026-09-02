@@ -315,6 +315,17 @@ describe("DailyPromptScreen", () => {
     expect(router.push).toHaveBeenCalledWith("/settings");
   });
 
+  it("offers a quiet progress entry that pushes the progress route", () => {
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    // Same corner-door pattern as settings: present, labelled from
+    // strings.ts, and the day's one decision keeps the focal point.
+    expect(screen.getByText(strings.profile.title)).toBeTruthy();
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("open-progress"));
+    expect(router.push).toHaveBeenCalledWith("/progress");
+  });
+
   it("shows the onboarding handoff atop the first question only", () => {
     const screen = render(
       <DailyPromptScreen onSessionReady={jest.fn()} showHandoff />,
