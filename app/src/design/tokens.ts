@@ -12,6 +12,14 @@ export interface ColorTheme {
   gold: string;
   danger: string;
   line: string;
+  /**
+   * Text on an accent fill. Theme-aware because the accents invert in
+   * brightness: bone on deep sage passes AA in light (5.05:1), but bone
+   * on the LIGHT dark-mode sage is 2.49:1 — dark mode pairs the light
+   * sage fill with dark ink instead (6.79:1). Always read this from the
+   * theme, never from a static constant.
+   */
+  onAccent: string;
 }
 
 export const lightColors: ColorTheme = {
@@ -24,6 +32,7 @@ export const lightColors: ColorTheme = {
   gold: "#B98A2F", // skill unlocks ONLY
   danger: "#A65746", // muted terracotta, errors only
   line: "#E8E2D8", // hairline borders
+  onAccent: "#FAF7F2", // bone on deep sage — 5.05:1
 };
 
 export const darkColors: ColorTheme = {
@@ -36,11 +45,13 @@ export const darkColors: ColorTheme = {
   gold: "#B98A2F",
   danger: "#A65746",
   line: "#33302B",
+  onAccent: "#171614", // dark ink on light sage — 6.79:1 (bone would be 2.49:1)
 };
 
-// On-accent text: bone in both themes (sage buttons carry light text).
-export const onAccent = "#FAF7F2";
-// The unlock moment: bone → deep sage full screen with gold accent.
+// The unlock moment: bone → deep sage full screen with gold accent. The
+// sage here is the LIGHT accent in both themes (the moment is the same
+// everywhere), so its pairings are static: bone text on the sage (5.05:1)
+// and, for the inverse button, sage text on a bone fill (same 5.05:1).
 export const unlockBg = "#5C6F5E";
 export const onUnlock = "#FAF7F2";
 
@@ -72,6 +83,16 @@ export const typeScale = {
   display: 40,
   numeral: 64, // timers, counts, points
 } as const;
+
+/**
+ * Dynamic Type cap for the numeral variant ONLY — body and titles scale
+ * freely. The numeral starts at 64pt (already an accessibility size); at
+ * 2× it renders 128pt, and three tabular digits (~0.6em each) then span
+ * ≈230pt — inside the 272pt content width of the narrowest supported
+ * iPhone (320pt minus 24pt margins). iOS's largest AX multiplier (~3.1×)
+ * would push a 3-digit count to ≈356pt and off-screen.
+ */
+export const numeralMaxFontScale = 2;
 
 export const fontWeight = {
   regular: "400",

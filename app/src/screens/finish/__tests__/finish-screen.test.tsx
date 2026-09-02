@@ -182,6 +182,23 @@ describe("FinishScreen", () => {
     }
   });
 
+  it("announces the HONEST close to VoiceOver once settled", async () => {
+    const announce = jest.spyOn(
+      require("react-native").AccessibilityInfo,
+      "announceForAccessibility",
+    );
+    const base = fixtureApplyResult();
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByText(strings.finish.nothingDone.headline);
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith(strings.finish.nothingDone.headline);
+    announce.mockRestore();
+  });
+
   it("continues via the single button", async () => {
     const onContinue = jest.fn();
     const screen = render(<FinishScreen onContinue={onContinue} />);

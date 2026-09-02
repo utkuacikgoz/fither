@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
+import { AccessibilityInfo } from "react-native";
 
 import { strings } from "../../../copy/strings";
 import { createPlayer } from "../../../session/player-machine";
@@ -269,6 +270,28 @@ describe("SessionPlayerScreen", () => {
       expect(screen.getByText("Plank")).toBeTruthy();
     });
 
+    it("announces nothing while the confirm is open, and never re-announces on Keep going", () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      expect(announce).toHaveBeenCalledTimes(1); // the first intro
+
+      revealIntroSkip();
+      fireEvent.press(screen.getByTestId("player-skip"));
+      expect(announce).toHaveBeenCalledTimes(1); // confirm open: silence
+
+      fireEvent.press(screen.getByTestId("player-skip-keep"));
+      expect(announce).toHaveBeenCalledTimes(1); // same intro: no repeat
+
+      revealIntroSkip();
+      fireEvent.press(screen.getByTestId("player-skip"));
+      fireEvent.press(screen.getByTestId("player-skip-confirm"));
+      // A confirmed skip lands on the NEXT block's intro — one announcement.
+      expect(announce).toHaveBeenCalledTimes(2);
+      expect(announce).toHaveBeenLastCalledWith(
+        expect.stringContaining("Plank"),
+      );
+    });
+
     it("skip confirm copy passes the no-guilt filter", () => {
       const copy = [
         strings.player.skipConfirm.title("Wall Push-Up"),
@@ -297,6 +320,117 @@ describe("SessionPlayerScreen", () => {
       for (const pattern of guiltPatterns) {
         expect(copy).not.toMatch(pattern);
       }
+    });
+  });
+
+  describe("VoiceOver phase announcements (one per transition, none per tick)", () => {
+    let announce: jest.SpyInstance;
+
+    beforeEach(() => {
+      announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    });
+
+    it("announces the block intro once — name and prescription — and stays silent on re-render", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(announce).toHaveBeenCalledWith(
+        `Wall Push-Up. ${strings.player.blockPlan(2, 8, false, false)}`,
+      );
+
+      screen.rerender(<SessionPlayerScreen onFinished={jest.fn()} />);
+      expect(announce).toHaveBeenCalledTimes(1);
+    });
+
+    it("announces work start with the cue, rest with its seconds — and each exactly once", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(announce).toHaveBeenCalledTimes(2);
+      expect(announce).toHaveBeenLastCalledWith("Push through your palms.");
+
+      fireEvent.press(screen.getByTestId("player-set-done"));
+      expect(announce).toHaveBeenCalledTimes(3);
+      expect(announce).toHaveBeenLastCalledWith(
+        `${strings.player.rest}. 30 ${strings.player.holdLabel}`,
+      );
+
+      // Rest ticks: the count moves, VoiceOver stays quiet.
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+      expect(screen.getByText("25")).toBeTruthy();
+      expect(announce).toHaveBeenCalledTimes(3);
+
+      // Second set: its own single work announcement, next cue in sequence.
+      fireEvent.press(screen.getByTestId("player-end-rest"));
+      expect(announce).toHaveBeenCalledTimes(4);
+      expect(announce).toHaveBeenLastCalledWith("Keep your body in one line.");
+    });
+
+    it("hold work announces once at start and stays silent through the countdown", () => {
+      useSessionStore.setState({
+        player: createPlayer([fixturePlayerBlocks[1]!]),
+      });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      expect(announce).toHaveBeenCalledTimes(1); // intro
+
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(announce).toHaveBeenCalledTimes(2);
+      expect(announce).toHaveBeenLastCalledWith("Squeeze your glutes.");
+
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+      expect(screen.getByText("15")).toBeTruthy();
+      expect(announce).toHaveBeenCalledTimes(2);
+    });
+
+    it("announces the side switch instruction, then the second side's cue", () => {
+      useSessionStore.setState({
+        player: createPlayer([
+          { ...fixturePlayerBlocks[1]!, unilateral: true, amount: 5 },
+        ]),
+      });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(announce).toHaveBeenLastCalledWith(
+        `${strings.player.sides.left}. Squeeze your glutes.`,
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+      expect(announce).toHaveBeenCalledTimes(3);
+      expect(announce).toHaveBeenLastCalledWith(
+        `${strings.player.sides.switchTitle}. ${strings.player.sides.switchBody}`,
+      );
+
+      fireEvent.press(screen.getByTestId("player-start-right"));
+      expect(announce).toHaveBeenCalledTimes(4);
+      expect(announce).toHaveBeenLastCalledWith(
+        `${strings.player.sides.right}. Breathe steadily.`,
+      );
+    });
+
+    it("feedback and done are silent here — the finish screen owns the close announcement", () => {
+      useSessionStore.setState({
+        player: createPlayer([fixturePlayerBlocks[1]!]),
+      });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(announce).toHaveBeenCalledTimes(2);
+
+      act(() => {
+        jest.advanceTimersByTime(20000);
+      });
+      // Landed on feedback: no announcement for it.
+      expect(screen.getByText(strings.player.feedback.question)).toBeTruthy();
+      expect(announce).toHaveBeenCalledTimes(2);
+
+      // Done stays silent in the player: the finish screen announces the
+      // HONEST close reason once it is known (a generic "Session
+      // complete" here could contradict "Today didn't fit").
+      fireEvent.press(screen.getByTestId("feedback-good"));
+      expect(announce).toHaveBeenCalledTimes(2);
     });
   });
 });

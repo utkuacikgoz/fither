@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet } from "react-native";
 
 import { useTheme } from "../theme";
-import { minTouchTarget, onAccent, radius, spacing } from "../tokens";
+import { minTouchTarget, onUnlock, radius, spacing, unlockBg } from "../tokens";
 import { AppText } from "./app-text";
 
 interface PrimaryButtonProps {
@@ -13,8 +13,13 @@ interface PrimaryButtonProps {
 }
 
 /**
- * The one call to action a screen is allowed. Sage pill, bone text,
- * generous height — reachable one-handed at the bottom of the screen.
+ * The one call to action a screen is allowed. Sage pill, generous
+ * height — reachable one-handed at the bottom of the screen. The label
+ * colour comes from the THEME (theme.onAccent): bone on light's deep
+ * sage, dark ink on dark's light sage — both ≥4.5:1. The inverse tone
+ * exists only on the theme-independent sage unlock screen, so it pairs
+ * the static unlock tokens (bone fill, deep-sage text, 5.05:1) in both
+ * themes.
  */
 export function PrimaryButton({
   label,
@@ -23,8 +28,8 @@ export function PrimaryButton({
   testID,
 }: PrimaryButtonProps) {
   const colors = useTheme();
-  const background = tone === "inverse" ? onAccent : colors.accent;
-  const textColor = tone === "inverse" ? colors.accent : onAccent;
+  const background = tone === "inverse" ? onUnlock : colors.accent;
+  const textColor = tone === "inverse" ? unlockBg : colors.onAccent;
   return (
     <Pressable
       accessibilityRole="button"

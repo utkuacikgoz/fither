@@ -1,7 +1,12 @@
 import { StyleSheet, Text, type TextProps } from "react-native";
 
 import { useTheme } from "../theme";
-import { fontFamily, fontWeight, typeScale } from "../tokens";
+import {
+  fontFamily,
+  fontWeight,
+  numeralMaxFontScale,
+  typeScale,
+} from "../tokens";
 
 type Variant =
   | "caption"
@@ -20,7 +25,10 @@ interface AppTextProps extends TextProps {
 
 /**
  * The only Text in the app. Big, warm, unhurried type; body is 17pt
- * minimum and Dynamic Type stays on (no maxFontSizeMultiplier games).
+ * minimum and Dynamic Type stays on. One deliberate exception: the
+ * numeral variant caps its scaling (numeralMaxFontScale — see the
+ * token's sizing math) so a 3-digit count stays on-screen at the
+ * largest accessibility sizes. Body, titles and captions scale freely.
  */
 export function AppText({ variant = "body", color, style, ...rest }: AppTextProps) {
   const colors = useTheme();
@@ -29,6 +37,9 @@ export function AppText({ variant = "body", color, style, ...rest }: AppTextProp
   return (
     <Text
       {...rest}
+      {...(variant === "numeral"
+        ? { maxFontSizeMultiplier: numeralMaxFontScale }
+        : null)}
       style={[styles[variant], { color: color ?? defaultColor }, style]}
     />
   );

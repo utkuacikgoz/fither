@@ -5,7 +5,6 @@ import { useTheme } from "../../design/theme";
 import {
   hairline,
   minTouchTarget,
-  onAccent,
   radius,
   spacing,
 } from "../../design/tokens";
@@ -49,8 +48,14 @@ export function AuthButton({
       : tone === "google"
         ? colors.surface
         : colors.accent;
+  // Guest reads theme onAccent: the dark theme's light sage needs dark
+  // ink, not bone (contrast — see the token's comment).
   const text =
-    tone === "apple" ? colors.bg : tone === "google" ? colors.ink : onAccent;
+    tone === "apple"
+      ? colors.bg
+      : tone === "google"
+        ? colors.ink
+        : colors.onAccent;
   const border = tone === "google" ? colors.line : fill;
   return (
     <Pressable
