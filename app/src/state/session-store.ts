@@ -11,8 +11,10 @@ import {
 import { loadLibrary } from "../session/load-library";
 import {
   createPlayer,
+  advanceCountdownBy,
   finishEarly,
   isFinished,
+  isCountingDown,
   reduce,
   restorePlayerBlocks,
   samePosition,
@@ -37,6 +39,36 @@ let sessionSequence = 0;
 function createSessionId(session: Session): string {
   sessionSequence += 1;
   return `${session.date}:${session.seed}:${Date.now().toString(36)}:${sessionSequence.toString(36)}`;
+}
+
+function countdownSeconds(player: PlayerState): number | null {
+  const { phase } = player;
+  if (phase.kind === "rest") return phase.remainingSeconds;
+  if (phase.kind === "work") return phase.remainingSeconds;
+  return null;
+}
+
+function deadlineFor(player: PlayerState, now: number): number | null {
+  const seconds = countdownSeconds(player);
+  return seconds === null ? null : now + seconds * 1000;
+}
+
+function reconcileCountdown(
+  player: PlayerState,
+  countdownEndsAt: number | null,
+  now: number,
+): { player: PlayerState; countdownEndsAt: number | null } {
+  const seconds = countdownSeconds(player);
+  if (seconds === null || countdownEndsAt === null) {
+    return { player, countdownEndsAt: deadlineFor(player, now) };
+  }
+  const startedAt = countdownEndsAt - seconds * 1000;
+  const elapsed = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const next = advanceCountdownBy(player, elapsed);
+  return {
+    player: next,
+    countdownEndsAt: isCountingDown(next) ? deadlineFor(next, now) : null,
+  };
 }
 
 function persistentStoresReady(): boolean {
@@ -65,12 +97,15 @@ interface SessionFlowState {
   sessionId: string | null;
   session: Session | null;
   player: PlayerState | null;
+  countdownEndsAt: number | null;
   finish: FinishSummary | null;
   saveFailed: boolean;
   saving: boolean;
   /** Generate today's session from the prompt. Everything runs on device. */
   startSession: (prompt: DailyPrompt) => CreateSessionResult;
   dispatchPlayer: (event: PlayerEvent) => void;
+  /** Catch a suspended countdown up to wall-clock time. */
+  reconcileTimer: (now?: number) => void;
   /** Apply the finished session through the engine boundary. Idempotent. */
   completeSession: () => Promise<void>;
   /**
@@ -100,6 +135,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   sessionId: null,
   session: null,
   player: null,
+  countdownEndsAt: null,
   finish: null,
   saveFailed: false,
   saving: false,
@@ -119,22 +155,34 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         sessionId,
         session: result.value.session,
         player,
+        countdownEndsAt: null,
         finish: null,
         saveFailed: false,
         saving: false,
       });
       useActiveSessionStore
         .getState()
-        .save({ sessionId, prompt, session: result.value.session, player });
+        .save({
+          sessionId,
+          prompt,
+          session: result.value.session,
+          player,
+          countdownEndsAt: null,
+        });
     }
     return result;
   },
 
   dispatchPlayer: (event) => {
-    const { prompt, sessionId, session, player, finish } = get();
+    const { prompt, sessionId, session, player, finish, countdownEndsAt } = get();
     if (!player) return;
     const next = reduce(player, event);
-    set({ player: next });
+    const nextDeadline = isCountingDown(next)
+      ? samePosition(player, next) && countdownEndsAt !== null
+        ? countdownEndsAt
+        : deadlineFor(next, Date.now())
+      : null;
+    set({ player: next, countdownEndsAt: nextDeadline });
     // Gate 3 t1, captured at the dispatch boundary (never in the player's
     // render path): the first time this launch lands in a "work" phase —
     // intro and rest don't count as moving. The tracker fires at most
@@ -155,8 +203,32 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     // position isn't restored anyway (a resumed set restarts its
     // countdown from the top — samePosition ignores remaining seconds).
     if (prompt && sessionId && session && !finish && !samePosition(player, next)) {
-      useActiveSessionStore.getState().save({ sessionId, prompt, session, player: next });
+      useActiveSessionStore.getState().save({
+        sessionId,
+        prompt,
+        session,
+        player: next,
+        countdownEndsAt: nextDeadline,
+      });
     }
+  },
+
+  reconcileTimer: (now = Date.now()) => {
+    const { prompt, sessionId, session, player, finish, countdownEndsAt } = get();
+    if (!prompt || !sessionId || !session || !player || finish) return;
+    const reconciled = reconcileCountdown(player, countdownEndsAt, now);
+    if (
+      reconciled.player === player &&
+      reconciled.countdownEndsAt === countdownEndsAt
+    ) return;
+    set(reconciled);
+    useActiveSessionStore.getState().save({
+      sessionId,
+      prompt,
+      session,
+      player: reconciled.player,
+      countdownEndsAt: reconciled.countdownEndsAt,
+    });
   },
 
   completeSession: async () => {
@@ -239,7 +311,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     const { finish } = get();
     if (finish) return;
     useActiveSessionStore.getState().clear();
-    set({ sessionId: null, session: null, player: null, saveFailed: false, saving: false });
+    set({ sessionId: null, session: null, player: null, countdownEndsAt: null, saveFailed: false, saving: false });
   },
 
   restoreActiveSession: (todayDate) => {
@@ -252,26 +324,38 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       return "none";
     }
     const library = loadLibrary();
-    const player = library
+    const restoredPlayer = library
       ? restorePlayerBlocks(
           snapshot.player,
           toPlayerBlocks(snapshot.session, library),
         )
       : snapshot.player;
+    const reconciled = reconcileCountdown(
+      restoredPlayer,
+      snapshot.countdownEndsAt ?? null,
+      Date.now(),
+    );
     set({
       prompt: snapshot.prompt,
       sessionId: snapshot.sessionId ?? `legacy:${snapshot.session.date}:${snapshot.session.seed}`,
       session: snapshot.session,
-      player,
+      player: reconciled.player,
+      countdownEndsAt: reconciled.countdownEndsAt,
       finish: null,
       saveFailed: false,
       saving: false,
     });
-    return isFinished(player) ? "completedUnsaved" : "inProgress";
+    useActiveSessionStore.getState().save({
+      ...snapshot,
+      sessionId: snapshot.sessionId ?? `legacy:${snapshot.session.date}:${snapshot.session.seed}`,
+      player: reconciled.player,
+      countdownEndsAt: reconciled.countdownEndsAt,
+    });
+    return isFinished(reconciled.player) ? "completedUnsaved" : "inProgress";
   },
 
   resetSession: () => {
     useActiveSessionStore.getState().clear();
-    set({ prompt: null, sessionId: null, session: null, player: null, finish: null, saveFailed: false, saving: false });
+    set({ prompt: null, sessionId: null, session: null, player: null, countdownEndsAt: null, finish: null, saveFailed: false, saving: false });
   },
 }));

@@ -19,6 +19,8 @@ export interface ActiveSessionSnapshot {
   session: Session;
   /** Full machine state: blocks with display info, phase, outcomes so far. */
   player: PlayerState;
+  /** Wall-clock end of the current countdown; null outside timed phases. */
+  countdownEndsAt?: number | null;
 }
 
 interface ActiveSessionState {
