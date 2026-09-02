@@ -212,6 +212,8 @@ Exit criteria: no asymmetric prescription, no missing coaching step, no ambiguou
 1. Build the real preview and answer-edit path.
 2. Define and instrument the time-budget contract.
 3. Implement idempotent completion and crash-safe timer restoration.
+   - Idempotent, journaled completion shipped 2026-09-02; elapsed-time timer
+     restoration remains.
 4. Build honest finish, ended-early, save-failed, and completed-today states.
 5. Add hydrated route guards and expired-access navigation that preserves owned records.
 

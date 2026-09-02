@@ -25,6 +25,19 @@ import { useFirstMovementStore } from "./first-movement-store";
 import { useProfileStore } from "./profile-store";
 import { useLedgerStore } from "./ledger-store";
 import { useSettingsStore } from "./settings-store";
+import {
+  clearPersistedActiveSession,
+  persistCanonicalCompletion,
+  readCompletionRecord,
+  writeCompletionRecord,
+  type CompletionRecord,
+} from "./completion-journal";
+
+let sessionSequence = 0;
+function createSessionId(session: Session): string {
+  sessionSequence += 1;
+  return `${session.date}:${session.seed}:${Date.now().toString(36)}:${sessionSequence.toString(36)}`;
+}
 
 function persistentStoresReady(): boolean {
   return (
@@ -49,15 +62,17 @@ export type RestoreActiveSessionResult =
 
 interface SessionFlowState {
   prompt: DailyPrompt | null;
+  sessionId: string | null;
   session: Session | null;
   player: PlayerState | null;
   finish: FinishSummary | null;
   saveFailed: boolean;
+  saving: boolean;
   /** Generate today's session from the prompt. Everything runs on device. */
   startSession: (prompt: DailyPrompt) => CreateSessionResult;
   dispatchPlayer: (event: PlayerEvent) => void;
   /** Apply the finished session through the engine boundary. Idempotent. */
-  completeSession: () => void;
+  completeSession: () => Promise<void>;
   /**
    * "Finish here" on the resume offer: keep every outcome she captured,
    * mark the rest skipped, and hand the player to the finish screen's
@@ -82,10 +97,12 @@ interface SessionFlowState {
 
 export const useSessionStore = create<SessionFlowState>()((set, get) => ({
   prompt: null,
+  sessionId: null,
   session: null,
   player: null,
   finish: null,
   saveFailed: false,
+  saving: false,
 
   startSession: (prompt) => {
     if (!persistentStoresReady()) {
@@ -96,22 +113,25 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     const result = createSession(prompt, profile, history, sessionSalt);
     if (result.ok) {
       const player = createPlayer(result.value.playerBlocks);
+      const sessionId = createSessionId(result.value.session);
       set({
         prompt,
+        sessionId,
         session: result.value.session,
         player,
         finish: null,
         saveFailed: false,
+        saving: false,
       });
       useActiveSessionStore
         .getState()
-        .save({ prompt, session: result.value.session, player });
+        .save({ sessionId, prompt, session: result.value.session, player });
     }
     return result;
   },
 
   dispatchPlayer: (event) => {
-    const { prompt, session, player, finish } = get();
+    const { prompt, sessionId, session, player, finish } = get();
     if (!player) return;
     const next = reduce(player, event);
     set({ player: next });
@@ -134,75 +154,92 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     // make storage churn race the timer for nothing, because a countdown
     // position isn't restored anyway (a resumed set restarts its
     // countdown from the top — samePosition ignores remaining seconds).
-    if (prompt && session && !finish && !samePosition(player, next)) {
-      useActiveSessionStore.getState().save({ prompt, session, player: next });
+    if (prompt && sessionId && session && !finish && !samePosition(player, next)) {
+      useActiveSessionStore.getState().save({ sessionId, prompt, session, player: next });
     }
   },
 
-  completeSession: () => {
-    const { session, player, finish } = get();
+  completeSession: async () => {
+    const { sessionId, session, player, finish, saving } = get();
     if (!session || !player || !isFinished(player)) return;
-    if (finish) return; // already applied
+    if (finish || saving) return;
     if (!persistentStoresReady()) {
-      set({ saveFailed: true });
+      set({ saveFailed: true, saving: false });
       return;
     }
-    set({ saveFailed: false });
-    const { profile, history, applyEngineResult } = useProfileStore.getState();
-    const outcome = applyResult(profile, history, {
-      session,
-      outcomes: player.outcomes,
-    });
-    if (outcome.ok) {
-      // DUAL-WRITE GAP (S3, accepted for now): applying a result touches
-      // three AsyncStorage keys in separate writes — profile/history,
-      // then the ledger append, then clearing the active-session
-      // snapshot. There is no transaction, so a crash inside this window
-      // can drop one side (history saved but points not yet appended) or
-      // leave a done-snapshot behind that re-applies on relaunch. This is
-      // accepted because: single device (no concurrent writer), the
-      // ledger is append-only (nothing here can shrink it), the profile
-      // is engine-derived from the same apply (never partially edited),
-      // and all three writes are issued in one JS turn, so the window is
-      // a hard kill mid-flush. Revisit before any sync/backup story.
-      applyEngineResult(outcome.value);
-      // Trial policy stamp (ADR-0009 §2): the 7-day trial starts at the
-      // first COMPLETED session. Stamped from the session's own date —
-      // the same local-date source the daily prompt used — and only when
-      // the apply actually landed (a failed save spends no trial).
-      // Idempotent inside the entitlement store; joins the accepted S3
-      // dual-write window above.
-      useEntitlementStore.getState().markSessionCompleted(session.date);
-      useActiveSessionStore.getState().clear();
+    set({ saveFailed: false, saving: true });
+    try {
+      const stableId = sessionId ?? `legacy:${session.date}:${session.seed}`;
+      const previous = await readCompletionRecord();
+      let record: CompletionRecord;
+      if (previous?.sessionId === stableId) {
+        record = previous;
+      } else {
+        const { profile, history } = useProfileStore.getState();
+        const outcome = applyResult(profile, history, {
+          session,
+          outcomes: player.outcomes,
+        });
+        if (!outcome.ok) {
+          set({ saveFailed: true, saving: false });
+          return;
+        }
+        const entitlement = useEntitlementStore.getState();
+        record = {
+          version: 1,
+          status: "pending",
+          sessionId: stableId,
+          result: outcome.value,
+          ledgerEvents: [...useLedgerStore.getState().events, ...outcome.value.ledgerEvents],
+          trialStartDate: entitlement.trialStartDate ?? session.date,
+          purchase: entitlement.purchase,
+        };
+        await writeCompletionRecord(record);
+      }
+
+      await persistCanonicalCompletion(record);
+      useProfileStore.setState({
+        profile: record.result.profile,
+        history: record.result.history,
+      });
+      useLedgerStore.setState({ events: record.ledgerEvents });
+      useEntitlementStore.setState({
+        trialStartDate: record.trialStartDate,
+        purchase: record.purchase,
+      });
+      await writeCompletionRecord({ ...record, status: "committed" });
+      await clearPersistedActiveSession();
+      useActiveSessionStore.setState({ snapshot: null });
       set({
         finish: {
-          pointsEarned: outcome.value.ledgerEvents.reduce((s, e) => s + e.points, 0),
-          unlockedSkills: outcome.value.unlockedSkills,
+          pointsEarned: record.result.ledgerEvents.reduce((s, e) => s + e.points, 0),
+          unlockedSkills: record.result.unlockedSkills,
         },
         saveFailed: false,
+        saving: false,
       });
-    } else {
-      // Snapshot intentionally kept: a failed save must survive a
-      // relaunch so the finish screen can retry — her workout counts.
-      set({ saveFailed: true });
+    } catch {
+      // The active snapshot and journal are deliberately retained. A retry
+      // replays the exact result instead of asking the engine to award it again.
+      set({ saveFailed: true, saving: false });
     }
   },
 
   finishSessionEarly: () => {
-    const { prompt, session, player, finish } = get();
-    if (!prompt || !session || !player || finish) return;
+    const { prompt, sessionId, session, player, finish } = get();
+    if (!prompt || !sessionId || !session || !player || finish) return;
     const next = finishEarly(player);
     set({ player: next });
     // Snapshot the done-state too: a crash before the apply lands must
     // still resolve to the completedUnsaved path on the next launch.
-    useActiveSessionStore.getState().save({ prompt, session, player: next });
+    useActiveSessionStore.getState().save({ sessionId, prompt, session, player: next });
   },
 
   prepareSessionEdit: () => {
     const { finish } = get();
     if (finish) return;
     useActiveSessionStore.getState().clear();
-    set({ session: null, player: null, saveFailed: false });
+    set({ sessionId: null, session: null, player: null, saveFailed: false, saving: false });
   },
 
   restoreActiveSession: (todayDate) => {
@@ -223,16 +260,18 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       : snapshot.player;
     set({
       prompt: snapshot.prompt,
+      sessionId: snapshot.sessionId ?? `legacy:${snapshot.session.date}:${snapshot.session.seed}`,
       session: snapshot.session,
       player,
       finish: null,
       saveFailed: false,
+      saving: false,
     });
     return isFinished(player) ? "completedUnsaved" : "inProgress";
   },
 
   resetSession: () => {
     useActiveSessionStore.getState().clear();
-    set({ prompt: null, session: null, player: null, finish: null, saveFailed: false });
+    set({ prompt: null, sessionId: null, session: null, player: null, finish: null, saveFailed: false, saving: false });
   },
 }));

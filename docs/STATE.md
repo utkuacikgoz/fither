@@ -106,7 +106,13 @@ truthfully named in every active phase, old active-session shapes upgrade on
 restore, and the progress line exposes a screen-reader value. The preview now
 shows its actual block prescription, leads with one primary adaptation, and
 returns to prefilled daily answers for edits. Next is durable idempotent
-completion and lifecycle-aware timers.
+completion and lifecycle-aware timers. Completion is now journaled under a
+stable per-session ID before profile, history, ledger, trial, and active-session
+state are changed. A retry or relaunch replays that exact result, so a hard kill
+cannot award twice; the finish screen withholds success until the committed
+write and active-session cleanup land. Next is elapsed-time restoration across
+backgrounding and process death, followed by honest ended-early and
+completed-today states.
 
 1. ~~GATE 2~~ **PASSED 2026-09-01.** The owner ran the app from a device
    build, trained with it, and called it good after the live-testing UX
