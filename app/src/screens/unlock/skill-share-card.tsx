@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { WORDMARK } from "../../design/primitives/wordmark";
 import {
   hairline,
   lightColors,
@@ -10,10 +11,10 @@ import {
   spacing,
 } from "../../design/tokens";
 
-// The brand wordmark on the shareable card. A mark, not copy — but it is
-// still text a user sees, so it's exported for the copy-audit allowlist
-// and flagged for the copy-writer as a candidate strings.brand key.
-export const WORDMARK = "FITHER";
+// The card typesets the shared WORDMARK constant in its own small,
+// letter-spaced style — the primitive's display treatment belongs to the
+// launch/sign-in brand moment, not a card corner.
+export { WORDMARK };
 
 interface SkillShareCardProps {
   skillName: string;

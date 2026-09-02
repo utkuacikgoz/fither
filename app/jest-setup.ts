@@ -13,6 +13,13 @@ jest.mock(
       .default,
 );
 
+// Screens navigate through expo-router's imperative `router`. Component
+// tests render screens without a navigation container, so the router is a
+// plain spy here — tests assert on the pushed paths.
+jest.mock("expo-router", () => ({
+  router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
+}));
+
 jest.mock("expo-keep-awake", () => ({
   useKeepAwake: () => undefined,
   activateKeepAwakeAsync: async () => undefined,

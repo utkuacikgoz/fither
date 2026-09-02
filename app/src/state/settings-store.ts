@@ -29,6 +29,11 @@ interface SettingsState {
   setEquipment: (equipment: Equipment[]) => void;
   /** Persist the two onboarding answers and mark onboarding done. */
   completeOnboarding: (equipment: Equipment[], alwaysAvoid: BodyArea[]) => void;
+  /**
+   * Toggle one persistent avoid area (the settings screen's editor for
+   * the onboarding list). Persists immediately via the store layer.
+   */
+  toggleAlwaysAvoid: (area: BodyArea) => void;
 }
 
 function generateSalt(): number {
@@ -48,6 +53,12 @@ export const useSettingsStore = create<SettingsState>()(
       setEquipment: (equipment) => set({ equipment }),
       completeOnboarding: (equipment, alwaysAvoid) =>
         set({ equipment, alwaysAvoid, onboardingCompleted: true }),
+      toggleAlwaysAvoid: (area) =>
+        set((state) => ({
+          alwaysAvoid: state.alwaysAvoid.includes(area)
+            ? state.alwaysAvoid.filter((a) => a !== area)
+            : [...state.alwaysAvoid, area],
+        })),
     }),
     {
       name: "fither/settings-v1",

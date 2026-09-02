@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import type { BodyArea, DailyPrompt, Energy, SessionMinutes } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
@@ -166,16 +167,27 @@ export function DailyPromptScreen({
 
   return (
     <Screen>
-      {__DEV__ ? (
-        <Pressable
-          testID="dev-timing-entry"
-          onLongPress={() => setDevTimingVisible(true)}
-        >
-          {dayLabel}
-        </Pressable>
-      ) : (
-        dayLabel
-      )}
+      <View style={styles.header}>
+        {__DEV__ ? (
+          <Pressable
+            testID="dev-timing-entry"
+            onLongPress={() => setDevTimingVisible(true)}
+          >
+            {dayLabel}
+          </Pressable>
+        ) : (
+          dayLabel
+        )}
+        {/* The quiet corner door to settings — a pushed route, so her
+            answers survive the round trip. Deliberately the smallest
+            interactive thing here: the day's one decision stays the
+            screen's focal point. */}
+        <QuietButton
+          testID="open-settings"
+          label={strings.settings.title}
+          onPress={() => router.push("/settings")}
+        />
+      </View>
       {handoffVisible && (
         <AppText variant="bodySoft" style={styles.handoffLine}>
           {strings.onboarding.handoff.line}
@@ -352,6 +364,11 @@ export function DailyPromptScreen({
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   dayLabel: {
     marginTop: spacing.md,
   },

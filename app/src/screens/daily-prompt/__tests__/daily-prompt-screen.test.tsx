@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import { router } from "expo-router";
 import React from "react";
 
 import { strings } from "../../../copy/strings";
@@ -301,6 +302,17 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("dev-timing-close"));
     expect(screen.queryByText(DEV_TIMING_TITLE)).toBeNull();
     expect(screen.getByText(strings.prompt.energy.question)).toBeTruthy();
+  });
+
+  it("offers a quiet settings entry that pushes the settings route", () => {
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    // The entry exists, labelled from strings.ts, without displacing the
+    // day's one decision.
+    expect(screen.getByText(strings.settings.title)).toBeTruthy();
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("open-settings"));
+    expect(router.push).toHaveBeenCalledWith("/settings");
   });
 
   it("shows the onboarding handoff atop the first question only", () => {

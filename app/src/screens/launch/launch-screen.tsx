@@ -7,11 +7,13 @@ import { useActiveSessionStore } from "../../state/active-session-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
+import { useIdentityStore } from "../../state/identity-store";
 import { useSessionStore } from "../../state/session-store";
 import { useSettingsStore } from "../../state/settings-store";
 import { DailyPromptScreen } from "../daily-prompt/daily-prompt-screen";
 import { OnboardingScreen } from "../onboarding/onboarding-screen";
 import { PaywallScreen } from "../paywall/paywall-screen";
+import { SignInScreen } from "../sign-in/sign-in-screen";
 import { ResumeOffer } from "./resume-offer";
 
 // The app's entry surface. Once every persisted store has hydrated, the
@@ -19,8 +21,10 @@ import { ResumeOffer } from "./resume-offer";
 // launch: a same-day in-progress session earns the one calm resume
 // decision, a finished-but-unsaved one goes straight to the finish
 // screen's retrying save path. The resume decision wins over EVERYTHING —
-// an already-generated session is never interrupted by onboarding or the
-// paywall. After it, in order: first-ever open (no history, onboarding
+// an already-generated session is never interrupted by sign-in,
+// onboarding or the paywall. After it, in order: no identity yet gets
+// the one sign-in screen (ADR-0011 — guest is one tap, Gate 3's only
+// extra cost); first-ever open (no history, onboarding
 // never completed) gets the three onboarding screens; an expired,
 // unpurchased trial gets the paywall instead of generating a new session
 // (ADR-0009 §3 — her history, points and skills stay hers regardless);
@@ -45,6 +49,8 @@ export function LaunchScreen({
   const settingsHydrated = useSettingsStore((s) => s.hydrated);
   const activeHydrated = useActiveSessionStore((s) => s.hydrated);
   const entitlementHydrated = useEntitlementStore((s) => s.hydrated);
+  const identityHydrated = useIdentityStore((s) => s.hydrated);
+  const identity = useIdentityStore((s) => s.identity);
   const restoreActiveSession = useSessionStore((s) => s.restoreActiveSession);
   const finishSessionEarly = useSessionStore((s) => s.finishSessionEarly);
 
@@ -62,7 +68,8 @@ export function LaunchScreen({
     ledgerHydrated &&
     settingsHydrated &&
     activeHydrated &&
-    entitlementHydrated;
+    entitlementHydrated &&
+    identityHydrated;
 
   // Gate 3 t0: the launch surface's first mount this JS lifetime. Marked
   // in a mount effect (first commit; native pre-JS launch time is not
@@ -104,6 +111,13 @@ export function LaunchScreen({
         }}
       />
     );
+  }
+
+  // Sign-in runs while no identity exists (ADR-0011): one screen, three
+  // options with equal dignity, guest is one tap. Continuing is
+  // store-driven — the identity landing re-renders this surface onward.
+  if (hydrated && !identity) {
+    return <SignInScreen />;
   }
 
   // Onboarding runs once, ever: never completed AND no profile history
