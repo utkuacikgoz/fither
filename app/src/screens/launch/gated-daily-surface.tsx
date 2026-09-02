@@ -33,11 +33,13 @@ export function GatedDailySurface() {
             <View style={styles.headerActions}>
               <QuietButton
                 testID="open-progress"
+                outlined
                 label={strings.profile.title}
                 onPress={() => router.push("/progress")}
               />
               <QuietButton
                 testID="open-settings"
+                outlined
                 label={strings.settings.title}
                 onPress={() => router.push("/settings")}
               />

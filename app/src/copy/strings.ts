@@ -190,9 +190,11 @@ export const strings = {
   // second-class for skipping an account. Apple/Google wordings are the
   // platform-sanctioned conventions — do not restyle them.
   auth: {
-    // The decided brand tagline (ADR-0006), reused verbatim — no rival
-    // slogan invented for this screen.
-    welcome: "Strength that fits your life.",
+    // Not the tagline: onboarding's welcome headline owns the brand
+    // moment (ADR-0006), and on a first run these two screens are
+    // back-to-back. This line just sets up the choice below — no rival
+    // slogan, no feature promise (ADR-0011 §5: no sync claims).
+    welcome: "Choose how you'd like to continue.",
     apple: "Continue with Apple",
     google: "Continue with Google",
     guest: "Continue without an account",

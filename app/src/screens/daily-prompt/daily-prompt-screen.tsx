@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import type { BodyArea, DailyPrompt, Energy, SessionMinutes } from "@fither/engine";
@@ -14,6 +14,7 @@ import { spacing } from "../../design/tokens";
 import { BODY_AREAS } from "../../lib/body-areas";
 import { needsCareMoment } from "../../lib/care-moment";
 import { todayIso } from "../../lib/dates";
+import { useTodayIso } from "../../lib/use-today";
 import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 import { useActiveSessionStore } from "../../state/active-session-store";
@@ -70,6 +71,9 @@ export function DailyPromptScreen({
   const identityFailed = useIdentityStore((s) => s.hydrationFailed);
 
   const appendCareNote = useCareNoteStore((s) => s.append);
+  // Reactive across midnight: a prompt left open overnight refreshes its
+  // date on the next foreground, so yesterday's done-state can't linger.
+  const today = useTodayIso();
 
   // Completed-today detection (audit wave 2): today counts as done only
   // when an entry recorded at least one COMPLETED block — reading the
@@ -95,6 +99,20 @@ export function DailyPromptScreen({
     previousPrompt?.avoid.filter((area) => !alwaysAvoid.includes(area)) ?? [],
   );
   const [careNoteText, setCareNoteText] = useState("");
+  // Words typed on a heavy day are never dropped by navigation (audit
+  // polish): whatever is still in the field when this screen unmounts is
+  // saved. restart() saves-and-clears first, so no double write.
+  const careNoteRef = useRef(careNoteText);
+  careNoteRef.current = careNoteText;
+  useEffect(
+    () => () => {
+      const note = careNoteRef.current.trim();
+      if (note.length > 0) {
+        appendCareNote({ date: todayIso(), text: note });
+      }
+    },
+    [appendCareNote],
+  );
 
   const finish = (avoidAreas: BodyArea[]) => {
     if (minutes === null || energy === null || quiet === null) return;
@@ -211,11 +229,13 @@ export function DailyPromptScreen({
       <View style={styles.headerActions}>
         <QuietButton
           testID="open-progress"
+          outlined
           label={strings.profile.title}
           onPress={() => router.push("/progress")}
         />
         <QuietButton
           testID="open-settings"
+          outlined
           label={strings.settings.title}
           onPress={() => router.push("/settings")}
         />
@@ -231,7 +251,6 @@ export function DailyPromptScreen({
   // means we can't honestly total minutes — lineSome claims none. Corner
   // doors stay; first runs never land here (no history yet), so the
   // handoff eyebrow and Gate 3 instrumentation are untouched.
-  const today = todayIso();
   const trainedToday = historyEntries.filter(
     (entry) =>
       entry.date === today &&

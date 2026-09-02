@@ -89,10 +89,12 @@ function seedFinishSummary(finish: {
   });
 }
 
-/** A finish summary with one unlocked skill — /unlock's guard passes. */
+/** A finish summary with one unlocked skill — /unlock's guard passes.
+ * Points follow ADR-0008 for a 10-minute session with a skill unlock:
+ * 20 (session) + 25 (unlock) — the owner previews real numbers. */
 export function seedUnlockPreviewForDev(): void {
   seedFinishSummary({
-    pointsEarned: 35,
+    pointsEarned: 45,
     unlockedSkills: [DEV_PREVIEW_SKILL],
     completedAnything: true,
     close: { reason: "completed" },
@@ -120,7 +122,10 @@ export function seedFinishPreviewForDev(preview: DevFinishPreview): void {
         { reason: "outOfTime", minutes: 20 }
       : { reason: preview };
   seedFinishSummary({
-    pointsEarned: completedAnything ? 10 : 0,
+    // ADR-0008: a completed 10/20/30-minute session earns 20/25/30. The
+    // outOfTime preview names 20 minutes, so its points read 25; the
+    // other completed closes preview the 10-minute base.
+    pointsEarned: !completedAnything ? 0 : preview === "outOfTime" ? 25 : 20,
     unlockedSkills: [],
     completedAnything,
     close,

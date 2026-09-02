@@ -185,9 +185,12 @@ describe("dev first-run reset (persistence-layer wipe)", () => {
         onResumeFinished={jest.fn()}
       />,
     );
-    // First-ever-open branch: onboarding, not the prompt or the paywall.
+    // First-ever-open branch: sign-in first (identity wiped too), never
+    // the prompt or the paywall. (This previously asserted onboarding's
+    // headline, which passed only because sign-in shared the same
+    // sentence — the reset's true first screen is sign-in.)
     await waitFor(() =>
-      expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy(),
+      expect(screen.getByText(strings.auth.guest)).toBeTruthy(),
     );
     // The launch stamped this lifetime's tracker as a true first run — a
     // first work-phase entry would be recorded as THE Gate 3 number.
