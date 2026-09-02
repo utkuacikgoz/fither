@@ -50,6 +50,8 @@ describe("SessionPlayerScreen", () => {
     const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
     expect(screen.getByText("Wall Push-Up")).toBeTruthy();
     expect(screen.getByText(strings.player.blockPlan(2, 8, false))).toBeTruthy();
+    expect(screen.getByText("Push through your palms.")).toBeTruthy();
+    expect(screen.getByText("Keep your body in one line.")).toBeTruthy();
     expect(screen.getByTestId("player-begin")).toBeTruthy();
   });
 
@@ -110,6 +112,34 @@ describe("SessionPlayerScreen", () => {
       "skipped",
       "completed",
     ]);
+  });
+
+  it("guides both sides of a unilateral hold before asking for feedback", () => {
+    useSessionStore.setState({
+      player: createPlayer([
+        { ...fixturePlayerBlocks[1]!, unilateral: true, amount: 5 },
+      ]),
+    });
+    const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+
+    expect(
+      screen.getByText(strings.player.blockPlan(1, 5, true, true)),
+    ).toBeTruthy();
+    fireEvent.press(screen.getByTestId("player-begin"));
+    expect(screen.getByText(strings.player.sides.left)).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(screen.getByText(strings.player.sides.switchTitle)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("player-start-right"));
+    expect(screen.getByText(strings.player.sides.right)).toBeTruthy();
+    expect(screen.getByText("5")).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(screen.getByText(strings.player.feedback.question)).toBeTruthy();
   });
 
   describe("post-block feedback: three answers, two engine outcomes", () => {
@@ -211,24 +241,30 @@ describe("SessionPlayerScreen", () => {
       ).toBeNull();
     });
 
-    it("keeps the immediate, unconfirmed skip during work (unchanged)", () => {
+    it("confirms a skip during work before recording it", () => {
       const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
       fireEvent.press(screen.getByTestId("player-begin"));
 
-      // Work phase: skip is available at once and acts at once.
       expect(screen.getByTestId("player-skip")).toBeTruthy();
       fireEvent.press(screen.getByTestId("player-skip"));
+      expect(useSessionStore.getState().player?.outcomes).toEqual([]);
+      expect(screen.getByText(strings.player.skipConfirm.body)).toBeTruthy();
+      fireEvent.press(screen.getByTestId("player-skip-confirm"));
       expect(useSessionStore.getState().player?.outcomes).toEqual(["skipped"]);
     });
 
-    it("keeps the immediate, unconfirmed skip during rest (unchanged)", () => {
+    it("confirms that the rest action skips the exercise, not only the rest", () => {
       const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
       fireEvent.press(screen.getByTestId("player-begin"));
       fireEvent.press(screen.getByTestId("player-set-done"));
 
-      // Rest phase: skip available at once, no confirm step.
       expect(screen.getByText(strings.player.rest)).toBeTruthy();
       fireEvent.press(screen.getByTestId("player-skip"));
+      expect(useSessionStore.getState().player?.outcomes).toEqual([]);
+      expect(
+        screen.getByText(strings.player.skipConfirm.title("Wall Push-Up")),
+      ).toBeTruthy();
+      fireEvent.press(screen.getByTestId("player-skip-confirm"));
       expect(useSessionStore.getState().player?.outcomes).toEqual(["skipped"]);
       expect(screen.getByText("Plank")).toBeTruthy();
     });

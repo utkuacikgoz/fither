@@ -21,7 +21,10 @@ import {
 
 // The engine boundaries are mocked: the engine itself is still a contract
 // stub, so the flow is exercised against fixture Sessions/ApplyResults.
-jest.mock("../../session/create-session", () => ({ createSession: jest.fn() }));
+jest.mock("../../session/create-session", () => ({
+  ...jest.requireActual("../../session/create-session"),
+  createSession: jest.fn(),
+}));
 jest.mock("../../session/apply-result", () => ({ applyResult: jest.fn() }));
 
 const mockedCreate = jest.mocked(createSession);
@@ -184,7 +187,8 @@ describe("crash-safe persistence (S3)", () => {
           {
             movementId: "plank",
             name: "Plank",
-            cue: "Breathe steadily.",
+            cues: ["Breathe steadily."],
+            unilateral: false,
             sets: 1,
             amount: 5,
             restSeconds: 0,
@@ -396,7 +400,8 @@ describe("Gate 3 capture at the dispatch boundary", () => {
           {
             movementId: "plank",
             name: "Plank",
-            cue: "Breathe steadily.",
+            cues: ["Breathe steadily."],
+            unilateral: false,
             sets: 1,
             amount: 5,
             restSeconds: 0,

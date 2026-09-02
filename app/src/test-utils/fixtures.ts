@@ -84,7 +84,8 @@ export const fixturePlayerBlocks: PlayerBlock[] = [
   {
     movementId: "wall-push-up",
     name: "Wall Push-Up",
-    cue: "Push through your palms.",
+    cues: ["Push through your palms.", "Keep your body in one line."],
+    unilateral: false,
     sets: 2,
     amount: 8,
     restSeconds: 30,
@@ -93,7 +94,8 @@ export const fixturePlayerBlocks: PlayerBlock[] = [
   {
     movementId: "plank",
     name: "Plank",
-    cue: "Squeeze your glutes.",
+    cues: ["Squeeze your glutes.", "Breathe steadily."],
+    unilateral: false,
     sets: 1,
     amount: 20,
     restSeconds: 0,

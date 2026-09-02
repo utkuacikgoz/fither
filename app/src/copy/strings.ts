@@ -34,7 +34,7 @@ export const strings = {
       // Shared with the onboarding avoid-list screen (one string, on
       // purpose): both "nothing to work around" defaults say "All good".
       allGood: "All good",
-      confirm: "Noted. We'll work around it.",
+      confirm: "Build today's session",
       // COPY-WRITER: new key (2026-09-01, live-testing pass) — the quiet
       // count cue under multi-select body-area pickers.
       areasNoted: (count: number) =>
@@ -52,19 +52,34 @@ export const strings = {
     },
   },
   player: {
+    sessionProgress: "Session progress",
     begin: "Begin",
     setDone: "Done",
-    skipBlock: "Skip this one",
+    skipBlock: "Skip exercise",
     repsLabel: "reps",
     holdLabel: "seconds",
     rest: "Rest",
     restNote: "Breathe.",
     restDone: "I'm ready",
     setCounter: (current: number, total: number) => `Set ${current} of ${total}`,
-    blockPlan: (sets: number, amount: number, isHold: boolean) =>
-      isHold
-        ? `${sets} × ${amount}-second hold`
-        : `${sets} × ${amount} reps`,
+    blockPlan: (
+      sets: number,
+      amount: number,
+      isHold: boolean,
+      unilateral = false,
+    ) => {
+      const side = unilateral ? " each side" : "";
+      return isHold
+        ? `${sets} × ${amount}-second hold${side}`
+        : `${sets} × ${amount} reps${side}`;
+    },
+    sides: {
+      left: "Left side",
+      right: "Right side",
+      switchTitle: "Switch sides",
+      switchBody: "Set up on your right side when you're ready.",
+      startRight: "Start right side",
+    },
     feedback: {
       question: "How was that?",
       // COPY-WRITER: three answers since 2026-09-01 (live-testing pass),
@@ -83,9 +98,9 @@ export const strings = {
     // mentioned again afterwards.
     skipConfirm: {
       title: (movement: string) => `Skip ${movement}?`,
-      body: "Fewer reps count too. Either way is fine.",
+      body: "We'll move on. This exercise won't count as completed.",
       keepGoing: "Keep going",
-      skipIt: "Skip it",
+      skipIt: "Skip exercise",
     },
   },
   // COPY-WRITER: new keys (2026-09-01, live-testing pass). Shown only

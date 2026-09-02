@@ -3,12 +3,18 @@ import { create } from "zustand";
 
 import { firstMovementTracker } from "../lib/first-movement-timer";
 import { applyResult } from "../session/apply-result";
-import { createSession, type CreateSessionResult } from "../session/create-session";
+import {
+  createSession,
+  toPlayerBlocks,
+  type CreateSessionResult,
+} from "../session/create-session";
+import { loadLibrary } from "../session/load-library";
 import {
   createPlayer,
   finishEarly,
   isFinished,
   reduce,
+  restorePlayerBlocks,
   samePosition,
   type PlayerEvent,
   type PlayerState,
@@ -199,14 +205,21 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       clear();
       return "none";
     }
+    const library = loadLibrary();
+    const player = library
+      ? restorePlayerBlocks(
+          snapshot.player,
+          toPlayerBlocks(snapshot.session, library),
+        )
+      : snapshot.player;
     set({
       prompt: snapshot.prompt,
       session: snapshot.session,
-      player: snapshot.player,
+      player,
       finish: null,
       saveFailed: false,
     });
-    return isFinished(snapshot.player) ? "completedUnsaved" : "inProgress";
+    return isFinished(player) ? "completedUnsaved" : "inProgress";
   },
 
   resetSession: () => {

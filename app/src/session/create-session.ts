@@ -39,7 +39,8 @@ export function toPlayerBlocks(
     return {
       movementId: b.movementId,
       name: movement?.name ?? b.movementId,
-      cue: movement?.cues[0] ?? "",
+      cues: movement?.cues ?? [],
+      unilateral: movement?.unilateral ?? false,
       sets: b.sets,
       amount: b.amount,
       restSeconds: b.restSeconds,

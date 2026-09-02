@@ -13,14 +13,16 @@ import { Screen } from "../../design/primitives/screen";
 import { minTouchTarget, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import {
+  completedSets,
   isCountingDown,
   isFinished,
   progressFraction,
+  totalSets,
 } from "../../session/player-machine";
 import { useSessionStore } from "../../state/session-store";
 
-// The session is sacred: movement name, one cue, one huge number, a thin
-// progress line. Nothing else. No chrome, no points mid-set.
+// The session is sacred: movement name, complete setup, one live cue, one
+// huge number, a thin progress line. Nothing else. No points mid-set.
 
 /**
  * On a block intro she sees the movement first; the quiet exit appears
@@ -52,6 +54,11 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const [introSkipVisible, setIntroSkipVisible] = useState(false);
   const [confirmingSkip, setConfirmingSkip] = useState(false);
 
+  const confirmSkip = () => {
+    dispatchPlayer({ type: "skipBlock" });
+    setConfirmingSkip(false);
+  };
+
   useEffect(() => {
     setIntroSkipVisible(false);
     setConfirmingSkip(false);
@@ -64,10 +71,10 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   }, [introBlockIndex]);
 
   useEffect(() => {
-    if (!counting) return;
+    if (!counting || confirmingSkip) return;
     const interval = setInterval(() => dispatchPlayer({ type: "tick" }), 1000);
     return () => clearInterval(interval);
-  }, [counting, dispatchPlayer]);
+  }, [confirmingSkip, counting, dispatchPlayer]);
 
   useEffect(() => {
     if (finished) onFinished();
@@ -83,19 +90,59 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
   return (
     <Screen>
-      <ProgressLine testID="session-progress" fraction={progressFraction(player)} />
+      <ProgressLine
+        testID="session-progress"
+        fraction={progressFraction(player)}
+        completed={completedSets(player)}
+        total={totalSets(player)}
+      />
+
+      {confirmingSkip && (
+        <>
+          <View style={styles.center}>
+            <AppText variant="title" accessibilityRole="header">
+              {strings.player.skipConfirm.title(block.name)}
+            </AppText>
+            <AppText variant="bodySoft" style={styles.subline}>
+              {strings.player.skipConfirm.body}
+            </AppText>
+          </View>
+          <View style={styles.bottom}>
+            <PrimaryButton
+              testID="player-skip-keep"
+              label={strings.player.skipConfirm.keepGoing}
+              onPress={() => setConfirmingSkip(false)}
+            />
+            <QuietButton
+              testID="player-skip-confirm"
+              label={strings.player.skipConfirm.skipIt}
+              onPress={confirmSkip}
+            />
+          </View>
+        </>
+      )}
 
       {phase.kind === "blockIntro" && !confirmingSkip && (
         <>
           <View style={styles.center}>
-            <AppText variant="display">{block.name}</AppText>
+            <AppText variant="display" accessibilityRole="header">{block.name}</AppText>
             <AppText variant="bodySoft" style={styles.subline}>
               {strings.player.blockPlan(
                 block.sets,
                 block.amount,
                 block.timingType === "seconds",
+                block.unilateral,
               )}
             </AppText>
+            {block.cues.length > 0 && (
+              <View style={styles.cues} testID="player-cues">
+                {block.cues.map((cue) => (
+                  <AppText key={cue} variant="bodySoft" style={styles.cue}>
+                    {cue}
+                  </AppText>
+                ))}
+              </View>
+            )}
           </View>
           <View style={styles.bottom}>
             <PrimaryButton
@@ -120,43 +167,34 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
         </>
       )}
 
-      {phase.kind === "blockIntro" && confirmingSkip && (
-        <>
-          <View style={styles.center}>
-            <AppText variant="title">
-              {strings.player.skipConfirm.title(block.name)}
-            </AppText>
-            <AppText variant="bodySoft" style={styles.subline}>
-              {strings.player.skipConfirm.body}
-            </AppText>
-          </View>
-          <View style={styles.bottom}>
-            <PrimaryButton
-              testID="player-skip-keep"
-              label={strings.player.skipConfirm.keepGoing}
-              onPress={() => setConfirmingSkip(false)}
-            />
-            <QuietButton
-              testID="player-skip-confirm"
-              label={strings.player.skipConfirm.skipIt}
-              onPress={() => dispatchPlayer({ type: "skipBlock" })}
-            />
-          </View>
-        </>
-      )}
-
-      {phase.kind === "work" && (
+      {phase.kind === "work" && !confirmingSkip && (
         <>
           <View style={styles.top}>
-            <AppText variant="title">{block.name}</AppText>
-            {block.cue.length > 0 && (
+            <AppText variant="title" accessibilityRole="header">{block.name}</AppText>
+            {block.cues.length > 0 && (
               <AppText variant="bodySoft" style={styles.subline}>
-                {block.cue}
+                {block.cues[
+                  (phase.setIndex + (phase.side === "right" ? 1 : 0)) %
+                    block.cues.length
+                ]}
               </AppText>
             )}
           </View>
           <View style={styles.center}>
-            <AppText variant="numeral" testID="player-numeral">
+            {phase.side !== null && (
+              <AppText variant="bodyLarge" testID="player-side">
+                {strings.player.sides[phase.side]}
+              </AppText>
+            )}
+            <AppText
+              variant="numeral"
+              testID="player-numeral"
+              accessibilityLabel={
+                block.timingType === "seconds"
+                  ? `${phase.remainingSeconds ?? block.amount} ${strings.player.holdLabel}`
+                  : `${block.amount} ${strings.player.repsLabel}`
+              }
+            >
               {phase.remainingSeconds ?? block.amount}
             </AppText>
             <AppText variant="caption">
@@ -179,19 +217,45 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             <QuietButton
               testID="player-skip"
               label={strings.player.skipBlock}
-              onPress={() => dispatchPlayer({ type: "skipBlock" })}
+              onPress={() => setConfirmingSkip(true)}
             />
           </View>
         </>
       )}
 
-      {phase.kind === "rest" && (
+      {phase.kind === "sideSwitch" && !confirmingSkip && (
+        <>
+          <View style={styles.center}>
+            <AppText variant="title" accessibilityRole="header">
+              {strings.player.sides.switchTitle}
+            </AppText>
+            <AppText variant="bodySoft" style={styles.subline}>
+              {strings.player.sides.switchBody}
+            </AppText>
+          </View>
+          <View style={styles.bottom}>
+            <PrimaryButton
+              testID="player-start-right"
+              label={strings.player.sides.startRight}
+              onPress={() => dispatchPlayer({ type: "advance" })}
+            />
+            <QuietButton
+              testID="player-skip"
+              label={strings.player.skipBlock}
+              onPress={() => setConfirmingSkip(true)}
+            />
+          </View>
+        </>
+      )}
+
+      {phase.kind === "rest" && !confirmingSkip && (
         <>
           <View style={styles.center}>
             <AppText variant="title">{strings.player.rest}</AppText>
             <AppText variant="numeral" testID="player-numeral" style={styles.restNumeral}>
               {phase.remainingSeconds}
             </AppText>
+            <AppText variant="caption">{strings.player.holdLabel}</AppText>
             <AppText variant="caption">{strings.player.restNote}</AppText>
           </View>
           <View style={styles.bottom}>
@@ -203,13 +267,13 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             <QuietButton
               testID="player-skip"
               label={strings.player.skipBlock}
-              onPress={() => dispatchPlayer({ type: "skipBlock" })}
+              onPress={() => setConfirmingSkip(true)}
             />
           </View>
         </>
       )}
 
-      {phase.kind === "feedback" && (
+      {phase.kind === "feedback" && !confirmingSkip && (
         <>
           <View style={styles.top}>
             <AppText variant="title">{strings.player.feedback.question}</AppText>
@@ -263,6 +327,15 @@ const styles = StyleSheet.create({
   },
   subline: {
     marginTop: spacing.sm,
+    textAlign: "center",
+  },
+  cues: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    alignSelf: "stretch",
+  },
+  cue: {
+    textAlign: "center",
   },
   setCounter: {
     marginTop: spacing.md,
