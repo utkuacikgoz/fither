@@ -308,6 +308,25 @@ describe("SettingsScreen care journal (ADR-0012 §4)", () => {
     expect(leaves.indexOf(longText)).toBeLessThan(leaves.indexOf("older note"));
   });
 
+  it("edits in place: her words back in the field, Save commits (audit S1)", () => {
+    useCareNoteStore.setState({
+      entries: [{ id: "n1", date: "2026-09-01", text: "first draft" }],
+    });
+    const screen = render(<SettingsScreen />);
+
+    fireEvent.press(screen.getByTestId("care-journal-edit-n1"));
+    const input = screen.getByTestId("care-journal-edit-input-n1");
+    fireEvent.changeText(input, "second thoughts");
+    fireEvent.press(screen.getByTestId("care-journal-save-n1"));
+
+    expect(useCareNoteStore.getState().entries).toMatchObject([
+      { id: "n1", text: "second thoughts" },
+    ]);
+    // Back to the plain note; edit mode closed.
+    expect(screen.getByText("second thoughts")).toBeTruthy();
+    expect(screen.queryByTestId("care-journal-save-n1")).toBeNull();
+  });
+
   it("deletes only after the one calm confirm", () => {
     useCareNoteStore.setState({
       entries: [
