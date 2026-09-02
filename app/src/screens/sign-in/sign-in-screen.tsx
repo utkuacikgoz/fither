@@ -32,15 +32,23 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
   const continueAsGuest = useIdentityStore((s) => s.continueAsGuest);
 
   const reduceMotion = useReducedMotion();
-  const [busy, setBusy] = useState(false);
+  // Which option is in flight (audit S9): the tapped button shows its
+  // pending state, siblings quiet down, and everything clears on failure
+  // so she can retry — guest included, always.
+  const [pending, setPending] = useState<"apple" | "google" | "guest" | null>(
+    null,
+  );
   const [failed, setFailed] = useState(false);
 
-  const run = async (action: () => Promise<boolean>) => {
-    if (busy) return;
-    setBusy(true);
+  const run = async (
+    tone: "apple" | "google" | "guest",
+    action: () => Promise<boolean>,
+  ) => {
+    if (pending) return;
+    setPending(tone);
     setFailed(false);
     const ok = await action();
-    setBusy(false);
+    setPending(null);
     if (!ok) {
       setFailed(true);
       return;
@@ -64,16 +72,20 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
           testID="sign-in-apple"
           tone="apple"
           label={strings.auth.apple}
+          pending={pending === "apple"}
+          quieted={pending !== null && pending !== "apple"}
           onPress={() => {
-            void run(signInWithApple);
+            void run("apple", signInWithApple);
           }}
         />
         <AuthButton
           testID="sign-in-google"
           tone="google"
           label={strings.auth.google}
+          pending={pending === "google"}
+          quieted={pending !== null && pending !== "google"}
           onPress={() => {
-            void run(signInWithGoogle);
+            void run("google", signInWithGoogle);
           }}
         />
         {/* What an account does today — the honest line (ADR-0011 §5),
@@ -85,8 +97,10 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
           testID="sign-in-guest"
           tone="guest"
           label={strings.auth.guest}
+          pending={pending === "guest"}
+          quieted={pending !== null && pending !== "guest"}
           onPress={() => {
-            void run(continueAsGuest);
+            void run("guest", continueAsGuest);
           }}
         />
         <AppText variant="caption" style={styles.note}>

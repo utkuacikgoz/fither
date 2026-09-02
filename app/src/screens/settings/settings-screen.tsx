@@ -71,6 +71,8 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
   const toggleAlwaysAvoid = useSettingsStore((s) => s.toggleAlwaysAvoid);
+  const equipment = useSettingsStore((s) => s.equipment);
+  const setEquipment = useSettingsStore((s) => s.setEquipment);
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
   const resetEntitlementForDev = useEntitlementStore((s) => s.resetForDev);
 
@@ -124,6 +126,30 @@ export function SettingsScreen({
               onPress={() => toggleAlwaysAvoid(area)}
             />
           ))}
+        </View>
+
+        {/* Audit S6: the onboarding floor/chair answer was a one-shot —
+            editable here now. Same two options, same strings, same
+            equipment sets (a wall exists in every room she'd train in,
+            so it stays on both paths — the engine rule is never
+            re-derived, these are onboarding's own constants mirrored
+            through the store). */}
+        <View style={styles.section}>
+          <AppText variant="caption" style={styles.sectionHeading}>
+            {strings.onboarding.equipment.question}
+          </AppText>
+          <RowButton
+            testID="equipment-floor-only"
+            label={strings.onboarding.equipment.options.floorOnly}
+            selected={!equipment.includes("chair")}
+            onPress={() => setEquipment(["none", "wall"])}
+          />
+          <RowButton
+            testID="equipment-chair"
+            label={strings.onboarding.equipment.options.chair}
+            selected={equipment.includes("chair")}
+            onPress={() => setEquipment(["none", "chair", "wall"])}
+          />
         </View>
 
         <View style={styles.section}>

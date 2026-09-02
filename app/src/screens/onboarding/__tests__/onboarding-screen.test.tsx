@@ -73,6 +73,40 @@ describe("OnboardingScreen", () => {
     expect(useSettingsStore.getState().onboardingCompleted).toBe(true);
   });
 
+  it("hides 'All good' once an area is picked, so picks can't be silently discarded", () => {
+    // Mirrors the daily prompt's soreness step exactly (audit S5): same
+    // constraint, same question, one behaviour.
+    const onDone = jest.fn();
+    const screen = render(<OnboardingScreen onDone={onDone} />);
+    fireEvent.press(screen.getByTestId("onboarding-begin"));
+    fireEvent.press(screen.getByTestId("onboarding-chair"));
+
+    expect(screen.getByTestId("onboarding-avoid-nothing")).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("onboarding-avoid-knees"));
+    // The discard path no longer exists while anything is selected.
+    expect(screen.queryByTestId("onboarding-avoid-nothing")).toBeNull();
+    expect(screen.queryByText(strings.prompt.soreness.allGood)).toBeNull();
+    expect(onDone).not.toHaveBeenCalled();
+
+    // Deselecting the last area brings the one-tap default back.
+    fireEvent.press(screen.getByTestId("onboarding-avoid-knees"));
+    expect(screen.getByTestId("onboarding-avoid-nothing")).toBeTruthy();
+  });
+
+  it("confirm renders only with picks, labelled from strings.ts", () => {
+    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("onboarding-begin"));
+    fireEvent.press(screen.getByTestId("onboarding-chair"));
+
+    expect(screen.queryByTestId("onboarding-avoid-confirm")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("onboarding-avoid-hips"));
+    // The action-naming label (audit S10) — asserted through its key, so
+    // the copy-writer's surface stays the single source of the words.
+    expect(screen.getByText(strings.onboarding.avoid.confirm)).toBeTruthy();
+  });
+
   it("renders no user-facing text outside strings.ts on any step", () => {
     const allowed = collectStringValues(strings);
     // areasNoted is parameterised; allowlist the output this flow renders.

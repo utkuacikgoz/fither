@@ -68,6 +68,29 @@ it("a failed provider sign-in shows the calm error and keeps guest open", async 
   expect(useIdentityStore.getState().identity?.kind).toBe("guest");
 });
 
+it("an in-flight sign-in shows pending on the tapped option and quiets the rest (audit S9)", async () => {
+  // Keep the dev port's session store unsettled so the sign-in stays
+  // in flight until we release it — the stand-in for provider latency.
+  useDevAuthSessionStore.setState({ hydrated: false, hydrationFailed: false });
+  const onDone = jest.fn();
+  const screen = render(<SignInScreen onDone={onDone} />);
+  fireEvent.press(screen.getByTestId("sign-in-apple"));
+  await waitFor(() =>
+    expect(
+      screen.getByTestId("sign-in-apple").props.accessibilityState.busy,
+    ).toBe(true),
+  );
+  expect(
+    screen.getByTestId("sign-in-google").props.accessibilityState.disabled,
+  ).toBe(true);
+  expect(
+    screen.getByTestId("sign-in-guest").props.accessibilityState.disabled,
+  ).toBe(true);
+  // Release the port: the sign-in completes and the states clear.
+  useDevAuthSessionStore.setState({ hydrated: true });
+  await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+});
+
 it("every rendered string comes from strings.ts", () => {
   const allowed = collectStringValues(strings);
   allowed.add(WORDMARK);

@@ -42,8 +42,12 @@ import { PlanRow } from "./plan-row";
 // other state (pre-expiry, e.g. reached via future settings) keeps the
 // pre-trial keys.
 
-/** After a restore attempt: nothing to say, no purchase found, or failed. */
-type RestoreNotice = "none" | "empty" | "failed";
+/**
+ * After a purchase or restore attempt: nothing to say, or exactly one calm
+ * notice — a failed purchase, a restore that found nothing, or a failed
+ * restore. One slot, one register; starting a new attempt clears it.
+ */
+type Notice = "none" | "purchaseFailed" | "restoreEmpty" | "restoreFailed";
 
 // Developer-facing only, shown solely in __DEV__ builds — deliberately
 // not user-facing copy, so it does not live in strings.ts. Exported for
@@ -72,7 +76,7 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
   const offerings = getBilling().getOfferings();
   const [selected, setSelected] = useState<PlanId>("annual");
   const [busy, setBusy] = useState(false);
-  const [restoreNotice, setRestoreNotice] = useState<RestoreNotice>("none");
+  const [notice, setNotice] = useState<Notice>("none");
 
   // The expired gate state, from the same policy the launch gate uses.
   const expired =
@@ -94,16 +98,22 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
   const buy = async () => {
     if (busy) return;
     setBusy(true);
-    setRestoreNotice("none");
-    await purchasePlan(selected);
+    setNotice("none");
+    // A false here is a provider/process failure (audit S2) — never her
+    // declining. Say so calmly; success is store-driven (the grant lands
+    // and the gate re-renders away), so there is nothing to say on true.
+    const ok = await purchasePlan(selected);
+    if (!ok) setNotice("purchaseFailed");
     setBusy(false);
   };
 
   const restore = async () => {
     if (busy) return;
     setBusy(true);
+    setNotice("none");
     const result = await restorePurchases();
-    setRestoreNotice(result === "restored" ? "none" : result);
+    if (result === "empty") setNotice("restoreEmpty");
+    else if (result === "failed") setNotice("restoreFailed");
     setBusy(false);
   };
 
@@ -156,6 +166,18 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
         ) : null}
 
         <View style={styles.restore}>
+          {/* The purchase notice sits above Restore, adjacent to the
+              purchase cluster it answers (mapping), in the same register
+              as the restore notices below. */}
+          {notice === "purchaseFailed" && (
+            <AppText
+              variant="bodySoft"
+              style={styles.noticeText}
+              testID="paywall-purchase-error"
+            >
+              {strings.paywall.purchaseError}
+            </AppText>
+          )}
           <QuietButton
             testID="paywall-restore"
             label={strings.paywall.restore}
@@ -163,19 +185,19 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
               void restore();
             }}
           />
-          {restoreNotice === "failed" && (
+          {notice === "restoreFailed" && (
             <AppText
               variant="bodySoft"
-              style={styles.restoreError}
+              style={styles.noticeText}
               testID="paywall-restore-error"
             >
               {strings.paywall.restoreError}
             </AppText>
           )}
-          {restoreNotice === "empty" && (
+          {notice === "restoreEmpty" && (
             <AppText
               variant="bodySoft"
-              style={styles.restoreError}
+              style={styles.noticeText}
               testID="paywall-restore-empty"
             >
               {strings.paywall.restoreEmpty}
@@ -187,19 +209,11 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
         <AppText variant="caption" style={styles.legal}>
           {strings.paywall.legal.autoRenew}
         </AppText>
-        <View style={styles.legalLinks}>
-          {/* Placeholder labels: destinations land with the legal pages. */}
-          <QuietButton
-            testID="paywall-terms"
-            label={strings.paywall.legal.termsLabel}
-            onPress={() => undefined}
-          />
-          <QuietButton
-            testID="paywall-privacy"
-            label={strings.paywall.legal.privacyLabel}
-            onPress={() => undefined}
-          />
-        </View>
+        {/* Terms / Privacy actions return here when the real legal-page
+            URLs exist (launch checklist: privacy policy). Until then no
+            control renders — a button that can't act is a constraints
+            violation, not a placeholder (audit S3). The labels stay in
+            strings.paywall.legal for that day. */}
 
         {__DEV__ && (
           // Dev-only control (ADR-0009): resets the app-side entitlement
@@ -273,7 +287,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
   },
-  restoreError: {
+  noticeText: {
     textAlign: "center",
   },
   rule: {
@@ -282,12 +296,6 @@ const styles = StyleSheet.create({
   },
   legal: {
     marginTop: spacing.lg,
-  },
-  legalLinks: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.md,
-    marginTop: spacing.sm,
   },
   devReset: {
     marginTop: spacing.xl,

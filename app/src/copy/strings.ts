@@ -170,7 +170,15 @@ export const strings = {
       // The one-tap default deliberately reuses prompt.soreness.allGood
       // ("All good") — one shared string, warmer than the old "Nothing",
       // and it matches the daily prompt she'll see every day after.
-      confirm: "Noted. Every session will work around it.",
+      //
+      // COPY-WRITER (2026-09-02, audit S10): confirm is a primary BUTTON,
+      // so it names an action, not a confirmation. It only renders when
+      // she has picked areas (the no-picks path is the "All good" row,
+      // which advances on its own), so one label serves its one state.
+      // "Continue" over outcome-naming: the count cue directly above
+      // ("1 area noted") already acknowledges the picks, and any
+      // these/this phrasing breaks on a single pick.
+      confirm: "Continue",
     },
     handoff: {
       eyebrow: "Last step",
@@ -239,6 +247,11 @@ export const strings = {
     },
     restore: "Restore purchase",
     restoreError: "Couldn't restore your purchase. Try again in a minute.",
+    // COPY-WRITER (2026-09-02, audit S2): the purchase ATTEMPT failed —
+    // a provider/process error, never her declining. Symmetric with
+    // restoreError: the process couldn't complete, one calm retry, no
+    // urgency. No "you weren't charged" claim — we can't guarantee it.
+    purchaseError: "Couldn't complete your purchase. Try again in a minute.",
     // Restore found no purchase on this Apple ID. Not an error — she may
     // simply be new, or on a new phone signed into a different Apple ID.
     restoreEmpty:

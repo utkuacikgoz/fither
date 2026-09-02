@@ -109,13 +109,18 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         <AppText variant="title" style={styles.title}>
           {strings.onboarding.avoid.question}
         </AppText>
-        <RowButton
-          testID="onboarding-avoid-nothing"
-          // One shared string with the daily prompt's soreness default —
-          // the same warm "All good" she'll tap every day from tomorrow.
-          label={strings.prompt.soreness.allGood}
-          onPress={() => finish([])}
-        />
+        {avoid.length === 0 && (
+          <RowButton
+            testID="onboarding-avoid-nothing"
+            // One shared string with the daily prompt's soreness default —
+            // the same warm "All good" she'll tap every day from tomorrow.
+            // Hidden the moment she picks an area (audit S5), exactly like
+            // the prompt's soreness step: one constraint, one behaviour —
+            // "All good" can never silently discard her picks.
+            label={strings.prompt.soreness.allGood}
+            onPress={() => finish([])}
+          />
+        )}
         {BODY_AREAS.map((area) => (
           <RowButton
             key={area}

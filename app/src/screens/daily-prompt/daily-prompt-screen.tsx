@@ -130,19 +130,18 @@ export function DailyPromptScreen({
     );
   };
 
-  const restart = () => {
-    // If she wrote in the optional care note, keep it before the answers
-    // reset — one local, append-only save; it goes nowhere else.
+  // Leaving the can't-build state (audit S4a): back to the FIRST question
+  // with today's answers kept as prefills — she adjusts what didn't work
+  // instead of starting over. The optional care note (that state renders
+  // the care moment) is saved on the way out, exactly as before: one
+  // local, append-only save; it goes nowhere else.
+  const adjustAnswers = () => {
     const note = careNoteText.trim();
     if (note.length > 0) {
       appendCareNote({ date: todayIso(), text: note });
     }
     setCareNoteText("");
     setStep("time");
-    setMinutes(null);
-    setEnergy(null);
-    setQuiet(null);
-    setAvoid([]);
   };
 
   const hydrated =
@@ -399,10 +398,12 @@ export function DailyPromptScreen({
           <AppText variant="body" style={styles.title}>
             {strings.errors.sessionUnavailable}
           </AppText>
+          {/* Audit S4b: "Try again" truthfully names a retry — the same
+              answers go back through generation; nothing resets. */}
           <QuietButton
             testID="prompt-try-again"
             label={strings.errors.tryAgain}
-            onPress={restart}
+            onPress={() => finish(avoid)}
           />
         </View>
       )}
@@ -448,8 +449,8 @@ export function DailyPromptScreen({
               )}
               <QuietButton
                 testID="prompt-adjust-answers"
-                label={strings.errors.tryAgain}
-                onPress={restart}
+                label={strings.preview.changeAnswers}
+                onPress={adjustAnswers}
               />
             </ScrollView>
           );

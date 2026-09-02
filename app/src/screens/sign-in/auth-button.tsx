@@ -24,9 +24,24 @@ interface AuthButtonProps {
   label: string;
   onPress: () => void;
   testID?: string;
+  /**
+   * Audit S9: while a sign-in is in flight, the tapped option holds a
+   * visible pending state and its siblings quiet down — instant with the
+   * dev port, honest the day a real provider adds latency. Taps stay
+   * guarded upstream; this is the visual half of that constraint.
+   */
+  pending?: boolean;
+  quieted?: boolean;
 }
 
-export function AuthButton({ tone, label, onPress, testID }: AuthButtonProps) {
+export function AuthButton({
+  tone,
+  label,
+  onPress,
+  testID,
+  pending = false,
+  quieted = false,
+}: AuthButtonProps) {
   const colors = useTheme();
   const fill =
     tone === "apple"
@@ -40,6 +55,7 @@ export function AuthButton({ tone, label, onPress, testID }: AuthButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ busy: pending, disabled: quieted }}
       testID={testID}
       onPress={onPress}
       style={({ pressed }) => [
@@ -47,7 +63,7 @@ export function AuthButton({ tone, label, onPress, testID }: AuthButtonProps) {
         {
           backgroundColor: fill,
           borderColor: border,
-          opacity: pressed ? 0.88 : 1,
+          opacity: pending ? 0.72 : quieted ? 0.45 : pressed ? 0.88 : 1,
         },
       ]}
     >
