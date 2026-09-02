@@ -38,6 +38,30 @@ export const useProfileStore = create<ProfileState>()(
     {
       name: "fither/profile-v1",
       storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
+      // v0 → v1 (S2 rename): the engine's PatternState fields renamed
+      // cleanStreak → cleanCount and struggledStreak → struggleCount; the
+      // engine stays single-shaped (no legacy tolerance), so profiles
+      // persisted before the rename are mapped here, values untouched.
+      migrate: (persisted) => {
+        const state = persisted as {
+          profile?: { patterns?: Record<string, Record<string, unknown>> };
+        };
+        const patterns = state?.profile?.patterns;
+        if (patterns) {
+          for (const pattern of Object.values(patterns)) {
+            if ("cleanStreak" in pattern && !("cleanCount" in pattern)) {
+              pattern.cleanCount = pattern.cleanStreak;
+              delete pattern.cleanStreak;
+            }
+            if ("struggledStreak" in pattern && !("struggleCount" in pattern)) {
+              pattern.struggleCount = pattern.struggledStreak;
+              delete pattern.struggledStreak;
+            }
+          }
+        }
+        return state;
+      },
       partialize: (state) => ({ profile: state.profile, history: state.history }),
       onRehydrateStorage: () => (_state, error) => {
         Promise.resolve().then(() =>

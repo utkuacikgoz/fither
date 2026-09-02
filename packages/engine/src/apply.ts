@@ -136,26 +136,26 @@ export function applySessionResult(
     const next: PatternState = { ...prev };
 
     if (struggled.has(pattern)) {
-      next.cleanStreak = 0;
-      next.struggledStreak = prev.struggledStreak + 1;
-      if (next.struggledStreak >= STRUGGLED_SESSIONS_TO_REGRESS) {
+      next.cleanCount = 0;
+      next.struggleCount = prev.struggleCount + 1;
+      if (next.struggleCount >= STRUGGLED_SESSIONS_TO_REGRESS) {
         // Third consecutive struggle: drop one tier, land softly
         // (volume-reduced) with fresh counters. Every tier change —
         // regress included — restarts the time-floor clock (ADR-0008).
         next.tier = Math.max(1, prev.tier - 1) as Tier;
-        next.struggledStreak = 0;
+        next.struggleCount = 0;
         next.volumeReduced = true;
         next.tierSince = session.date;
-      } else if (next.struggledStreak >= STRUGGLED_SESSIONS_TO_REDUCE_VOLUME) {
+      } else if (next.struggleCount >= STRUGGLED_SESSIONS_TO_REDUCE_VOLUME) {
         next.volumeReduced = true;
       }
     } else {
       // Clean session: any clean session resets the struggle counter and
       // ends the volume-reduced soft landing.
-      next.struggledStreak = 0;
+      next.struggleCount = 0;
       next.volumeReduced = false;
-      next.cleanStreak = prev.cleanStreak + 1;
-      // Advancement needs BOTH the clean streak and the time floor
+      next.cleanCount = prev.cleanCount + 1;
+      // Advancement needs BOTH the clean count and the time floor
       // (ADR-0008): DAYS_AT_TIER_TO_ADVANCE[tier] calendar days since the
       // tier was reached. Cleans keep banking while the floor is unmet —
       // the tier moves on the first clean session where both hold. A
@@ -166,9 +166,9 @@ export function applySessionResult(
         (prev.tierSince === undefined ||
           calendarDaysBetween(prev.tierSince, session.date) >=
             DAYS_AT_TIER_TO_ADVANCE[prev.tier as Exclude<Tier, 6>]);
-      if (next.cleanStreak >= CLEAN_SESSIONS_TO_ADVANCE && floorMet) {
+      if (next.cleanCount >= CLEAN_SESSIONS_TO_ADVANCE && floorMet) {
         next.tier = (prev.tier + 1) as Tier;
-        next.cleanStreak = 0;
+        next.cleanCount = 0;
         next.tierSince = session.date;
         const alreadyUnlocked = unlockedMilestones.some(
           (milestone) =>
@@ -193,7 +193,7 @@ export function applySessionResult(
           }
         }
       }
-      // Tier 6 is terminal: cleanStreak keeps counting, tier never changes.
+      // Tier 6 is terminal: cleanCount keeps counting, tier never changes.
     }
     // Tier changes are stamped above. Otherwise a missing tierSince gets
     // stamped now: the legacy tolerance spent its one free pass this

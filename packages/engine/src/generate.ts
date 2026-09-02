@@ -208,8 +208,8 @@ export function generateSession(
     // them earns the new-tier bonus (gamification.md).
     const atNewTier =
       state.tier > 1 &&
-      state.cleanStreak === 0 &&
-      state.struggledStreak === 0 &&
+      state.cleanCount === 0 &&
+      state.struggleCount === 0 &&
       !state.volumeReduced &&
       m.tier === state.tier;
     for (let sets = desiredSets; sets >= MIN_SETS; sets--) {

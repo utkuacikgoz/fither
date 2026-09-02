@@ -107,11 +107,11 @@ export function fixtureApplyResult(): ApplyResult {
   return {
     profile: {
       patterns: {
-        push: { tier: 4, cleanStreak: 0, struggledStreak: 0, volumeReduced: false },
-        pull: { tier: 1, cleanStreak: 1, struggledStreak: 0, volumeReduced: false },
-        squat: { tier: 1, cleanStreak: 0, struggledStreak: 0, volumeReduced: false },
-        hinge: { tier: 1, cleanStreak: 0, struggledStreak: 0, volumeReduced: false },
-        core: { tier: 1, cleanStreak: 2, struggledStreak: 0, volumeReduced: false },
+        push: { tier: 4, cleanCount: 0, struggleCount: 0, volumeReduced: false },
+        pull: { tier: 1, cleanCount: 1, struggleCount: 0, volumeReduced: false },
+        squat: { tier: 1, cleanCount: 0, struggleCount: 0, volumeReduced: false },
+        hinge: { tier: 1, cleanCount: 0, struggleCount: 0, volumeReduced: false },
+        core: { tier: 1, cleanCount: 2, struggleCount: 0, volumeReduced: false },
       },
       unlockedMilestones: [{ pattern: "push", tier: 4 }],
     },

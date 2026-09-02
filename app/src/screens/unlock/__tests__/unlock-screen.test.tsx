@@ -12,10 +12,21 @@ import { WORDMARK } from "../skill-share-card";
 import { UnlockScreen } from "../unlock-screen";
 
 const SKILL = { pattern: "push", tier: 4, movementName: "Full Push-Up" } as const;
+const SECOND = { pattern: "squat", tier: 4, movementName: "Deep Squat" } as const;
 
 function seedUnlock() {
   useSessionStore.setState({
     finish: { pointsEarned: 35, unlockedSkills: [SKILL], completedAnything: true },
+  });
+}
+
+function seedTwoUnlocks() {
+  useSessionStore.setState({
+    finish: {
+      pointsEarned: 85,
+      completedAnything: true,
+      unlockedSkills: [SKILL, SECOND],
+    },
   });
 }
 
@@ -88,20 +99,76 @@ describe("UnlockScreen", () => {
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
 
-  it("renders one card per unlocked skill", () => {
-    useSessionStore.setState({
-      finish: {
-        pointsEarned: 60,
-        completedAnything: true,
-        unlockedSkills: [
-          SKILL,
-          { pattern: "squat", tier: 4, movementName: "Deep Squat" },
-        ],
-      },
+  // Sequencing (2026-09-02 audit): about half of unlock sessions award
+  // more than one skill, so the screen celebrates one at a time —
+  // Continue advances through them; only the last Continue leaves.
+  describe("two-skill sequence", () => {
+    it("celebrates the first skill alone — the second waits its turn", () => {
+      seedTwoUnlocks();
+      const screen = render(<UnlockScreen onContinue={jest.fn()} />);
+      // The full moment for skill one: huge name plus its card preview.
+      expect(screen.getAllByText(SKILL.movementName)).toHaveLength(2);
+      expect(screen.getByTestId("unlock-share-push-4")).toBeTruthy();
+      // Skill two is nowhere on screen yet — each gets its own moment.
+      expect(screen.queryByText(SECOND.movementName)).toBeNull();
+      expect(screen.queryByTestId("unlock-share-squat-4")).toBeNull();
     });
-    const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-    expect(screen.getByTestId("unlock-share-push-4")).toBeTruthy();
-    expect(screen.getByTestId("unlock-share-squat-4")).toBeTruthy();
+
+    it("Continue advances to the second skill's full moment instead of leaving", () => {
+      seedTwoUnlocks();
+      const onContinue = jest.fn();
+      const screen = render(<UnlockScreen onContinue={onContinue} />);
+      fireEvent.press(screen.getByTestId("unlock-continue"));
+      expect(onContinue).not.toHaveBeenCalled();
+      // Skill two now gets the identical full moment, alone.
+      expect(screen.getByText(strings.unlock.heading)).toBeTruthy();
+      expect(screen.getAllByText(SECOND.movementName)).toHaveLength(2);
+      expect(screen.getByText(strings.unlock.note)).toBeTruthy();
+      expect(screen.getByTestId("unlock-share-squat-4")).toBeTruthy();
+      expect(screen.queryByText(SKILL.movementName)).toBeNull();
+      expect(screen.queryByTestId("unlock-share-push-4")).toBeNull();
+    });
+
+    it("the final Continue leaves, exactly once", () => {
+      seedTwoUnlocks();
+      const onContinue = jest.fn();
+      const screen = render(<UnlockScreen onContinue={onContinue} />);
+      fireEvent.press(screen.getByTestId("unlock-continue"));
+      fireEvent.press(screen.getByTestId("unlock-continue"));
+      expect(onContinue).toHaveBeenCalledTimes(1);
+    });
+
+    it("shares stay per-skill: skill one before continuing, skill two after", () => {
+      seedTwoUnlocks();
+      const screen = render(<UnlockScreen onContinue={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("unlock-share-push-4-share"));
+      expect(shareSpy).toHaveBeenLastCalledWith({
+        message: strings.share.message(SKILL.movementName),
+      });
+      fireEvent.press(screen.getByTestId("unlock-continue"));
+      fireEvent.press(screen.getByTestId("unlock-share-squat-4-share"));
+      expect(shareSpy).toHaveBeenLastCalledWith({
+        message: strings.share.message(SECOND.movementName),
+      });
+      expect(shareSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("renders no user-facing text outside strings.ts at either step", () => {
+      seedTwoUnlocks();
+      const allowed = collectStringValues(strings);
+      allowed.add(SKILL.movementName);
+      allowed.add(SECOND.movementName);
+      allowed.add(WORDMARK);
+
+      const screen = render(<UnlockScreen onContinue={jest.fn()} />);
+      for (const leaf of renderedTextLeaves(screen.toJSON())) {
+        expect(allowed.has(leaf)).toBe(true);
+      }
+      fireEvent.press(screen.getByTestId("unlock-continue"));
+      for (const leaf of renderedTextLeaves(screen.toJSON())) {
+        expect(allowed.has(leaf)).toBe(true);
+      }
+    });
   });
 
   it("renders no user-facing text outside strings.ts", () => {
