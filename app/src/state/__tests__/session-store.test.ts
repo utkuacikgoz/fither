@@ -334,6 +334,65 @@ describe("restoreActiveSession", () => {
     expect(result).toBe("none");
     expect(useActiveSessionStore.getState().snapshot).toBeNull();
     expect(useSessionStore.getState().session).toBeNull();
+    // Zero completed blocks: nothing saved to keep, nothing fabricated.
+    expect(mockedApply).not.toHaveBeenCalled();
+  });
+
+  // Audit S7: midnight must not discard COMPLETED work.
+  async function flushStaleApply() {
+    for (let i = 0; i < 20; i += 1) {
+      if (useActiveSessionStore.getState().snapshot === null) return;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+
+  function seedStaleSnapshotWithCompletedWork() {
+    const player = {
+      ...createPlayer(fixturePlayerBlocks),
+      outcomes: ["completed", "skipped"] as const,
+    } as ReturnType<typeof createPlayer>;
+    useActiveSessionStore.setState({
+      snapshot: {
+        sessionId: `stale:${fixtureSession.date}`,
+        prompt: fixturePrompt,
+        session: fixtureSession,
+        player,
+      },
+    });
+  }
+
+  it("a previous-day snapshot WITH completed work applies silently under its own date", async () => {
+    seedStaleSnapshotWithCompletedWork();
+    const result = useSessionStore.getState().restoreActiveSession("2099-01-01");
+    // The launch decision is unaffected: today proceeds as normal.
+    expect(result).toBe("none");
+    expect(useSessionStore.getState().session).toBeNull();
+    expect(useSessionStore.getState().finish).toBeNull();
+    await flushStaleApply();
+    // Applied through the normal journaled path: profile, ledger, and
+    // the trial evidence rule, dated by the SNAPSHOT's session.
+    expect(mockedApply).toHaveBeenCalledTimes(1);
+    const fixture = fixtureApplyResult();
+    expect(useProfileStore.getState().profile).toEqual(fixture.profile);
+    expect(useLedgerStore.getState().events).toEqual(fixture.ledgerEvents);
+    expect(useEntitlementStore.getState().trialStartDate).toBe(
+      fixtureSession.date,
+    );
+    expect(useActiveSessionStore.getState().snapshot).toBeNull();
+  });
+
+  it("a crash mid-apply replays the identical result — no double award", async () => {
+    seedStaleSnapshotWithCompletedWork();
+    useSessionStore.getState().restoreActiveSession("2099-01-01");
+    await flushStaleApply();
+    const eventsAfterFirst = useLedgerStore.getState().events;
+    // Simulate the crash-retry: the same snapshot resurfaces (it would
+    // only persist if the commit never landed) and restore runs again.
+    seedStaleSnapshotWithCompletedWork();
+    useSessionStore.getState().restoreActiveSession("2099-01-01");
+    await flushStaleApply();
+    expect(useLedgerStore.getState().events).toEqual(eventsAfterFirst);
+    expect(useActiveSessionStore.getState().snapshot).toBeNull();
   });
 
   it("routes a finished-but-unsaved session to the finish path, which applies it", async () => {

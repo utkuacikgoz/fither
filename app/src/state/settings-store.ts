@@ -36,6 +36,14 @@ interface SettingsState {
   toggleAlwaysAvoid: (area: BodyArea) => void;
 }
 
+// The two equipment shapes the product offers — "Just me and the floor"
+// vs "A sturdy chair too" (onboarding's one equipment question, and the
+// settings editor's options; onboarding-screen keeps matching private
+// copies). A wall exists in every room she'd train in, so it stays
+// available on both paths; bodyweight always. Never mutate these.
+export const FLOOR_ONLY_EQUIPMENT: Equipment[] = ["none", "wall"];
+export const WITH_CHAIR_EQUIPMENT: Equipment[] = ["none", "chair", "wall"];
+
 function generateSalt(): number {
   return Math.floor(Math.random() * 0x7fffffff);
 }
@@ -44,7 +52,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       // A wall and a chair exist in almost every home; bodyweight always.
-      equipment: ["none", "chair", "wall"],
+      equipment: WITH_CHAIR_EQUIPMENT,
       onboardingCompleted: false,
       alwaysAvoid: [],
       sessionSalt: generateSalt(),

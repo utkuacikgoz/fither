@@ -141,6 +141,25 @@ describe("SettingsScreen", () => {
     expect(screen.queryByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeNull();
   });
 
+  it("equipment is editable (audit S6): onboarding's answer, changeable any day", async () => {
+    useSettingsStore.setState({ equipment: ["none", "chair", "wall"] });
+    const screen = render(<SettingsScreen />);
+    // Current choice shown as selected.
+    expect(screen.getByText(strings.onboarding.equipment.question)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("equipment-floor-only"));
+    // The exact onboarding sets — wall always available on both paths.
+    expect(useSettingsStore.getState().equipment).toEqual(["none", "wall"]);
+    await flushPersistence();
+    const persisted = await AsyncStorage.getItem("fither/settings-v1");
+    expect(persisted).not.toContain("chair");
+    fireEvent.press(screen.getByTestId("equipment-chair"));
+    expect(useSettingsStore.getState().equipment).toEqual([
+      "none",
+      "chair",
+      "wall",
+    ]);
+  });
+
   it("restore succeeds when the (dev) store account has a receipt — no notice", async () => {
     useDevReceiptStore.setState({
       receipt: { plan: "annual", date: "2026-08-20" },

@@ -9,6 +9,7 @@ import {
   lightColors,
   motion,
   onUnlock,
+  radius,
   spacing,
   unlockBg,
 } from "../../design/tokens";
@@ -88,9 +89,13 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
   return (
     <Screen backgroundColor={unlockBg}>
       <Animated.View style={[styles.center, { opacity }]}>
-        <AppText variant="caption" color={lightColors.gold}>
+        {/* Audit S8: gold text on sage is ~1.75:1 — far under AA. The
+            heading reads in bone; gold stays decorative as a short rule
+            beneath it (the share card's established pattern). */}
+        <AppText variant="caption" color={onUnlock}>
           {strings.unlock.heading}
         </AppText>
+        <View style={styles.goldRule} />
         {skill ? (
           <AppText
             key={`${skill.pattern}-${skill.tier}`}
@@ -137,6 +142,12 @@ const styles = StyleSheet.create({
   },
   skillName: {
     textAlign: "center",
+  },
+  goldRule: {
+    width: spacing.xl,
+    height: spacing.xs / 2,
+    borderRadius: radius.pill,
+    backgroundColor: lightColors.gold,
   },
   note: {
     marginTop: spacing.md,

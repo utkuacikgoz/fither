@@ -2,9 +2,10 @@
 // happened?" moment. LOCAL ONLY, as a hard rule: entries persist to
 // AsyncStorage on this device and never go anywhere else — no network,
 // no analytics event, no engine input. The one place they render back is
-// the settings care journal (ADR-0012 §4), where she can read and delete
-// them; the UI states "stays on your phone" because this file makes it
-// true. Entries are date-stamped, one per save, and never edited.
+// the settings care journal (ADR-0012 §4), where she can read, edit and
+// delete them; the UI states "stays on your phone" because this file
+// makes it true. Entries are date-stamped, one per save; an edit changes
+// the text only — the date keeps saying when the heavy day was.
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
@@ -29,7 +30,7 @@ export type CareNoteInput = Omit<CareNoteEntry, "id">;
 interface CareNoteState {
   hydrated: boolean;
   hydrationFailed: boolean;
-  /** Oldest first. Appended and deleted only — never edited in place. */
+  /** Oldest first. Appended, edited in place (text only) and deleted. */
   entries: CareNoteEntry[];
   /** Append one entry. Buffered if hydration hasn't landed yet. */
   append: (entry: CareNoteInput) => void;
@@ -40,6 +41,16 @@ interface CareNoteState {
    * other id-less entries. Removing what isn't there is a no-op.
    */
   remove: (entry: CareNoteEntry) => void;
+  /**
+   * Edit one entry's text in place (ADR-0012 §4) — id, date and position
+   * are untouched: the date keeps saying when the heavy day was. Targets
+   * are matched exactly like `remove` (id first, legacy tolerance after).
+   * Text is trimmed like append's callers trim; a save that trims to
+   * empty is a NO-OP — blanking a note would be deletion in disguise,
+   * and deletion is the journal's one confirmed path, never a side
+   * effect of saving. Updating what isn't there is a no-op too.
+   */
+  update: (entry: CareNoteEntry, text: string) => void;
 }
 
 // Ids only need to be unique within this one on-device list. Wall-clock
@@ -54,6 +65,22 @@ function nextNoteId(date: string): string {
 // An append that beats hydration waits here instead of racing the
 // rehydrate merge (same pattern as the first-movement store).
 const pendingBeforeHydration: CareNoteEntry[] = [];
+
+/**
+ * The one target-matching rule, shared by remove and update so the two
+ * never drift: id when the entry has one; a legacy id-less entry by
+ * reference, then by date + text among the other id-less entries.
+ */
+function indexOfEntry(entries: CareNoteEntry[], target: CareNoteEntry): number {
+  return entries.findIndex((entry) =>
+    target.id !== undefined
+      ? entry.id === target.id
+      : entry === target ||
+        (entry.id === undefined &&
+          entry.date === target.date &&
+          entry.text === target.text),
+  );
+}
 
 export const useCareNoteStore = create<CareNoteState>()(
   persist(
@@ -77,16 +104,27 @@ export const useCareNoteStore = create<CareNoteState>()(
         // Before hydration there is nothing on screen to delete, and a
         // removal now would be clobbered by the rehydrate merge anyway.
         if (!hydrated && !hydrationFailed) return;
-        const index = entries.findIndex((entry) =>
-          target.id !== undefined
-            ? entry.id === target.id
-            : entry === target ||
-              (entry.id === undefined &&
-                entry.date === target.date &&
-                entry.text === target.text),
-        );
+        const index = indexOfEntry(entries, target);
         if (index === -1) return;
         set({ entries: entries.filter((_, i) => i !== index) });
+      },
+
+      update: (target, text) => {
+        const { hydrated, hydrationFailed, entries } = get();
+        // Same hydration gate as remove: nothing renders before
+        // hydration, so nothing can be in edit mode yet.
+        if (!hydrated && !hydrationFailed) return;
+        // Trimmed like append's callers trim; empty means keep the
+        // original — never a silent, unconfirmed delete.
+        const trimmed = text.trim();
+        if (trimmed.length === 0) return;
+        const index = indexOfEntry(entries, target);
+        if (index === -1) return;
+        set({
+          entries: entries.map((entry, i) =>
+            i === index ? { ...entry, text: trimmed } : entry,
+          ),
+        });
       },
     }),
     {

@@ -1,5 +1,6 @@
 import type {
   ApplyResult,
+  BlockOutcome,
   DailyPrompt,
   Session,
   SessionMinutes,
@@ -28,7 +29,10 @@ import {
   type PlayerEvent,
   type PlayerState,
 } from "../session/player-machine";
-import { useActiveSessionStore } from "./active-session-store";
+import {
+  useActiveSessionStore,
+  type ActiveSessionSnapshot,
+} from "./active-session-store";
 import { useEntitlementStore } from "./entitlement-store";
 import { useFirstMovementStore } from "./first-movement-store";
 import { useProfileStore } from "./profile-store";
@@ -150,6 +154,71 @@ function ceilingWrapDue(
     elapsedActiveMs(activeMs, workResumedAt, now) >
     sessionCeilingMs(session.minutes)
   );
+}
+
+/**
+ * Audit S7: apply a previous day's snapshot that holds completed work as
+ * a finished-early session under the SNAPSHOT's own date. Mirrors
+ * completeSession's journaled transaction exactly — same idempotency,
+ * same trial-evidence rule (ADR-0009 §2, dated per the record), same
+ * canonical persistence — but touches no UI state: silent by design.
+ */
+async function applyStaleSnapshot(
+  snapshot: ActiveSessionSnapshot,
+): Promise<void> {
+  try {
+    const finished = finishEarly(snapshot.player);
+    const stableId =
+      snapshot.sessionId ??
+      `legacy:${snapshot.session.date}:${snapshot.session.seed}`;
+    const previous = await readCompletionRecord();
+    let record: CompletionRecord;
+    if (previous?.sessionId === stableId) {
+      record = previous;
+    } else {
+      const { profile, history } = useProfileStore.getState();
+      const outcome = applyResult(profile, history, {
+        session: snapshot.session,
+        outcomes: finished.outcomes,
+      });
+      if (!outcome.ok) return;
+      const entitlement = useEntitlementStore.getState();
+      const sessionCompleted = outcome.value.ledgerEvents.some(
+        (e) => e.type === "session",
+      );
+      record = {
+        version: 1,
+        status: "pending",
+        sessionId: stableId,
+        result: outcome.value,
+        ledgerEvents: [
+          ...useLedgerStore.getState().events,
+          ...outcome.value.ledgerEvents,
+        ],
+        trialStartDate:
+          entitlement.trialStartDate ??
+          (sessionCompleted ? snapshot.session.date : null),
+        purchase: entitlement.purchase,
+      };
+      await writeCompletionRecord(record);
+    }
+    await persistCanonicalCompletion(record);
+    useProfileStore.setState({
+      profile: record.result.profile,
+      history: record.result.history,
+    });
+    useLedgerStore.setState({ events: record.ledgerEvents });
+    useEntitlementStore.setState({
+      trialStartDate: record.trialStartDate,
+      purchase: record.purchase,
+    });
+    await writeCompletionRecord({ ...record, status: "committed" });
+    await clearPersistedActiveSession();
+    useActiveSessionStore.setState({ snapshot: null });
+  } catch {
+    // Snapshot and journal retained: the next launch retries and the
+    // journal replays the identical result. Nothing is said either way.
+  }
 }
 
 /** What a persisted in-flight session means for this launch. */
@@ -544,8 +613,32 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     const { snapshot, clear } = useActiveSessionStore.getState();
     if (!snapshot) return "none";
     if (snapshot.session.date !== todayDate) {
-      // Silently drop leftovers from a previous day — never mention it.
-      clear();
+      // Audit S7: a previous day's interruption must not discard her
+      // COMPLETED work — "Completed exercises are saved" has to be true
+      // across midnight too. If any block completed, the snapshot is
+      // silently applied as a finished-early session under ITS OWN date
+      // (points, history, progression through the normal journaled
+      // path); nothing is said to her — absence is never mentioned, her
+      // Progress simply shows the work. With zero completed blocks
+      // there is nothing saved to keep: struggled-only work would move
+      // her counters against her and skipped work is neutral by rule,
+      // so the kinder, honest reading of an abandoned day is absence —
+      // the snapshot clears exactly as before (nothing is fabricated,
+      // nothing regresses).
+      const staleOutcomes = finishEarly(snapshot.player).outcomes;
+      const hasCompletedWork = staleOutcomes.some(
+        (o: BlockOutcome) => o === "completed",
+      );
+      if (hasCompletedWork) {
+        // Fire-and-forget: the launch decision stays synchronous and
+        // today's flow renders as normal. Crash-safety comes from the
+        // journal — the snapshot clears only after commit, so a crash
+        // mid-apply re-runs this on the next launch and the journal
+        // replays the identical result (no double award).
+        void applyStaleSnapshot(snapshot);
+      } else {
+        clear();
+      }
       return "none";
     }
     const library = loadLibrary();

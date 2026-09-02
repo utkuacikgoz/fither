@@ -184,7 +184,7 @@ describe("DailyPromptScreen", () => {
     );
   });
 
-  it("shows a calm error and can start over when generation is unavailable", () => {
+  it("the error state's 'Try again' retries generation with the same answers", () => {
     mockedCreate.mockReturnValue({ ok: false, reason: "noLibrary" });
     const onSessionReady = jest.fn();
     const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
@@ -196,9 +196,24 @@ describe("DailyPromptScreen", () => {
 
     expect(onSessionReady).not.toHaveBeenCalled();
     expect(screen.getByText(strings.errors.sessionUnavailable)).toBeTruthy();
+    expect(screen.getByText(strings.errors.tryAgain)).toBeTruthy();
 
+    // "Try again" truthfully names a retry: the identical prompt goes back
+    // through generation — no reset, no re-answering.
     fireEvent.press(screen.getByTestId("prompt-try-again"));
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    expect(mockedCreate).toHaveBeenCalledTimes(2);
+    expect(mockedCreate.mock.calls[1]).toEqual(mockedCreate.mock.calls[0]);
+    // Still unavailable: the honest error stays, not the questions.
+    expect(screen.getByText(strings.errors.sessionUnavailable)).toBeTruthy();
+
+    // When generation recovers, the same tap starts the session.
+    mockedCreate.mockReturnValue({
+      ok: true,
+      value: { session: fixtureSession, playerBlocks: fixturePlayerBlocks },
+    });
+    fireEvent.press(screen.getByTestId("prompt-try-again"));
+    expect(mockedCreate.mock.calls[2]).toEqual(mockedCreate.mock.calls[0]);
+    expect(onSessionReady).toHaveBeenCalledTimes(1);
   });
 
   it("keeps an impossible set of answers out of the player flow", () => {
@@ -214,6 +229,44 @@ describe("DailyPromptScreen", () => {
     expect(onSessionReady).not.toHaveBeenCalled();
     expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
     expect(screen.getByTestId("prompt-adjust-answers")).toBeTruthy();
+  });
+
+  it("the can't-build action returns to question one with her answers preserved", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-20"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-back"));
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+
+    // The action names what it does — adjusting answers, not "trying again".
+    expect(screen.getByText(strings.preview.changeAnswers)).toBeTruthy();
+    expect(screen.queryByText(strings.errors.tryAgain)).toBeNull();
+
+    fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+    // Back at the FIRST question, every answer kept as a prefill.
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    expect(screen.getByTestId("time-20").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    fireEvent.press(screen.getByTestId("time-20"));
+    expect(screen.getByTestId("energy-low").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    fireEvent.press(screen.getByTestId("energy-low"));
+    expect(screen.getByTestId("quiet-yes").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    expect(screen.getByTestId("soreness-back").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    // The kept pick means "All good" stays hidden and confirm is live —
+    // she adjusts the selection rather than rebuilding it.
+    expect(screen.queryByTestId("soreness-all-good")).toBeNull();
+    expect(screen.getByTestId("soreness-confirm")).toBeTruthy();
   });
 
   it("merges the persistent avoid-list into every prompt, even on 'All good'", () => {
@@ -338,11 +391,12 @@ describe("DailyPromptScreen", () => {
     // And she is back at the start, with the moment behind her.
     expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
 
-    // Leaving the field empty saves nothing — completely skippable.
+    // Leaving the field empty saves nothing — completely skippable. Her
+    // answers were preserved, so she re-walks the prefilled questions;
+    // "back" is still picked, so confirm is already live.
     fireEvent.press(screen.getByTestId("time-10"));
     fireEvent.press(screen.getByTestId("energy-low"));
     fireEvent.press(screen.getByTestId("quiet-yes"));
-    fireEvent.press(screen.getByTestId("soreness-back"));
     fireEvent.press(screen.getByTestId("soreness-confirm"));
     fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
     expect(useCareNoteStore.getState().entries).toHaveLength(1);
