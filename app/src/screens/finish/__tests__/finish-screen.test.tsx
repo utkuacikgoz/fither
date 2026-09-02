@@ -72,6 +72,27 @@ describe("FinishScreen", () => {
     expect(screen.getByText(strings.finish.pointsLabel)).toBeTruthy();
   });
 
+  it("a zero-completion session gets the honest close — no 'complete', no points row", async () => {
+    // Every block skipped: the engine emits no "session" event and no
+    // points (skip is neutral, ADR-0012). The screen must not celebrate.
+    const base = fixtureApplyResult();
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    expect(
+      await screen.findByText(strings.finish.nothingDone.headline),
+    ).toBeTruthy();
+    expect(screen.getByText(strings.finish.nothingDone.note)).toBeTruthy();
+    expect(screen.queryByText(strings.finish.headline)).toBeNull();
+    expect(screen.queryByText(strings.finish.note)).toBeNull();
+    expect(screen.queryByText("+0")).toBeNull();
+    expect(screen.queryByText(strings.finish.pointsLabel)).toBeNull();
+    // She still leaves through the same single button.
+    expect(screen.getByTestId("finish-continue")).toBeTruthy();
+  });
+
   it("continues via the single button", async () => {
     const onContinue = jest.fn();
     const screen = render(<FinishScreen onContinue={onContinue} />);

@@ -15,7 +15,7 @@ const SKILL = { pattern: "push", tier: 4, movementName: "Full Push-Up" } as cons
 
 function seedUnlock() {
   useSessionStore.setState({
-    finish: { pointsEarned: 35, unlockedSkills: [SKILL] },
+    finish: { pointsEarned: 35, unlockedSkills: [SKILL], completedAnything: true },
   });
 }
 
@@ -92,6 +92,7 @@ describe("UnlockScreen", () => {
     useSessionStore.setState({
       finish: {
         pointsEarned: 60,
+        completedAnything: true,
         unlockedSkills: [
           SKILL,
           { pattern: "squat", tier: 4, movementName: "Deep Squat" },

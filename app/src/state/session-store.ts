@@ -84,6 +84,13 @@ function persistentStoresReady(): boolean {
 interface FinishSummary {
   pointsEarned: number;
   unlockedSkills: ApplyResult["unlockedSkills"];
+  /**
+   * True when at least one block completed — read from the engine's own
+   * output (a "session" ledger event fires only for a session with a
+   * completed block), never re-derived. False = the honest nothing-done
+   * close: no "complete", no "counts" (ADR-0012 / audit P0 #5).
+   */
+  completedAnything: boolean;
 }
 
 /** What a persisted in-flight session means for this launch. */
@@ -286,6 +293,9 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         finish: {
           pointsEarned: record.result.ledgerEvents.reduce((s, e) => s + e.points, 0),
           unlockedSkills: record.result.unlockedSkills,
+          completedAnything: record.result.ledgerEvents.some(
+            (e) => e.type === "session",
+          ),
         },
         saveFailed: false,
         saving: false,
