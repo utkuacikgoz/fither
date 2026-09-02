@@ -117,17 +117,19 @@ export const strings = {
     eyebrow: "Made for today",
     headline: "Your session is ready",
     summary: (minutes: SessionMinutes, movements: number) =>
-      `${minutes} minutes · ${movements} movements`,
+      `${minutes} minutes · ${movements} ${movements === 1 ? "block" : "blocks"}`,
     defaultFit: "Built around your time and current level.",
+    planTitle: "Today's plan",
+    changeAnswers: "Change today's answers",
     start: "Start session",
     // Replacements from docs/copy/draft-strings.md §0 (2026-08-31): each
     // line reads as "Cause: effect", matching the domain file's examples.
     adaptations: {
       soreness: (areas: string) => `Works around your ${areas} today.`,
-      quiet: "Quiet mode: nothing here makes a sound.",
-      lowEnergy: "Low energy: same movements, lighter volume.",
+      quiet: "Quiet mode: every movement is designed to stay quiet.",
+      lowEnergy: "Low energy: fewer sets at your current level.",
       softLanding: "Slightly lighter where last session was hard.",
-      staleFocus: "One movement pattern rotates back in today.",
+      staleFocus: "A movement you haven't seen lately is back today.",
       tasteBlock: "Ends with a first look at your next level. Optional.",
     },
   },

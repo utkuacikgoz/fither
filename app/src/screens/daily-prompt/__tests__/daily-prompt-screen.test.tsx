@@ -56,6 +56,36 @@ beforeEach(() => {
 });
 
 describe("DailyPromptScreen", () => {
+  it("prefills today's previous answers when she returns from the preview", () => {
+    useSessionStore.setState({
+      prompt: {
+        minutes: 20,
+        energy: "strong",
+        quiet: false,
+        avoid: ["wrists"],
+        date: "2026-09-02",
+        equipment: ["none", "wall"],
+      },
+    });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    expect(screen.getByTestId("time-20").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    fireEvent.press(screen.getByTestId("time-20"));
+    expect(screen.getByTestId("energy-strong").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    fireEvent.press(screen.getByTestId("energy-strong"));
+    expect(screen.getByTestId("quiet-no").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    fireEvent.press(screen.getByTestId("quiet-no"));
+    expect(screen.getByTestId("soreness-wrists").props.accessibilityState).toEqual({
+      selected: true,
+    });
+  });
+
   it("asks the four decided questions, one at a time", () => {
     const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
     expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();

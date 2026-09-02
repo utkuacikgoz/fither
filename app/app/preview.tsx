@@ -4,5 +4,10 @@ import { SessionPreviewScreen } from "../src/screens/session-preview/session-pre
 
 export default function PreviewRoute() {
   const router = useRouter();
-  return <SessionPreviewScreen onStart={() => router.replace("/session")} />;
+  return (
+    <SessionPreviewScreen
+      onStart={() => router.replace("/session")}
+      onChangeAnswers={() => router.replace("/")}
+    />
+  );
 }
