@@ -34,7 +34,8 @@ Remaining, in production order:
 6. Build capability progress, verified skill milestones, completed-today and
    history surfaces, then measured opt-in return hooks.
 7. Run the release device matrix, persistence/end-to-end qualification,
-   privacy/store metadata, billing sandbox, and operational sign-off.
+   privacy/store metadata, billing sandbox, remote CI/EAS build verification,
+   and operational sign-off.
 
 ## Executive verdict
 
@@ -273,11 +274,15 @@ Exit criteria: hooks improve useful completion and return without increasing ski
 
 ### Wave 5 — Release qualification
 
-1. Run unit, type, lint, deterministic simulation, persistence, and end-to-end suites from a clean checkout.
-2. Exercise a device matrix covering supported iPhone sizes and OS versions.
-3. Complete airplane-mode, background/foreground, interruption, low-storage, share-cancel/failure, and purchase-restore scenarios.
-4. Add privacy lifecycle checks for every stored field and analytics event.
-5. Complete App Store assets, support/privacy URLs, subscription disclosures, observability, and rollback readiness.
+- [ ] Run unit, type, lint, deterministic simulation, persistence, and end-to-end suites from a clean checkout.
+- [ ] After every merge, require green GitHub CI for the exact `main` SHA and,
+  whenever an EAS build is triggered or required, a successful EAS build URL.
+  The latest GitHub CI for `57e8b94` is green; EAS history is currently
+  unverifiable here until the owner supplies Expo authentication.
+- [ ] Exercise a device matrix covering supported iPhone sizes and OS versions.
+- [ ] Complete airplane-mode, background/foreground, interruption, low-storage, share-cancel/failure, and purchase-restore scenarios.
+- [ ] Add privacy lifecycle checks for every stored field and analytics event.
+- [ ] Complete App Store assets, support/privacy URLs, subscription disclosures, observability, and rollback readiness.
 
 Exit criteria: every launch-checklist item has an owner, evidence link, and pass date; no P0 or unresolved safety decision remains.
 

@@ -17,6 +17,11 @@ auto-increment policy. It runs in both the pre-commit hook and CI. CI also runs
 `pnpm bundle:ios`, which makes Metro resolve and export the complete production
 JavaScript graph before a change can merge.
 
+After a `main` push, release work is not complete until GitHub CI succeeds for
+that exact commit. An EAS build is a separate gate: when one is triggered or
+required, confirm its final status with `eas build:list` and retain the build
+URL. Do not infer EAS success from GitHub CI or from a local Expo export.
+
 ## One-time account setup
 
 These actions require the owner's Expo and Apple accounts and cannot be

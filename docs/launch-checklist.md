@@ -23,6 +23,17 @@ Play Store addendum at the bottom applies if/when Android ships.
 
 ## Pre-launch technical essentials
 
+- [ ] **Every merged SHA has remote evidence.** After pushing `main`, wait for
+  GitHub CI to finish and record the successful run for that exact commit. If
+  an Expo/EAS build was triggered or is required by the step, verify that build
+  separately and retain its build URL. Local tests, a green prior commit, or an
+  unverifiable account-gated build do not count. Stop the next implementation
+  step while a required check is pending or red.
+- [ ] **EAS build visibility is available to the release operator.** Authenticate
+  the release machine with `eas login` or a least-privilege `EXPO_TOKEN`, then
+  confirm `eas build:list` can read this project. This is currently blocked on
+  owner-provided Expo access; GitHub CI visibility alone cannot diagnose an EAS
+  build failure.
 - [x] **Build variants are source-controlled.** Simulator development,
   registered-device development, internal preview, and production store builds
   use isolated EAS environments; production build numbers auto-increment.
