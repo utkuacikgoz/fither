@@ -89,6 +89,9 @@ export const fontFamily = {
 export const hairline = 1;
 export const minTouchTarget = 44;
 
+/** Letter-spacing for small-caps brand moments (wordmark on cards). */
+export const trackingWide = 2;
+
 // Decorative glyphs — visual affordances, not copy. Anything a screen
 // reader must convey (e.g. selection) is exposed via accessibility
 // state, never via these characters.

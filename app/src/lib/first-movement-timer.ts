@@ -9,8 +9,9 @@
 //        at the state-machine dispatch boundary
 //        (state/session-store.ts, dispatchPlayer)
 //
-// What the measured window covers: store hydration, onboarding (on a true
-// first run), the daily prompt, on-device session generation, the session
+// What the measured window covers: store hydration, sign-in and
+// onboarding (on a true first run), the daily prompt, on-device session
+// generation, the session
 // preview, and the first block intro up to "Begin". What it cannot cover:
 // native pre-JS launch time and JS bundle execution before the launch
 // surface's first commit — t0 starts at that mount, so the recorded delta
