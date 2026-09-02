@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { router } from "expo-router";
 import React from "react";
 
 import { useDevAuthSessionStore } from "../../../auth/dev-auth";
@@ -222,6 +223,44 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
     // Her record is untouched — gating blocks nothing already earned.
     expect(useProfileStore.getState().history.entries).toHaveLength(1);
+  });
+
+  it("the gated day keeps the quiet corner doors — Progress and Settings stay hers (P0 #7)", () => {
+    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    // The day's frame survives expiry: same label, same doors, same
+    // corner as every other morning — only new-session generation gates.
+    expect(screen.getByText(strings.prompt.dayLabel)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("open-progress"));
+    expect(router.push).toHaveBeenCalledWith("/progress");
+    fireEvent.press(screen.getByTestId("open-settings"));
+    expect(router.push).toHaveBeenCalledWith("/settings");
+    // Restore is always available from the gated day (ADR-0009 §3).
+    expect(screen.getByTestId("paywall-restore")).toBeTruthy();
+  });
+
+  it("restoring a purchase from the gated day unlocks the prompt", async () => {
+    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
+    useDevReceiptStore.setState({
+      receipt: { plan: "annual", date: isoDaysAgo(10) },
+    });
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    fireEvent.press(screen.getByTestId("paywall-restore"));
+    await waitFor(() =>
+      expect(screen.getByText(strings.prompt.time.question)).toBeTruthy(),
+    );
+  });
+
+  it("an empty restore leaves the gated day standing — doors intact, honest message", async () => {
+    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    fireEvent.press(screen.getByTestId("paywall-restore"));
+    await waitFor(() =>
+      expect(screen.getByTestId("paywall-restore-empty")).toBeTruthy(),
+    );
+    expect(screen.getByTestId("open-progress")).toBeTruthy();
+    expect(screen.getByTestId("open-settings")).toBeTruthy();
   });
 
   it("a purchase entitles her even with the trial long expired", () => {

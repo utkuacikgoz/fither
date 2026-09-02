@@ -50,6 +50,16 @@ export const strings = {
         core: "Core",
       } satisfies Record<BodyArea, string>,
     },
+    // COPY-WRITER: the calm completed-today state on the daily surface
+    // (2026-09-02, ADR-0012 §2 / audit wave 2). States what she did, and
+    // offers one quiet action — training again is her choice, never
+    // pushed, so the action sits plain, with no urgency and no reward
+    // framing. `line` takes total minutes trained today.
+    completedToday: {
+      headline: "Done for today",
+      line: (minutes: number) => `${minutes} minutes trained today. It counts.`,
+      action: "Another session",
+    },
   },
   player: {
     sessionProgress: "Session progress",
@@ -71,7 +81,7 @@ export const strings = {
       const side = unilateral ? " each side" : "";
       return isHold
         ? `${sets} × ${amount}-second hold${side}`
-        : `${sets} × ${amount} reps${side}`;
+        : `${sets} × ${amount} ${amount === 1 ? "rep" : "reps"}${side}`;
     },
     sides: {
       left: "Left side",
@@ -81,24 +91,26 @@ export const strings = {
       startRight: "Start right side",
     },
     feedback: {
-      question: "How was that?",
-      // COPY-WRITER: three answers since 2026-09-01 (live-testing pass),
-      // each one fine to give. The ENGINE contract is untouched: both
-      // positive answers record "completed", "hard" records "struggled" —
-      // see the mapping comment in session-player-screen.tsx.
+      question: "How did that feel?",
+      // COPY-WRITER: values revised 2026-09-02 (audit pass, owner-approved
+      // direction) — three dignified answers, keys unchanged. The ENGINE
+      // contract is untouched: "Strong" and "About right" both record
+      // "completed", "Hard today" records "struggled" — see the mapping
+      // comment in session-player-screen.tsx.
       options: {
-        feltStrong: "Felt strong",
-        good: "Good",
-        hard: "That was hard",
+        feltStrong: "Strong",
+        good: "About right",
+        hard: "Hard today",
       },
     },
-    // COPY-WRITER: new keys (2026-09-01, live-testing pass). One calm
-    // confirm when she taps the quiet exit on a block intro — never a
-    // lecture, no cost framing; skipping stays fully allowed and is never
-    // mentioned again afterwards.
+    // COPY-WRITER: one calm confirm when she taps the quiet exit on a
+    // block — shown in every active phase, never a lecture. The body is
+    // honest AND mechanically true (ADR-0012 §1: skip is progression-
+    // neutral): it doesn't count as completed, it also costs her nothing,
+    // and it is never mentioned again afterwards.
     skipConfirm: {
       title: (movement: string) => `Skip ${movement}?`,
-      body: "We'll move on. This exercise won't count as completed.",
+      body: "It won't count as completed, and it won't set you back. Either way is fine.",
       keepGoing: "Keep going",
       skipIt: "Skip exercise",
     },
@@ -158,7 +170,7 @@ export const strings = {
     },
     handoff: {
       eyebrow: "Last step",
-      line: "Now, today. Four taps and you're moving.",
+      line: "Four answers to today's plan.",
     },
   },
   // Sign-in (2026-09-01, dev-mode only for now — nothing connects yet).
@@ -216,6 +228,10 @@ export const strings = {
         "Subscribing starts billing today. Cancel anytime in your App Store settings.",
       cta: "Keep training",
       afterTrialNote: (price: string) => `${price}, starting today. Cancel anytime.`,
+      // The ownership boundary on the gated day (ADR-0009 §3), rendered
+      // under the "Today" header, above the letter. Plain fact: history,
+      // points and skills stay hers; only making a new session is gated.
+      recordNote: "Your record stays yours. Subscribe to make a new session.",
     },
     restore: "Restore purchase",
     restoreError: "Couldn't restore your purchase. Try again in a minute.",
@@ -259,7 +275,7 @@ export const strings = {
     // her work: "Finish here" applies the blocks she completed — it is
     // never a discard (fither-voice: no guilt about the interruption).
     headline: "You're mid-session",
-    line: "Everything you've done is saved. Carry on, or call it complete here.",
+    line: "Completed exercises are saved. Carry on, or call it complete here.",
     continueLabel: "Keep going",
     finishLabel: "Finish here",
   },
@@ -271,10 +287,35 @@ export const strings = {
     failedHeadline: "Your session is safe",
     pointsLabel: "points",
     continueLabel: "Continue",
+    // COPY-WRITER: honest close states (2026-09-02, ADR-0012 §2 and the
+    // audit's wave 2). Three distinct truths, zero guilt in any of them.
+    // She chose to stop. Completed work is saved and counts — full stop,
+    // no "but".
+    endedEarly: {
+      headline: "Finished here",
+      note: "Everything you completed is saved. It counts.",
+    },
+    // The session reached its chosen length (+10% tolerance) and wrapped
+    // up at a phase boundary. This is the time promise KEPT, not a
+    // shortfall — say so plainly. Headline takes the chosen minutes.
+    outOfTime: {
+      headline: (minutes: SessionMinutes) => `That's your ${minutes} minutes`,
+      note: "We keep to the time you chose. Everything you completed counts.",
+    },
+    // A session closed with zero completed blocks. Never false success —
+    // no "complete", no "counts" — but warm and forward-looking. No
+    // reference to what was missed.
+    nothingDone: {
+      headline: "Today didn't fit",
+      note: "That happens. Ready when you are.",
+    },
   },
   unlock: {
     heading: "New skill",
-    note: "It counts.",
+    // ADR-0012 §3: the celebration marks tier ENTRY. Honest framing —
+    // the movement has joined her training; never a claim she has
+    // performed it.
+    note: "Now in your training.",
     continueLabel: "Continue",
   },
   // Share — the unlock screen's share sheet and card (2026-09-01).
@@ -286,12 +327,15 @@ export const strings = {
     // Under 140 characters with any skill name from the library. No
     // link and no store ask — there is no listing yet, and begging
     // isn't the voice anyway. FITHER named once, at the end, quietly.
+    // ADR-0012 §3: earned entry, not claimed mastery — she reached the
+    // tier; the skill is now what she's training, not yet what she's
+    // performed.
     message: (skill: string) =>
-      `${skill} — my body can do this now. Trained with FITHER.`,
+      `${skill} — now in my training. With FITHER.`,
     card: {
-      // Rendered beneath the skill name. Capability only; "this body"
-      // keeps it neutral so the card reads true from any viewer's side.
-      line: "A new thing this body can do.",
+      // Rendered beneath the skill name. Honest tier-entry framing
+      // (ADR-0012 §3), and still proud — she earned her way here.
+      line: "Now in training.",
     },
   },
   // Settings (2026-09-01). The restore ACTION and its result messages
@@ -313,6 +357,19 @@ export const strings = {
     },
     restore: {
       title: "Subscription",
+    },
+    // COPY-WRITER: care journal (2026-09-02, ADR-0012 §4). Her heavy-day
+    // notes, listed with delete. The privacy line is care.notePrivacy —
+    // reuse it at the callsite, never duplicate it. Deleting is confirmed
+    // once, calmly: the body is one factual line, because the note lives
+    // only on this phone. No drama, no "are you sure?" theatre.
+    careNotes: {
+      title: "Your notes",
+      empty: "No notes yet. Anything you write on a heavy day is kept here.",
+      deleteAction: "Delete note",
+      deleteConfirmTitle: "Delete this note?",
+      deleteConfirmBody: "This removes the only copy.",
+      keepIt: "Keep it",
     },
     // Dev builds only, but still in-voice: plain, no jargon-wink.
     dev: {
@@ -343,7 +400,7 @@ export const strings = {
       title: "Skills",
       // Forward-looking, zero guilt: says where skills come from,
       // never when, and never what's absent. "counts" echoes
-      // unlock.note ("It counts.").
+      // finish.note ("That counts.").
       empty: "Named skills land here as you reach new tiers. Every session counts toward the first.",
     },
     points: {
@@ -351,7 +408,8 @@ export const strings = {
       // gate nothing (gamification.md), so no "balance"/"spend" shape.
       // finish.pointsLabel ("points") stays the in-session unit label;
       // this is the full ledger line.
-      total: (points: number) => `${points} points earned`,
+      total: (points: number) =>
+        points === 1 ? "1 point earned" : `${points} points earned`,
     },
     // Ladder length comes from the engine's MAX_TIER at the callsite —
     // copy never hardcodes product structure.

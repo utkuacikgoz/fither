@@ -15,10 +15,14 @@ jest.mock(
 
 // Screens navigate through expo-router's imperative `router`. Component
 // tests render screens without a navigation container, so the router is a
-// plain spy here — tests assert on the pushed paths.
-jest.mock("expo-router", () => ({
-  router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
-}));
+// plain spy here — tests assert on the pushed paths. `useRouter` returns
+// the same spy so route files render too (the route-guard matrix cold-
+// opens them), and `Stack.Screen` is inert chrome.
+jest.mock("expo-router", () => {
+  const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
+  const Stack = Object.assign(() => null, { Screen: () => null });
+  return { router, useRouter: () => router, Stack };
+});
 
 jest.mock("expo-keep-awake", () => ({
   useKeepAwake: () => undefined,

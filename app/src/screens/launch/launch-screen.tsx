@@ -12,8 +12,8 @@ import { useSessionStore } from "../../state/session-store";
 import { useSettingsStore } from "../../state/settings-store";
 import { DailyPromptScreen } from "../daily-prompt/daily-prompt-screen";
 import { OnboardingScreen } from "../onboarding/onboarding-screen";
-import { PaywallScreen } from "../paywall/paywall-screen";
 import { SignInScreen } from "../sign-in/sign-in-screen";
+import { GatedDailySurface } from "./gated-daily-surface";
 import { ResumeOffer } from "./resume-offer";
 
 // The app's entry surface. Once every persisted store has hydrated, the
@@ -26,7 +26,8 @@ import { ResumeOffer } from "./resume-offer";
 // the one sign-in screen (ADR-0011 — guest is one tap, Gate 3's only
 // extra cost); first-ever open (no history, onboarding
 // never completed) gets the three onboarding screens; an expired,
-// unpurchased trial gets the paywall instead of generating a new session
+// unpurchased trial gets the gated day — the paywall letter where the
+// prompt's questions would be, Progress and Settings doors intact
 // (ADR-0009 §3 — her history, points and skills stay hers regardless);
 // everyone else lands on the daily prompt with no comment.
 
@@ -129,11 +130,14 @@ export function LaunchScreen({
   // Entitlement gate (app-layer policy, never engine): only an expired,
   // unpurchased trial blocks generating a NEW session. Evaluated offline
   // from persisted state, with the daily prompt's local-date source.
+  // The gate renders the day's surface in its gated state — the paywall
+  // letter where the questions would be, with the Progress and Settings
+  // doors intact (ADR-0009 §3: her record stays hers).
   if (
     hydrated &&
     !isEntitled(entitlementStatus({ trialStartDate, purchase, today: todayIso() }))
   ) {
-    return <PaywallScreen />;
+    return <GatedDailySurface />;
   }
 
   // The prompt screen renders the hydration wait/failure states itself.

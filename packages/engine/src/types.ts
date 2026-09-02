@@ -72,7 +72,8 @@ export interface PatternState {
   tier: Tier;
   /** Clean sessions at this tier. Advances at CLEAN_SESSIONS_TO_ADVANCE. */
   cleanStreak: number;
-  /** Consecutive struggled/skipped sessions. Volume drops at 2, tier at 3. */
+  /** Consecutive struggled sessions (skips are neutral, ADR-0012).
+   * Volume drops at 2, tier at 3. */
   struggledStreak: number;
   /** True while in the reduced-volume soft landing. */
   volumeReduced: boolean;

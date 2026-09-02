@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
@@ -49,7 +50,17 @@ type RestoreNotice = "none" | "empty" | "failed";
 // the copy-audit test's allowlist.
 export const DEV_RESET_LABEL = "[dev] Reset entitlement";
 
-export function PaywallScreen() {
+interface PaywallScreenProps {
+  /**
+   * Optional chrome above the letter. The gated day (audit P0 #7,
+   * ADR-0009 §3) passes the daily surface's corner doors here so
+   * Progress and Settings stay reachable while only new-session
+   * generation is gated. The letter itself is unchanged either way.
+   */
+  headerSlot?: ReactNode;
+}
+
+export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
   const purchasePlan = useEntitlementStore((s) => s.purchasePlan);
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
   const resetForDev = useEntitlementStore((s) => s.resetForDev);
@@ -98,6 +109,7 @@ export function PaywallScreen() {
 
   return (
     <Screen>
+      {headerSlot}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
