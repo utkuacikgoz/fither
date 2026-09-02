@@ -12,16 +12,22 @@ node scripts/validate-movements.mjs  OK — 60 movements, ladders complete,
 pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
 engine + app typecheck               pass
-engine tests                         63/63
-app tests                            175/175
-simulation (seed 20260831, 500 users, 26 weeks, 36755 sessions)
+engine tests                         67/67
+app tests                            263/263 (28 suites)
+simulation (seed 20260831, 500 users, 26 weeks, 36767 sessions)
   G1 PASS  84/84 4x-week users at push tier >=4 by week 12, median week 8
-  G2 PASS  0 tier regressions; low-capability difficult blocks 752/28303
+  G2 PASS  0 tier regressions; low-capability difficult blocks 767/28270
   G3 PASS  0 sessions over budget (utilization 90.0-100.0%)
   G4 PASS  max pattern absence 3 training days (limit 7)
   G5 PASS  full-ladder exhaustion medians week 22-23 (floor: 18);
-           erratic never exhausts within 26 weeks
+           erratic exhausts week 26 (info only)
 ```
+
+Skip-neutrality (ADR-0012) moved the sim measurably vs the previous
+baseline (36755 sessions, difficult blocks 752/28303, erratic=never):
++12 sessions, 767/28270 difficult, erratic's full-ladder exhaustion
+arrives week 26 instead of never. Every gate passes on both sides;
+recorded per the report-actual-numbers rule.
 
 The engine carries an explicit Vitest config, so a checkout nested inside
 another Vite project cannot inherit its parent's plugins. App Jest runs with

@@ -198,7 +198,7 @@ describe("validity requirements", () => {
   });
 
   it("finishedSession accepts an applied summary", () => {
-    useSessionStore.setState({ finish: { pointsEarned: 10, unlockedSkills: [] } });
+    useSessionStore.setState({ finish: { pointsEarned: 10, unlockedSkills: [], completedAnything: true } });
     const screen = render(
       <RouteGuard requires="finishedSession">
         <Sentinel />
@@ -222,7 +222,7 @@ describe("validity requirements", () => {
   });
 
   it("pendingUnlock requires an actually unlocked skill", async () => {
-    useSessionStore.setState({ finish: { pointsEarned: 10, unlockedSkills: [] } });
+    useSessionStore.setState({ finish: { pointsEarned: 10, unlockedSkills: [], completedAnything: true } });
     const screen = render(
       <RouteGuard requires="pendingUnlock">
         <Sentinel />
@@ -236,6 +236,7 @@ describe("validity requirements", () => {
     useSessionStore.setState({
       finish: {
         pointsEarned: 35,
+        completedAnything: true,
         unlockedSkills: [
           { pattern: "push", tier: 4, movementName: "Full Push-Up" },
         ],

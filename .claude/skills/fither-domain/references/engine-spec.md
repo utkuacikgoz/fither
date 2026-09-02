@@ -135,7 +135,7 @@ appended taste block.
   pattern's state exactly as absence would (not even a `tierSince`
   stamp), though the session still enters history and still counts for
   pattern-coverage recency (the pattern was prescribed).
-  A 2×/week user who keeps showing up must never lose a tier — this is a
+- A 2×/week user who keeps showing up must never lose a tier — this is a
   simulation gate, not a preference.
 - Tier 6 is terminal; continued progress there is volume and density.
 

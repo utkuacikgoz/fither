@@ -294,8 +294,8 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
               Affective-to-outcome mapping — deliberate, NOT lost data.
               The engine contract stays exactly completed | struggled |
               skipped. Three answers exist so every answer feels fine to
-              give: "Felt strong" and "Good" BOTH record "completed";
-              "That was hard" records "struggled". The engine has no use
+              give: "Strong" and "About right" BOTH record "completed";
+              "Hard today" records "struggled". The engine has no use
               for the strong/good distinction (its progression rules key
               off completed/struggled), so nothing is dropped here — do
               not add outcome kinds to preserve it.

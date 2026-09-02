@@ -18,13 +18,20 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   const saveFailed = useSessionStore((s) => s.saveFailed);
   const saving = useSessionStore((s) => s.saving);
 
+  // A session with zero completed blocks gets the honest close — no
+  // "complete", no "counts", no points row (ADR-0012 / audit P0 #5).
+  const nothingDone = finish !== null && !finish.completedAnything;
   const headline = finish
-    ? strings.finish.headline
+    ? nothingDone
+      ? strings.finish.nothingDone.headline
+      : strings.finish.headline
     : saveFailed
       ? strings.finish.failedHeadline
       : strings.finish.savingHeadline;
   const note = finish
-    ? strings.finish.note
+    ? nothingDone
+      ? strings.finish.nothingDone.note
+      : strings.finish.note
     : saveFailed
       ? strings.errors.saveUnavailable
       : strings.finish.savingNote;
@@ -41,7 +48,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
         <AppText variant="bodySoft" style={styles.note}>
           {note}
         </AppText>
-        {finish && (
+        {finish && !nothingDone && (
           <View style={styles.points}>
             <AppText variant="numeral" testID="finish-points">
               {`+${finish.pointsEarned}`}

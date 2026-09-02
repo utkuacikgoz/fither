@@ -115,7 +115,13 @@ interface RouteGuardProps {
 
 export function RouteGuard({ requires, children }: RouteGuardProps) {
   const { hydrated, failed } = useStoreHydration();
-  const [decision, setDecision] = useState<Decision>("waiting");
+  // Decide synchronously when hydration is already settled (the common
+  // in-flow case: preview → session → finish), so navigation between
+  // live screens never flashes the holding line. The effect below covers
+  // only the true cold-open, where hydration finishes after mount.
+  const [decision, setDecision] = useState<Decision>(() =>
+    hydrated ? (requirementMet(requires) ? "allow" : "redirect") : "waiting",
+  );
 
   useEffect(() => {
     if (!hydrated || decision !== "waiting") return;
