@@ -6,7 +6,7 @@
   "scripts": {
     "bundle:ios": "expo export --platform ios --output-dir dist",
     "start": "expo start",
-    "ios": "expo start --ios",
+    "ios": "expo run:ios",
     "test": "jest --no-watchman",
     "typecheck": "tsc --noEmit"
   },
