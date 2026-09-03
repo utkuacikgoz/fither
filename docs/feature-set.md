@@ -6,12 +6,12 @@ do, and how done each piece is. Sources: `.claude/skills/fither-domain/`
 `docs/launch-checklist.md`, and the ADRs in `docs/adr/`. If this document
 and those files ever disagree, those files win — fix this one.
 
-Status snapshot date: 1 September 2026 (evening refresh). "Built" means it exists in the
+Status snapshot date: 2 September 2026 (post-audit; all build waves shipped). "Built" means it exists in the
 repo and passes its own checks today. "In progress" means working code
 exists but its reality gate (section 4) has not been passed. "Planned"
-means it is committed for v1.0 but not started. Gate 1 (simulation) has
-PASSED; Gate 2 (the owner's real workout) is next and is what holds the
-"Built" app features short of done.
+means it is committed for v1.0 but not started. Gates 1 (simulation)
+and 2 (the owner's real workout) have PASSED; Gate 3 (five real users)
+is what holds the "Built" app features short of done.
 
 ---
 
@@ -38,8 +38,8 @@ works in airplane mode.
 |---|---|---|---|
 | Daily prompt | Four quick questions before every session: how much time (10/20/30), how's your energy (low/okay/strong), do you need to be quiet (yes/no), anything sore today ("All good" is one tap). One decision per screen. | Exactly four questions, ~10–15 seconds total; adding a question means re-testing Gate 3 (ADR-0003, ADR-0006). | Built |
 | Session preview | Before starting: one plain-language line explaining why today's session fits your answers (from the engine's adaptations), the block list, one Start button. | The UI renders only what the engine emitted, never re-derives a reason; a 10-minute session gets the same visual dignity as a 30-minute one (ADR-0006/0007). | Built |
-| Crash-safe resume | An interrupted session is saved; relaunching the same day offers "Keep going" or "Finish here" — finishing early banks every completed block. Yesterday's interruption is discarded without comment. | Nothing she did is ever silently lost, and absence is never mentioned (ADR-0007). | Built |
-| Three session lengths | 10, 20 or 30 minutes. Never more options, never fewer. | The session must fit its time budget — running over is a bug and a simulation gate (Gate 1 #3). | Built |
+| Crash-safe resume | An interrupted session is saved; relaunching the same day offers "Keep going" or "Finish here" — finishing early banks every completed block. A previous day's interruption with completed work is silently applied under its own date; one with none is cleared without comment. | Nothing she did is ever silently lost, and absence is never mentioned (ADR-0007; midnight rule from the Norman audit). | Built |
+| Three session lengths | 10, 20 or 30 minutes. Never more options, never fewer. | Generation fits the budget (simulation gate), and the player enforces it live: past length +10% of ACTIVE time it wraps at the next phase boundary with the honest "That's your N minutes" close (ADR-0012 §2). | Built |
 | On-device session generation | The app builds today's session from the prompt answers, your history and the movement library — no server involved. | Runs entirely on device; a paying user in airplane mode always gets a full session (hard rule, CLAUDE.md). Quiet mode, available equipment and sore areas filter movements first; if today's answers exclude everything, the app says so honestly instead of faking a session. | Built |
 | Session player | Guides you through the session block by block: what to do, how many, when to rest, with coaching cues for each movement. | Cue lines come from the movement library and must work read aloud (fither-voice). Currently placeholder visuals — animation and audio land in Phase 3. Rest is hers — end-rest-early and skip controls always present. | Built |
 | Session finish | Marks each block completed / struggled / skipped, feeds that back to the engine, and shows what you earned. | Outcomes are the only input to progression — the UI never re-derives an engine rule (CLAUDE.md). Failed saves retry; work is never lost to an error. | Built |
@@ -51,7 +51,7 @@ works in airplane mode.
 |---|---|---|---|
 | Per-pattern tiers | Five movement patterns (push, pull, squat, hinge, core), each with its own six-tier ladder. You can be tier 3 in push and tier 1 in pull. | Progression is per-pattern, never global (engine-spec). Five patterns, hinge kept separate from squat on purpose (ADR-0002). Tier 6 is terminal; progress there is volume and density. | Built |
 | Advancing | A pattern moves up a tier after 3 clean sessions at the current tier AND enough calendar time there — adaptation takes weeks, not just reps. Floors: 7/14/28/42/56 days per step. | 3 clean sessions (ADR-0002) plus the ADR-0008 time floor: the first named skill lands ~week 7 of consistent training, the ladder lasts beyond six months, and nobody can buy speed with extra volume. | Built |
-| Gentle regression | Struggling doesn't punish you immediately: 2 consecutive struggled sessions reduce volume at the same tier; a 3rd drops one tier. Any clean session resets it. | Volume first, tier after 3 (ADR-0003). **Absence never regresses** — a 2×/week user must never lose a tier; missing days costs nothing. Taste blocks and constraint fallbacks are progression-neutral (ADR-0007). | Built |
+| Gentle regression | Struggling doesn't punish you immediately: 2 consecutive struggled sessions reduce volume at the same tier; a 3rd drops one tier. Any clean session resets it. | Volume first, tier after 3 (ADR-0003). **Absence never regresses**; **skips are progression-neutral** (ADR-0012) — only struggled work moves the counters. Taste blocks and constraint fallbacks are progression-neutral (ADR-0007). | Built |
 | Pattern coverage | The engine tracks which patterns you haven't trained lately and prioritises the stalest, so short sessions still cover everything over a week. | No pattern absent for more than 7 days of training (engine-spec, simulation gate). | Built |
 | Energy adaptation | Low energy: same tier, less volume — never a tier drop. Strong energy: full volume, sometimes a "taste" of the next tier late in the session. | Defaults validated by the simulation (ADR-0006); Brief 2 may still override. | Built |
 | Simulation harness | 500 simulated users trained for 26 virtual weeks before any real user touches the app, proving progression works. | `pnpm sim` must pass all four Gate 1 thresholds and print the actual numbers after every engine change. Reproducible from one seed. Six personas including a low-capability one; five gates including the ADR-0008 pacing ceiling; plus a deep-dive analyzer (docs/sim-analysis.md). | Built |
@@ -72,14 +72,17 @@ works in airplane mode.
 |---|---|---|---|
 | Points ledger | Points for work done: 20/25/30 per completed session for 10/20/30 minutes (a 15-point base for showing up plus 5 per ten minutes), +5 per block at a newly reached tier, +25 per skill unlock. | Points are only ever added — no decay, deductions or expiry; the ledger is append-only by construction. Points buy nothing and gate nothing. The base dominates: equal consistency is never halved by session length (gamification.md, ADR-0008). | Built |
 | Named skill unlocks | Tier milestones become human-meaningful skills — e.g. reaching push tier 4 unlocks "Full Push-Up" — with an unlock screen. | Skills are never lost, even if a tier later regresses. Names come from the movement library, not invented in UI code. Milestone tiers are 4 and 6 (ADR-0005); each unlocks once per lifetime — never lost, never re-earned (ADR-0007). | Built |
-| Shareable skill card | A card you can share when you unlock a skill. | States the skill, never anything about the body (gamification.md, fither-voice). | Planned |
+| Shareable skill card | A card on the unlock screen, one per skill, shared as text via the system sheet; multi-skill unlocks celebrate one at a time. | States the skill honestly ("now in my training"), never anything about the body. Image export is a later one-component swap. | Built |
 
 ### Onboarding
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
 | First-run onboarding | Three screens, one decision each — welcome, equipment, anything-to-avoid — then straight into the daily prompt. Runs once, persisted. | Gate 3: five real users must reach their first movement in under 60 seconds; the app measures the number itself (time-to-first-movement instrumentation, dev readout, per-tester reset). Protocol: docs/gate-3-protocol.md. | Built (Gate 3 pending) |
-| Notification permission ask | Asked in context — after the first completed session, when the value is obvious — never at first open. | Notifications are an invitation, never a nag; they never reference absence (launch checklist, fither-voice). Copy staged in strings.ts; the permission request code is not built. | Planned (copy staged) |
+| Sign-in | One first-run screen: Continue with Apple / Google / without an account — guest is first-class and one tap (ADR-0011). | Auth behind a typed port (dev adapter today; real SDKs land with the owner's Apple account). Identity gates nothing on the training path; airplane mode changes nothing. | Built (dev-mode adapters) |
+| Settings | Persistent avoid areas, equipment (editable any day), subscription/restore, the care-notes journal (view/edit/delete, local-only), daily-invitation slot, dev tools. | Every onboarding answer stays editable; the journal never leaves the phone; dev tools (Gate 3 reset, timing readout, flow previewer) are __DEV__-only. | Built |
+| Progress | Five pattern ladders (tier N of MAX_TIER with a calm track), unlocked skills, points total. | Read-only capability view; no comparisons, no percentages; gold only on earned skills. | Built |
+| Daily invitation (notifications) | Asked once, in context, after the first completed session; on allow she picks her slot (8:00/12:30/18:30) and gets one quiet local invitation a day, rotating four bodies; "No invitation" is an equal option in Settings. | An invitation, never a nag; never references absence; never claims a session exists before her four answers; fully offline (local scheduling behind a typed port). Decline is final in-app — Settings is the only way back. | Built |
 
 ### Monetization
 
@@ -102,8 +105,8 @@ works in airplane mode.
 | Analytics (PostHog) | A handful of deliberate events that test the retention thesis — session started/completed, tier advanced, skill unlocked, paywall seen/converted. | Payloads obey the forbidden list (no weight/calorie/streak data can even be represented); events queue offline; analytics never blocks anything (fither-code). | Planned |
 | Transactional email (Resend) | Receipts, trial-ending and data-request emails from our own domain. | Same coach voice, under 100 words, no upsell in a receipt (fither-voice); SPF/DKIM verified before launch. | Planned |
 | Feedback board (Canny) | One place for tester and user feedback, linked from settings. | Live from the first TestFlight build; triaged weekly (launch checklist). | Planned |
-| Accessibility basics | Dynamic Type, readable contrast, VoiceOver-usable session player, text equivalents for audio. | This audience trains in suboptimal conditions by definition (launch checklist). | Planned |
-| Rating prompt | The system rating ask, shown after a completed session or skill unlock. | Never at first open, never mid-session, no guilt framing (launch checklist). | Planned |
+| Accessibility basics | Theme-true AA contrast on every action (ratio table verified both themes), VoiceOver phase announcements in the player (no tick spam; the finish screen announces the honest close), Dynamic Type with a capped numeral scale, decorative glyphs hidden on both platforms. | This audience trains in suboptimal conditions by definition. Device QA at large AX sizes remains in release qualification. | Built (device QA pending) |
+| Rating prompt | The system rating ask, after leaving a completed close or an unlock — only from the second completed session onward, never colliding with the reminder ask. | Never at first open, never mid-session, no custom UI; iOS rate-limits it (launch checklist). | Built |
 | Launch process | TestFlight with ~20 users for two weeks, soft launch in smaller English-speaking storefronts, phased release, first update planned before launch. | v1.0 is stable, not complete — anything wobbly is cut, not shipped (launch checklist). | Planned |
 
 ---
