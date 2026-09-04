@@ -104,3 +104,15 @@ jest.mock("expo-store-review", () => ({
 jest.mock("./src/lib/use-reduced-motion", () => ({
   useReducedMotion: () => false,
 }));
+
+// Share export natives (owner direction 2026-09-04): capture resolves to
+// a file path and the sheet is available; unlock tests override per
+// scenario (capture failure, sheet unavailable) to prove the text share
+// still stands behind it.
+jest.mock("react-native-view-shot", () => ({
+  captureRef: jest.fn(async () => "file:///tmp/skill-card.png"),
+}));
+jest.mock("expo-sharing", () => ({
+  isAvailableAsync: jest.fn(async () => true),
+  shareAsync: jest.fn(async () => undefined),
+}));

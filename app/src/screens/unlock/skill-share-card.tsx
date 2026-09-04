@@ -1,7 +1,9 @@
+import { forwardRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { BrandMark } from "../../design/primitives/brand-mark";
 import { WORDMARK } from "../../design/primitives/wordmark";
 import {
   hairline,
@@ -28,12 +30,21 @@ interface SkillShareCardProps {
  * deliberately theme-fixed (light tokens): the card is the artifact she
  * shares, and it looks the same wherever it lands. Gold appears as the
  * accent rule — text stays ink/inkSoft so contrast holds AA on surface.
- * v1 shares text via the system sheet; image export is a later swap.
+ * The ref is the capturable artifact (share-skill.ts): the body only —
+ * the share row beneath it is a control, not part of what she sends.
+ * The drawn mark sits with the wordmark, tinted to the light accent
+ * explicitly because this card ignores the theme on purpose.
  */
-export function SkillShareCard({ skillName, onShare, testID }: SkillShareCardProps) {
+export const SkillShareCard = forwardRef<View, SkillShareCardProps>(
+  function SkillShareCard({ skillName, onShare, testID }, ref) {
   return (
     <View style={styles.card} testID={testID}>
-      <View style={styles.body}>
+      <View
+        ref={ref}
+        collapsable={false}
+        style={[styles.body, { backgroundColor: lightColors.surface }]}
+        testID={testID ? `${testID}-artifact` : undefined}
+      >
         <View style={styles.goldRule} />
         <AppText variant="title" color={lightColors.ink} style={styles.centered}>
           {skillName}
@@ -45,13 +56,16 @@ export function SkillShareCard({ skillName, onShare, testID }: SkillShareCardPro
         >
           {strings.share.card.line}
         </AppText>
-        <AppText
-          variant="caption"
-          color={lightColors.inkSoft}
-          style={styles.wordmark}
-        >
-          {WORDMARK}
-        </AppText>
+        <View style={styles.brand}>
+          <BrandMark size="small" tint={lightColors.accent} />
+          <AppText
+            variant="caption"
+            color={lightColors.inkSoft}
+            style={styles.wordmark}
+          >
+            {WORDMARK}
+          </AppText>
+        </View>
       </View>
       <Pressable
         accessibilityRole="button"
@@ -65,7 +79,8 @@ export function SkillShareCard({ skillName, onShare, testID }: SkillShareCardPro
       </Pressable>
     </View>
   );
-}
+  },
+);
 
 const styles = StyleSheet.create({
   card: {
@@ -79,6 +94,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     gap: spacing.sm,
+    // The captured image keeps the card's own corners.
+    borderTopLeftRadius: radius.card,
+    borderTopRightRadius: radius.card,
   },
   goldRule: {
     width: spacing.xl,
@@ -89,8 +107,12 @@ const styles = StyleSheet.create({
   centered: {
     textAlign: "center",
   },
-  wordmark: {
+  brand: {
+    alignItems: "center",
+    gap: spacing.xs,
     marginTop: spacing.xs,
+  },
+  wordmark: {
     letterSpacing: trackingWide,
   },
   shareRow: {

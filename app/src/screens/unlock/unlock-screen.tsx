@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Share, StyleSheet, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -15,6 +15,7 @@ import {
 } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useSessionStore } from "../../state/session-store";
+import { shareSkill } from "./share-skill";
 import { SkillShareCard } from "./skill-share-card";
 
 // The only loud screen in the app: deep sage full-screen, gold accent,
@@ -33,20 +34,10 @@ interface UnlockScreenProps {
   onContinue: () => void;
 }
 
-// v1 decision (do not revisit here): sharing is TEXT through the system
-// sheet — no view-shot dependency; image export is a later, isolated swap.
-function shareSkill(skillName: string): void {
-  // The Pressable's pressed state is the immediate feedback; the sheet
-  // itself is the OS's. A dismissed sheet RESOLVES (dismissedAction) and
-  // is not an error. A rejection means the sheet never opened — no
-  // existing error string fits calmly, so we stay quiet rather than
-  // alarm her on her proudest screen.
-  void Share.share({ message: strings.share.message(skillName) }).catch(() => {
-    // Intentionally silent.
-  });
-}
-
+// Sharing: the rendered card as an image, text as the fallback — see
+// share-skill.ts. The card's ref is the artifact.
 export function UnlockScreen({ onContinue }: UnlockScreenProps) {
+  const cardRef = useRef<View>(null);
   const finish = useSessionStore((s) => s.finish);
   const skills = finish?.unlockedSkills ?? [];
   const [index, setIndex] = useState(0);
@@ -154,8 +145,11 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
         {skill ? (
           <SkillShareCard
             key={`${skill.pattern}-${skill.tier}`}
+            ref={cardRef}
             skillName={skill.movementName}
-            onShare={() => shareSkill(skill.movementName)}
+            onShare={() => {
+              void shareSkill({ skillName: skill.movementName, card: cardRef });
+            }}
             testID={`unlock-share-${skill.pattern}-${skill.tier}`}
           />
         ) : null}
