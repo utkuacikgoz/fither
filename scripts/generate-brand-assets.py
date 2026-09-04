@@ -170,6 +170,13 @@ img = Image.new("RGBA", (1024*S, 1024*S), (0,0,0,0))
 draw_raster(ImageDraw.Draw(img), 1024*S, BONE + (255,), 1.0, -0.037, -0.028)
 img.resize((1024,1024), Image.LANCZOS).save(f"{OUT}/mark-bone-1024.png")
 
+# The app's own copy of the mark: pure white on transparent, exactly like
+# the movement figures, so one Image + tintColor mechanism draws it in the
+# theme's accent in both light and dark. 640px covers a 200pt hero at 3x.
+APP_BRAND = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "assets", "brand")
+os.makedirs(APP_BRAND, exist_ok=True)
+raster_mark_transparent(640, fg=(255, 255, 255)).save(f"{APP_BRAND}/mark.png")
+
 # --- Lockup: mark + wordmark (transparent) ---
 W_, H_ = 900*S, 1100*S
 sp = Image.new("RGBA", (W_, H_), (0,0,0,0))
