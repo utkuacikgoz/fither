@@ -135,6 +135,12 @@ ones.
 - Scroll indicators shown on every scrollable surface (the owner could
   not tell the preview list scrolled); only the session player stays
   clean.
+- The daily prompt gained a four-segment flow indicator (one segment per
+  ADR-0003 question, counted from the question list itself, carried as
+  the platform's progressbar semantics — no new copy) and staggered
+  answer-row entrances. Gate 3 is untouched: no question added, no tap
+  added, and every row stays hittable from its first frame, which a test
+  pins.
 
 **Reviews**
 
