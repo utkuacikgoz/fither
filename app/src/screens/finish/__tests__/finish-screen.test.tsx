@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
+import { Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { strings } from "../../../copy/strings";
@@ -10,6 +11,7 @@ import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../../../state/profile-store";
+import { movementFigure } from "../../../session/movement-figures";
 import { useSessionStore } from "../../../state/session-store";
 import { COMPLETION_STORAGE_KEY } from "../../../state/completion-journal";
 import { useSettingsStore } from "../../../state/settings-store";
@@ -70,6 +72,55 @@ beforeEach(async () => {
 });
 
 describe("FinishScreen", () => {
+  it("shows the faces of what she did — completed blocks only, in order", async () => {
+    // Both fixture blocks done: two figures. The default seed skips both
+    // (the nothing-done close, which draws none — asserted below); this
+    // keeps its finished player and only records the outcomes as done.
+    const done = useSessionStore.getState().player!;
+    useSessionStore.setState({
+      player: { ...done, outcomes: ["completed", "completed"] },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByText("+35");
+    const hidden = { includeHiddenElements: true } as const;
+    // A figure per completed block, in block order — where the library
+    // has one. The fixture's second block ("plank") is test data with no
+    // library movement behind it, so its figure honestly renders nothing
+    // (a degraded build shows the name, never a broken-image hole); the
+    // expectation is computed from the same map the screen reads.
+    const expected = fixturePlayerBlocks.filter(
+      (block) => movementFigure(block.movementId) !== null,
+    );
+    expect(screen.getAllByTestId(/^finish-figure-\d+$/, hidden)).toHaveLength(
+      expected.length,
+    );
+    expect(
+      screen.getByTestId("finish-figure-0", hidden).findByType(Image).props.source,
+    ).toEqual(movementFigure(fixturePlayerBlocks[0]!.movementId));
+  });
+
+  it("draws only the completed ones: a skipped block has no face here", async () => {
+    const done = useSessionStore.getState().player!;
+    useSessionStore.setState({
+      player: { ...done, outcomes: ["skipped", "completed"] },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByText("+35");
+    const hidden = { includeHiddenElements: true } as const;
+    expect(screen.getByTestId("finish-figures", hidden).children).toHaveLength(1);
+  });
+
+  it("the honest nothing-done close shows nothing to show, and Continue waits for nothing", async () => {
+    // Default seed: both blocks skipped.
+    const onContinue = jest.fn();
+    const screen = render(<FinishScreen onContinue={onContinue} />);
+    await screen.findByTestId("finish-continue");
+    expect(screen.queryByTestId("finish-figures", { includeHiddenElements: true })).toBeNull();
+    // No timers advanced: the button is outside the choreography.
+    fireEvent.press(screen.getByTestId("finish-continue"));
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
   it("applies the session once on arrival and shows the points earned", async () => {
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(screen.getByText(strings.finish.savingHeadline)).toBeTruthy();

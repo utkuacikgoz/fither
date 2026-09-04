@@ -2,12 +2,15 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
+import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
+import { FadeIn } from "../../design/primitives/fade-in";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
-import { spacing } from "../../design/tokens";
+import { motion, spacing } from "../../design/tokens";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { REMINDER_SLOTS, type ReminderSlot } from "../../notifications/notifications";
 import { useReminderStore } from "../../state/reminder-store";
 
@@ -31,6 +34,7 @@ export function ReminderAskScreen({ onDone }: ReminderAskScreenProps) {
   const decline = useReminderStore((s) => s.decline);
   const chooseSlot = useReminderStore((s) => s.chooseSlot);
 
+  const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<"rationale" | "time">("rationale");
   const [busy, setBusy] = useState(false);
 
@@ -66,32 +70,46 @@ export function ReminderAskScreen({ onDone }: ReminderAskScreenProps) {
   if (step === "time") {
     return (
       <Screen>
-        <View style={styles.body}>
+        <FadeIn
+          reduceMotion={reduceMotion}
+          rise={motion.riseDistance}
+          style={styles.body}
+        >
           <AppText variant="title" style={styles.title} accessibilityRole="header">
             {strings.notifications.time.question}
           </AppText>
-          {REMINDER_SLOTS.map((slot) => (
-            <RowButton
-              key={slot}
-              testID={`reminder-ask-${slot}`}
-              label={strings.notifications.time[slot]}
-              onPress={() => {
-                void handleSlot(slot);
-              }}
-            />
+          {/* Three real hours entering like every other short answer
+              list; each answers on its first frame. No flow indicator
+              here on purpose: this step only exists after the OS
+              granted, so a bar on the rationale would promise a second
+              step that may never come. */}
+          {REMINDER_SLOTS.map((slot, index) => (
+            <AnswerRow key={slot} index={index} reduceMotion={reduceMotion}>
+              <RowButton
+                testID={`reminder-ask-${slot}`}
+                label={strings.notifications.time[slot]}
+                onPress={() => {
+                  void handleSlot(slot);
+                }}
+              />
+            </AnswerRow>
           ))}
-        </View>
+        </FadeIn>
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <View style={styles.center}>
+      <FadeIn
+        reduceMotion={reduceMotion}
+        rise={motion.riseDistance}
+        style={styles.center}
+      >
         <AppText variant="bodyLarge" style={styles.rationale}>
           {strings.notifications.rationale.line}
         </AppText>
-      </View>
+      </FadeIn>
       <View style={styles.bottom}>
         <PrimaryButton
           testID="reminder-ask-allow"

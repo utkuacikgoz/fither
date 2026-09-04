@@ -154,6 +154,13 @@ ones.
   the feedback rows enter staggered. The countdown numeral deliberately
   does not animate per tick. The work phase is unchanged: the session
   is sacred.
+- The finish lands in three beats — the figures of the blocks she
+  completed (read off the player's own outcomes; nothing-done draws
+  none), the honest headline, then the points rising in once (never
+  counting up). Continue sits outside the choreography. The reminder
+  ask's rationale and its three hours enter the same way; it carries no
+  flow indicator on purpose, since its second step exists only after
+  the OS grants.
 
 **Reviews**
 
