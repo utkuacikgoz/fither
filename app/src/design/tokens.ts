@@ -130,4 +130,10 @@ export const motion = {
   staggerMs: 70,
   /** How far an entering element rises, in points. Small on purpose. */
   riseDistance: 12,
+  /**
+   * Gap between the steps of a progress fill drawing in (the tier
+   * ladders). Half the card stagger: six steps still complete inside one
+   * breath rather than crawling across the screen.
+   */
+  fillStaggerMs: 35,
 } as const;

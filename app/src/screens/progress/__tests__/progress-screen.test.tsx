@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
+import { Image } from "react-native";
 import {
   MAX_TIER,
   createInitialProfile,
@@ -14,6 +15,7 @@ import {
 import { strings } from "../../../copy/strings";
 import { glyph } from "../../../design/tokens";
 import { loadLibrary } from "../../../session/load-library";
+import { movementFigure } from "../../../session/movement-figures";
 import { useLedgerStore } from "../../../state/ledger-store";
 import { useProfileStore } from "../../../state/profile-store";
 import {
@@ -141,6 +143,22 @@ describe("ProgressScreen", () => {
     expect(screen.getByTestId("skills-empty")).toBeTruthy();
   });
 
+  it("draws a figure beside every skill she has named", () => {
+    useProfileStore.setState({ profile: tier4Profile() });
+    const screen = render(<ProgressScreen />);
+    const hidden = { includeHiddenElements: true } as const;
+
+    // Every movement has a face (ADR-0013): the skill row shows the
+    // figure of its own movement, resolved through the engine's
+    // milestoneMovement — the image is decorative, so the query opts in.
+    const row = screen.getByTestId("skill-push-4", hidden);
+    const images = row.findAllByType(Image);
+    expect(images).toHaveLength(1);
+    expect(images[0]?.props.source).toEqual(
+      movementFigure(milestoneMovement(library!, "push", 4)!.id),
+    );
+  });
+
   it("totals the ledger through the ledger module's own sum", () => {
     const events: LedgerEvent[] = [
       { type: "session", points: 20, date: "2026-08-30" },
@@ -155,12 +173,22 @@ describe("ProgressScreen", () => {
     ];
     useLedgerStore.setState({ events });
     const screen = render(<ProgressScreen />);
-    expect(screen.getByText(strings.profile.points.total(70))).toBeTruthy();
+    // Set on the numeral scale (the finish screen's own treatment), with
+    // the full sentence carried as the accessible reading so a screen
+    // reader hears "70 points earned", not "70" then "points".
+    expect(screen.getByText("70")).toBeTruthy();
+    expect(screen.getByText(strings.finish.pointsLabel)).toBeTruthy();
+    expect(
+      screen.getByTestId("progress-points-total").props.accessibilityLabel,
+    ).toBe(strings.profile.points.total(70));
   });
 
   it("renders zero points honestly for a brand-new profile", () => {
     const screen = render(<ProgressScreen />);
-    expect(screen.getByText(strings.profile.points.total(0))).toBeTruthy();
+    expect(screen.getByText("0")).toBeTruthy();
+    expect(
+      screen.getByTestId("progress-points-total").props.accessibilityLabel,
+    ).toBe(strings.profile.points.total(0));
   });
 
   it("renders no user-facing text outside strings.ts (plus library data)", () => {
@@ -174,7 +202,9 @@ describe("ProgressScreen", () => {
     for (let tier = 1; tier <= MAX_TIER; tier += 1) {
       allowed.add(strings.profile.tier(tier, MAX_TIER));
     }
-    allowed.add(strings.profile.points.total(20));
+    // The points total is set as a bare numeral (the sentence lives in
+    // the accessibility label, which is not a rendered text leaf).
+    allowed.add("20");
     // Library-sourced movement names are data, like the player's.
     for (const movement of library!.movements) {
       allowed.add(movement.name);

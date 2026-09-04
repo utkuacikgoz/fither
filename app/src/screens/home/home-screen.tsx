@@ -6,6 +6,7 @@ import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
+import { Card } from "../../design/primitives/card";
 import { Screen } from "../../design/primitives/screen";
 import { useTheme } from "../../design/theme";
 import { glyph, spacing } from "../../design/tokens";
@@ -18,7 +19,6 @@ import { skillLabel } from "../../session/skill-name";
 import { useProfileStore } from "../../state/profile-store";
 import { useSessionStore } from "../../state/session-store";
 import { todayTraining } from "../../state/today-training";
-import { HomeCard } from "./home-card";
 import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
 
 // The home hub (ADR-0013 §4): the app's face between sessions. Three
@@ -66,7 +66,7 @@ export function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <HomeCard
+        <Card
           tone="hero"
           order={0}
           reduceMotion={reduceMotion}
@@ -134,9 +134,9 @@ export function HomeScreen() {
               />
             </>
           )}
-        </HomeCard>
+        </Card>
 
-        <HomeCard
+        <Card
           order={1}
           reduceMotion={reduceMotion}
           testID="home-patterns"
@@ -147,9 +147,9 @@ export function HomeScreen() {
             {strings.profile.patterns.title}
           </AppText>
           <PatternGlance profile={profile} />
-        </HomeCard>
+        </Card>
 
-        <HomeCard
+        <Card
           order={2}
           reduceMotion={reduceMotion}
           testID="home-skills"
@@ -186,7 +186,7 @@ export function HomeScreen() {
               {strings.home.skills.empty}
             </AppText>
           )}
-        </HomeCard>
+        </Card>
       </ScrollView>
     </Screen>
   );

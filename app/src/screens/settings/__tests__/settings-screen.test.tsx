@@ -5,6 +5,7 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 
 import { strings } from "../../../copy/strings";
+import { glyph } from "../../../design/tokens";
 import { todayIso } from "../../../lib/dates";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
 import {
@@ -271,6 +272,38 @@ describe("SettingsScreen", () => {
     expect(screen.getByText(VERSION_LINE)).toBeTruthy();
   });
 
+  it("groups every section into a card, so preferences read as groups", () => {
+    const screen = render(<SettingsScreen />);
+    // ADR-0013: the same card the hub and progress use. The old shape
+    // stacked bordered prompt rows straight onto the page.
+    for (const section of [
+      "settings-avoid",
+      "settings-equipment",
+      "settings-subscription",
+      "settings-reminders",
+      "settings-journal",
+    ]) {
+      expect(screen.getByTestId(section)).toBeTruthy();
+    }
+  });
+
+  it("shows a visible check on every persistent choice, not just the multi-select ones", () => {
+    useSettingsStore.setState({ equipment: ["none", "chair", "wall"] });
+    useReminderStore.setState({ slot: "evening", hydrated: true });
+    const screen = render(<SettingsScreen />);
+    const hidden = { includeHiddenElements: true } as const;
+
+    // Signifiers: a single-select settings row never auto-advances away,
+    // so the state she set months ago has to be readable at a glance —
+    // where the daily prompt's rows could rely on leaving the screen.
+    expect(screen.getByTestId("equipment-chair-check", hidden)).toBeTruthy();
+    expect(
+      screen.queryByTestId("equipment-floor-only-check", hidden),
+    ).toBeNull();
+    expect(screen.getByTestId("reminder-evening-check", hidden)).toBeTruthy();
+    expect(screen.queryByTestId("reminder-off-check", hidden)).toBeNull();
+  });
+
   it("renders no user-facing text outside strings.ts", async () => {
     const allowed = collectStringValues(strings);
     // Parameterised and dev-only values are allowed explicitly.
@@ -286,6 +319,9 @@ describe("SettingsScreen", () => {
     });
     allowed.add("her own words");
     allowed.add(formatNoteDate("2026-09-01"));
+    // Decorative selection glyph on a chosen OptionRow (hidden from
+    // accessibility, which reads the selected state instead) — not copy.
+    allowed.add(glyph.check);
 
     const screen = render(<SettingsScreen />);
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
