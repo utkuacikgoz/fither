@@ -164,7 +164,9 @@ export function ProgressScreen() {
             testID="progress-points-total"
           >
             <AppText variant="numeral">{String(points)}</AppText>
-            <AppText variant="caption">{strings.finish.pointsLabel}</AppText>
+            <AppText variant="caption">
+              {strings.finish.pointsUnit(points)}
+            </AppText>
           </View>
         </Card>
       </ScrollView>

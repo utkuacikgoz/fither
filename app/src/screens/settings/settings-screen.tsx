@@ -92,6 +92,7 @@ export function SettingsScreen({
     (s) => s.chooseSlotWithPermission,
   );
   const disableReminders = useReminderStore((s) => s.disable);
+  const reminderDenied = useReminderStore((s) => s.permissionDenied);
 
   const reduceMotion = useReducedMotion();
   const [busy, setBusy] = useState(false);
@@ -245,6 +246,19 @@ export function SettingsScreen({
               void disableReminders();
             }}
           />
+          {/* A hard OS denial answers her tap with nothing at all — the
+              dialog no longer appears (wave-C flag, now closed). The one
+              line that names where the switch actually is, in the card
+              whose rows it explains (mapping), only while it is true. */}
+          {reminderDenied && (
+            <AppText
+              variant="bodySoft"
+              style={styles.restoreNotice}
+              testID="reminder-denied"
+            >
+              {strings.settings.reminders.denied}
+            </AppText>
+          )}
         </Card>
 
         <Card order={4} reduceMotion={reduceMotion} testID="settings-journal">

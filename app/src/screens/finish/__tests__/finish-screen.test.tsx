@@ -72,6 +72,22 @@ beforeEach(async () => {
 });
 
 describe("FinishScreen", () => {
+  it("one point reads '+1 point' — a unit that agrees with its number", async () => {
+    // pointsEarned is the sum of the result's ledger events, so a
+    // one-point session is one session event worth one point.
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: {
+        ...fixtureApplyResult(),
+        ledgerEvents: [{ type: "session", points: 1, date: "2026-08-31" }],
+      },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByText("+1");
+    expect(screen.getByText(strings.finish.pointsUnit(1))).toBeTruthy();
+    expect(strings.finish.pointsUnit(1)).not.toBe(strings.finish.pointsUnit(2));
+  });
+
   it("shows the faces of what she did — completed blocks only, in order", async () => {
     // Both fixture blocks done: two figures. The default seed skips both
     // (the nothing-done close, which draws none — asserted below); this
@@ -224,6 +240,7 @@ describe("FinishScreen", () => {
     // Parameterised strings.ts values and dynamic numerals, enumerated.
     allowed.add(strings.finish.outOfTime.headline(fixtureSession.minutes));
     allowed.add("+35");
+    allowed.add(strings.finish.pointsUnit(35));
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText(
       strings.finish.outOfTime.headline(fixtureSession.minutes),

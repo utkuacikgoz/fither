@@ -18,6 +18,15 @@ interface ReminderState {
   hydrationFailed: boolean;
   /** The in-context ask has run (allowed OR declined). Once ever. */
   asked: boolean;
+  /**
+   * Her last slot tap in Settings was answered by an OS denial — the
+   * dialog no longer appears, so nothing in-app acknowledged the tap
+   * (wave-C flag). Settings shows the one honest line while this holds.
+   * Deliberately NOT persisted: the OS is the truth, and she may turn
+   * notifications on in iOS Settings between launches; the flag clears
+   * the moment a grant or "No invitation" answers the section instead.
+   */
+  permissionDenied: boolean;
   /** The scheduled slot, or null for no invitation. */
   slot: ReminderSlot | null;
   /** "Not now" on our ask: never ask again, schedule nothing. */
@@ -52,6 +61,7 @@ export const useReminderStore = create<ReminderState>()(
       hydrationFailed: false,
       asked: false,
       slot: null,
+      permissionDenied: false,
 
       decline: () => set({ asked: true }),
 
@@ -85,6 +95,7 @@ export const useReminderStore = create<ReminderState>()(
           if (permission !== "granted") {
             permission = await getNotifications().requestPermission();
           }
+          set({ permissionDenied: permission === "denied" });
           if (permission !== "granted") return false;
         } catch {
           return false;
@@ -95,7 +106,7 @@ export const useReminderStore = create<ReminderState>()(
       disable: async () => {
         // Clear the state first — her tap answers immediately; the OS
         // cancellation is local and near-instant, but never gates the UI.
-        set({ slot: null });
+        set({ slot: null, permissionDenied: false });
         try {
           await getNotifications().cancelAll();
         } catch {

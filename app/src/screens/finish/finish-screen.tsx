@@ -140,13 +140,12 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
               <AppText variant="numeral" testID="finish-points">
                 {`+${finish.pointsEarned}`}
               </AppText>
-              {/* strings.finish.pointsLabel is the static plural unit; a
-                  parameterised singular does not exist yet (flagged for the
-                  copy-writer), so exactly one point renders unitless rather
-                  than as the false "+1 points". */}
-              {finish.pointsEarned !== 1 && (
-                <AppText variant="caption">{strings.finish.pointsLabel}</AppText>
-              )}
+              {/* The unit agrees with the number (the long-flagged copy
+                  nit, closed): one point reads "+1 point", never unitless
+                  and never the false "+1 points". */}
+              <AppText variant="caption">
+                {strings.finish.pointsUnit(finish.pointsEarned)}
+              </AppText>
             </View>
           </FadeIn>
         )}
