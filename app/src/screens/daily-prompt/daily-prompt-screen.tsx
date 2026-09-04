@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type {
   BodyArea,
@@ -8,6 +8,7 @@ import type {
 } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
+import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { FlowProgress } from "../../design/primitives/flow-progress";
@@ -56,36 +57,6 @@ interface DailyPromptScreenProps {
    * zero extra taps, zero extra screens.
    */
   showHandoff?: boolean;
-}
-
-/**
- * An answer row entering with its siblings. Short lists only — the three
- * option questions. The soreness list is eight rows and a stagger across
- * it becomes a wave travelling down the screen, which is the opposite of
- * "motion is breath"; that one fades as a single block.
- *
- * The row is hittable from the first frame, offset and all: a returning
- * user who knows the flow and taps ahead of the fade still lands on what
- * she sees, so nothing here spends Gate 3's budget.
- */
-function AnswerRow({
-  index,
-  reduceMotion,
-  children,
-}: {
-  index: number;
-  reduceMotion: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <FadeIn
-      reduceMotion={reduceMotion}
-      delayMs={index * motion.staggerMs}
-      rise={motion.riseDistance}
-    >
-      {children}
-    </FadeIn>
-  );
 }
 
 export function DailyPromptScreen({
