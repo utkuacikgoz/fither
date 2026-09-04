@@ -533,6 +533,32 @@ describe("SettingsScreen daily invitation", () => {
     }
   });
 
+  it("after a hard OS denial, the card says where the switch is — and only then", async () => {
+    const Notifications = jest.requireMock("expo-notifications") as {
+      getPermissionsAsync: jest.Mock;
+      requestPermissionsAsync: jest.Mock;
+    };
+    const denied = permissionResponse("denied");
+    Notifications.getPermissionsAsync.mockResolvedValue(denied);
+    Notifications.requestPermissionsAsync.mockResolvedValue(denied);
+
+    const screen = render(<SettingsScreen />);
+    expect(screen.queryByTestId("reminder-denied")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("reminder-morning"));
+    await waitFor(() =>
+      expect(screen.getByText(strings.settings.reminders.denied)).toBeTruthy(),
+    );
+    // Mapping: the line lives in the card whose rows it explains.
+    expect(
+      screen.getByTestId("settings-reminders").findByProps({ testID: "reminder-denied" }),
+    ).toBeTruthy();
+
+    // "No invitation" answers the section; the line has nothing left to say.
+    fireEvent.press(screen.getByTestId("reminder-off"));
+    await waitFor(() => expect(screen.queryByTestId("reminder-denied")).toBeNull());
+  });
+
   it("an OS denial schedules nothing and 'No invitation' honestly stays selected", async () => {
     jest
       .mocked(Notifications.requestPermissionsAsync)

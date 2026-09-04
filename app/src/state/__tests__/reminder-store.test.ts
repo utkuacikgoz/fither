@@ -160,3 +160,31 @@ describe("slot times are the facts the copy states", () => {
     });
   });
 });
+
+describe("a hard OS denial in Settings", () => {
+  it("is remembered only until a grant or 'No invitation' answers the section", async () => {
+    // The port answers "denied" on both reads: the dialog no longer
+    // appears, so the request comes straight back denied too.
+    port.getPermission.mockResolvedValue("denied");
+    port.requestPermission.mockResolvedValue("denied");
+
+    const store = useReminderStore.getState();
+    expect(store.permissionDenied).toBe(false);
+    await store.chooseSlotWithPermission("morning");
+    expect(useReminderStore.getState().permissionDenied).toBe(true);
+    expect(useReminderStore.getState().slot).toBeNull();
+
+    // "No invitation" answers the section: the line has nothing to explain.
+    await useReminderStore.getState().disable();
+    expect(useReminderStore.getState().permissionDenied).toBe(false);
+  });
+
+  it("never persists — the OS is the truth on every launch", () => {
+    // The persist partialize names asked and slot only; a stale "denied"
+    // after she flips the switch in iOS Settings would be a lie.
+    const persisted = (useReminderStore.persist.getOptions().partialize as (
+      s: ReturnType<typeof useReminderStore.getState>,
+    ) => object)({ ...useReminderStore.getState(), permissionDenied: true });
+    expect(persisted).not.toHaveProperty("permissionDenied");
+  });
+});

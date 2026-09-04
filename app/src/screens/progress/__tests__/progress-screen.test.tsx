@@ -177,7 +177,7 @@ describe("ProgressScreen", () => {
     // the full sentence carried as the accessible reading so a screen
     // reader hears "70 points earned", not "70" then "points".
     expect(screen.getByText("70")).toBeTruthy();
-    expect(screen.getByText(strings.finish.pointsLabel)).toBeTruthy();
+    expect(screen.getByText(strings.finish.pointsUnit(70))).toBeTruthy();
     expect(
       screen.getByTestId("progress-points-total").props.accessibilityLabel,
     ).toBe(strings.profile.points.total(70));
@@ -205,6 +205,7 @@ describe("ProgressScreen", () => {
     // The points total is set as a bare numeral (the sentence lives in
     // the accessibility label, which is not a rendered text leaf).
     allowed.add("20");
+    allowed.add(strings.finish.pointsUnit(20));
     // Library-sourced movement names are data, like the player's.
     for (const movement of library!.movements) {
       allowed.add(movement.name);

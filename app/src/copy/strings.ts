@@ -400,7 +400,16 @@ export const strings = {
     savingHeadline: "Saving your session",
     savingNote: "Keeping your progress safe.",
     failedHeadline: "Your session is safe",
+    // Superseded by pointsUnit below (2026-09-04, the "two copy nits" in
+    // docs/STATE.md). Kept only for readers not yet moved over; do not
+    // add new callsites. Remove once every reader uses pointsUnit.
     pointsLabel: "points",
+    // COPY-WRITER (2026-09-04): the unit word under the numeral — "+35"
+    // on the finish screen, "70" on Progress. Parameterised so a single
+    // point reads "point", not "1 points" (which is why one point used
+    // to render unitless). Same plural rule as profile.points.total,
+    // which owns the full-sentence form; this is the bare unit only.
+    pointsUnit: (points: number) => (points === 1 ? "point" : "points"),
     continueLabel: "Continue",
     // COPY-WRITER: honest close states (2026-09-02, ADR-0012 §2 and the
     // audit's wave 2). Three distinct truths, zero guilt in any of them.
@@ -485,6 +494,18 @@ export const strings = {
     reminders: {
       title: "Daily invitation",
       off: "No invitation",
+      // COPY-WRITER (2026-09-04, the "two copy nits" in docs/STATE.md).
+      // Rendered inside this card, under the four rows, only after she
+      // tapped a slot here and iOS reported a hard denial — the OS
+      // dialog no longer appears, so her tap was answered by nothing
+      // except "No invitation" staying selected. Two plain facts, no
+      // guilt, nothing about what she'd miss: where the switch is (the
+      // iPhone's Settings app — capitalised, it is the app's name), and
+      // that flipping it there is what makes a slot work. Says nothing
+      // about the app asking again, because it can't. Not an error —
+      // she may well have chosen this.
+      denied:
+        "Notifications for FITHER are off in your iPhone's Settings. Turn them on there and the slot you pick here will work.",
     },
     // COPY-WRITER: care journal (2026-09-02, ADR-0012 §4). Her heavy-day
     // notes, listed with delete. The privacy line is care.notePrivacy —

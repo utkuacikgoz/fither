@@ -187,9 +187,10 @@ ones.
    ops SDKs (Sentry/PostHog/Resend/Canny), store preparation.
 4. **Owner: commission Brief 6** (movement animations; 6 reference
    clips first) and the **human coach review** of the 60 movements.
-5. Build side, unblocked now (small): the two flagged copy nits below;
-   share-card image export when wanted; voice audio after the owner's
-   voice choice.
+5. Build side, unblocked now (small): share-card image export when
+   wanted; voice audio after the owner's voice choice. (The two flagged
+   copy nits — "+1 point" and the hard-denied notification line — are
+   closed.)
 
 ## Deferred, recorded
 
@@ -204,9 +205,6 @@ ones.
   first frames of the paywall letterhead fade before the snap.
 - Progress screen renders without its own hydration gate — matters only
   if a cold deep-link to /progress ever exists.
-- A permanently-denied OS notification permission ends a Settings slot
-  tap at the instant OS denial with no in-app line — needs a "turn it
-  on in iOS Settings" copy key (wave-C flag).
 - Dark-mode danger token (#A65746 on #171614 = 3.5:1) is below AA —
   unused as text today; the first dark screen to render danger text
   needs a dark value (a11y-wave flag).
