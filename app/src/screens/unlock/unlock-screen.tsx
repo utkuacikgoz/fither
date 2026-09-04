@@ -53,30 +53,56 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
   const skill = skills[index];
   const isLast = index >= skills.length - 1;
 
-  // The unlock moment's one considered animation, applied PER skill:
-  // each subsequent skill enters on its own gentle fade so it reads as
-  // its own moment, not a content swap. The FIRST skill renders exactly
-  // as it always has (opacity settled at 1, no entrance) — a single
-  // unlock is pixel-identical to what shipped before sequencing.
+  // The most generous animation in the product (ADR-0013 — the unlock is
+  // the emotional payoff and it EARNS the choreography every other screen
+  // spends sparingly). Three beats, staggered: the "New skill" eyebrow
+  // arrives, the gold rule draws itself out from the centre, and the
+  // skill name rises into place. It plays on arrival AND on each
+  // subsequent skill, so a second unlock reads as its own moment rather
+  // than a content swap. Reduce Motion lands every value at its final
+  // state — never a half-played frame.
   const reduceMotion = useReducedMotion();
-  const opacity = useRef(new Animated.Value(1)).current;
-  const shownIndex = useRef(index);
+  const eyebrow = useRef(new Animated.Value(0)).current;
+  const rule = useRef(new Animated.Value(0)).current;
+  const name = useRef(new Animated.Value(0)).current;
+  const card = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    if (shownIndex.current === index) return;
-    shownIndex.current = index;
+    const values = [eyebrow, rule, name, card];
     if (reduceMotion) {
-      opacity.setValue(1);
+      values.forEach((v) => v.setValue(1));
       return;
     }
-    opacity.setValue(0);
-    const animation = Animated.timing(opacity, {
-      toValue: 1,
-      duration: motion.fadeMs,
-      useNativeDriver: true,
-    });
+    values.forEach((v) => v.setValue(0));
+    const beat = (value: Animated.Value, delay: number) =>
+      Animated.timing(value, {
+        toValue: 1,
+        duration: motion.fadeMs,
+        delay,
+        useNativeDriver: true,
+      });
+    const animation = Animated.parallel([
+      beat(eyebrow, 0),
+      beat(rule, motion.staggerMs),
+      beat(name, motion.staggerMs * 2),
+      beat(card, motion.staggerMs * 4),
+    ]);
     animation.start();
     return () => animation.stop();
-  }, [index, opacity, reduceMotion]);
+  }, [index, eyebrow, rule, name, card, reduceMotion]);
+
+  /** Rise + fade for a beat: the entrance every screen shares. */
+  const entrance = (value: Animated.Value) => ({
+    opacity: value,
+    transform: [
+      {
+        translateY: value.interpolate({
+          inputRange: [0, 1],
+          outputRange: [motion.riseDistance, 0],
+        }),
+      },
+    ],
+  });
 
   const handleContinue = () => {
     if (isLast) {
@@ -88,30 +114,43 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
 
   return (
     <Screen backgroundColor={unlockBg}>
-      <Animated.View style={[styles.center, { opacity }]}>
+      <Animated.View style={styles.center}>
         {/* Audit S8: gold text on sage is ~1.75:1 — far under AA. The
             heading reads in bone; gold stays decorative as a short rule
             beneath it (the share card's established pattern). */}
-        <AppText variant="caption" color={onUnlock}>
-          {strings.unlock.heading}
-        </AppText>
-        <View style={styles.goldRule} />
-        {skill ? (
-          <AppText
-            key={`${skill.pattern}-${skill.tier}`}
-            variant="display"
-            color={onUnlock}
-            style={styles.skillName}
-            testID="unlock-skill-name"
-          >
-            {skill.movementName}
+        <Animated.View style={entrance(eyebrow)}>
+          <AppText variant="caption" color={onUnlock}>
+            {strings.unlock.heading}
           </AppText>
+        </Animated.View>
+        {/* The rule draws itself out from the centre — the one flourish
+            the product allows itself, and only here. */}
+        <Animated.View
+          style={[
+            styles.goldRule,
+            { opacity: rule, transform: [{ scaleX: rule }] },
+          ]}
+        />
+        {skill ? (
+          <Animated.View style={entrance(name)}>
+            <AppText
+              key={`${skill.pattern}-${skill.tier}`}
+              variant="display"
+              color={onUnlock}
+              style={styles.skillName}
+              testID="unlock-skill-name"
+            >
+              {skill.movementName}
+            </AppText>
+          </Animated.View>
         ) : null}
-        <AppText variant="bodySoft" color={onUnlock} style={styles.note}>
-          {strings.unlock.note}
-        </AppText>
+        <Animated.View style={entrance(name)}>
+          <AppText variant="bodySoft" color={onUnlock} style={styles.note}>
+            {strings.unlock.note}
+          </AppText>
+        </Animated.View>
       </Animated.View>
-      <Animated.View style={[styles.cards, { opacity }]}>
+      <Animated.View style={[styles.cards, entrance(card)]}>
         {skill ? (
           <SkillShareCard
             key={`${skill.pattern}-${skill.tier}`}

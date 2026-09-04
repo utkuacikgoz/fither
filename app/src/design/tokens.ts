@@ -121,6 +121,13 @@ export const glyph = {
 } as const;
 
 // Motion is breath, not fireworks: 250–350ms ease-out. Nothing bounces.
+// ADR-0013 makes motion the default rather than the exception: entrances
+// carry a small rise and lists stagger, all inside the same 250–350ms
+// ease-out envelope. Reduce Motion renders the final state instead.
 export const motion = {
   fadeMs: 300,
+  /** Gap between staggered siblings (cards entering a screen). */
+  staggerMs: 70,
+  /** How far an entering element rises, in points. Small on purpose. */
+  riseDistance: 12,
 } as const;

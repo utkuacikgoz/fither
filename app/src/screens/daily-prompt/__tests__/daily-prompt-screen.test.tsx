@@ -427,56 +427,36 @@ describe("DailyPromptScreen", () => {
     expect(screen.getByText(strings.prompt.energy.question)).toBeTruthy();
   });
 
-  it("offers a quiet settings entry that pushes the settings route", () => {
+  it("carries no navigation doors — Progress and Settings are tabs now", () => {
+    // ADR-0013 §4: the corner doors are gone. This is a pushed flow with
+    // one job (the four questions); the hub's tab bar owns navigation,
+    // and the way back is the route's own back chevron.
     const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
-    // The entry exists, labelled from strings.ts, without displacing the
-    // day's one decision.
-    expect(screen.getByText(strings.settings.title)).toBeTruthy();
     expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
-
-    fireEvent.press(screen.getByTestId("open-settings"));
-    expect(router.push).toHaveBeenCalledWith("/settings");
+    expect(screen.queryByTestId("open-progress")).toBeNull();
+    expect(screen.queryByTestId("open-settings")).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
   });
 
-  it("offers a quiet progress entry that pushes the progress route", () => {
-    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
-    // Same corner-door pattern as settings: present, labelled from
-    // strings.ts, and the day's one decision keeps the focal point.
-    expect(screen.getByText(strings.profile.title)).toBeTruthy();
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
-
-    fireEvent.press(screen.getByTestId("open-progress"));
-    expect(router.push).toHaveBeenCalledWith("/progress");
-  });
-
-  it("shows the completed-today state once today holds a fully completed session", () => {
+  it("asks the four questions even when today already holds completed work", () => {
+    // The calm done-state moved to the hub (one definition, in
+    // state/today-training.ts). Arriving here means she CHOSE to build a
+    // session — "Another session" is a home action — so this screen never
+    // second-guesses her with a done state of its own.
     seedTodayHistory([todayEntry(20, ["completed", "completed"])]);
     const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
 
-    expect(screen.getByText(strings.prompt.completedToday.headline)).toBeTruthy();
+    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
     expect(
-      screen.getByText(strings.prompt.completedToday.line(20)),
-    ).toBeTruthy();
-    expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
-    // The corner doors stay hers.
-    expect(screen.getByTestId("open-progress")).toBeTruthy();
-    expect(screen.getByTestId("open-settings")).toBeTruthy();
+      screen.queryByText(strings.prompt.completedToday.headline),
+    ).toBeNull();
+    expect(screen.queryByTestId("another-session")).toBeNull();
   });
 
-  it("sums every fully completed session from today into the minutes-trained line", () => {
-    seedTodayHistory([
-      todayEntry(10, ["completed"]),
-      todayEntry(20, ["completed", "completed"]),
-    ]);
-    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
-    expect(
-      screen.getByText(strings.prompt.completedToday.line(30)),
-    ).toBeTruthy();
-  });
-
-  it("an all-skipped session is not training: the four questions render", () => {
+  it("an all-skipped session leaves the questions exactly as they are", () => {
     // The entry exists in history (the engine records it), but nothing
-    // completed — today is not "done" and no done-state may claim it is.
+    // completed. Whatever today holds, this screen asks the four
+    // questions — the done-state lives on the hub.
     seedTodayHistory([todayEntry(10, ["skipped", "skipped"])]);
     const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
 
@@ -486,71 +466,7 @@ describe("DailyPromptScreen", () => {
     ).toBeNull();
   });
 
-  it("a partial session shows the no-minutes-claim line, never planned minutes", () => {
-    // She completed one block and the rest were skipped (ended early or
-    // out of time): "done for today" holds, but claiming the full 20
-    // planned minutes would be false — lineSome claims none.
-    seedTodayHistory([todayEntry(20, ["completed", "skipped", "skipped"])]);
-    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
-
-    expect(screen.getByText(strings.prompt.completedToday.headline)).toBeTruthy();
-    expect(
-      screen.getByText(strings.prompt.completedToday.lineSome),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText(strings.prompt.completedToday.line(20)),
-    ).toBeNull();
-  });
-
-  it("a partial session alongside a full one keeps the claim honest: lineSome", () => {
-    seedTodayHistory([
-      todayEntry(10, ["completed"]),
-      todayEntry(20, ["completed", "struggled", "skipped"]),
-    ]);
-    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
-    expect(
-      screen.getByText(strings.prompt.completedToday.lineSome),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText(strings.prompt.completedToday.line(30)),
-    ).toBeNull();
-    expect(
-      screen.queryByText(strings.prompt.completedToday.line(10)),
-    ).toBeNull();
-  });
-
-  it("an all-skipped entry never dilutes a full session's true minutes claim", () => {
-    seedTodayHistory([
-      todayEntry(10, ["completed", "completed"]),
-      todayEntry(20, ["skipped", "skipped"]),
-    ]);
-    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
-    // The skipped session trained nothing, so it neither adds minutes
-    // nor turns the honest full-session line into lineSome.
-    expect(
-      screen.getByText(strings.prompt.completedToday.line(10)),
-    ).toBeTruthy();
-  });
-
-  it("'Another session' reopens the normal four questions, and they still work", () => {
-    seedTodayHistory([todayEntry(10, ["completed"])]);
-    const onSessionReady = jest.fn();
-    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
-
-    fireEvent.press(screen.getByTestId("another-session"));
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
-    expect(
-      screen.queryByText(strings.prompt.completedToday.headline),
-    ).toBeNull();
-
-    fireEvent.press(screen.getByTestId("time-10"));
-    fireEvent.press(screen.getByTestId("energy-okay"));
-    fireEvent.press(screen.getByTestId("quiet-yes"));
-    fireEvent.press(screen.getByTestId("soreness-all-good"));
-    expect(onSessionReady).toHaveBeenCalledTimes(1);
-  });
-
-  it("a previous day's history never triggers the done-state", () => {
+  it("a previous day's history changes nothing here either", () => {
     useProfileStore.setState({
       history: {
         entries: [{ date: "2026-08-01", minutes: 30, blocks: [] }],
@@ -563,7 +479,7 @@ describe("DailyPromptScreen", () => {
     ).toBeNull();
   });
 
-  it("completed-today renders no user-facing text outside strings.ts", () => {
+  it("renders no user-facing text outside strings.ts, history and all", () => {
     seedTodayHistory([
       todayEntry(10, ["completed"]),
       todayEntry(20, ["completed", "completed"]),

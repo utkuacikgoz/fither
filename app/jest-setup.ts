@@ -18,10 +18,27 @@ jest.mock(
 // plain spy here — tests assert on the pushed paths. `useRouter` returns
 // the same spy so route files render too (the route-guard matrix cold-
 // opens them), and `Stack.Screen` is inert chrome.
+// `Tabs` renders its children so a tab layout can be rendered in a test
+// without a navigation container; `Tabs.Screen` is inert chrome, like
+// `Stack.Screen`. `useLocalSearchParams` returns no params by default —
+// route tests that need one (the prompt's handoff) override it.
 jest.mock("expo-router", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const react = require("react") as typeof import("react");
   const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
   const Stack = Object.assign(() => null, { Screen: () => null });
-  return { router, useRouter: () => router, Stack };
+  const Tabs = Object.assign(
+    ({ children }: { children?: import("react").ReactNode }) =>
+      react.createElement(react.Fragment, null, children),
+    { Screen: () => null },
+  );
+  return {
+    router,
+    useRouter: () => router,
+    useLocalSearchParams: jest.fn(() => ({})),
+    Stack,
+    Tabs,
+  };
 });
 
 jest.mock("expo-keep-awake", () => ({

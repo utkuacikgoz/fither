@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
 
+import { strings } from "../../copy/strings";
+import { AppText } from "../../design/primitives/app-text";
+import { Screen } from "../../design/primitives/screen";
 import { todayIso } from "../../lib/dates";
 import { firstMovementTracker } from "../../lib/first-movement-timer";
+import { useStoreHydration } from "../../lib/route-guard";
 import { entitlementStatus, isEntitled } from "../../monetization/entitlement";
-import { useActiveSessionStore } from "../../state/active-session-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
-import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useIdentityStore } from "../../state/identity-store";
-import { useSessionStore } from "../../state/session-store";
+import {
+  useSessionStore,
+  type RestoreActiveSessionResult,
+} from "../../state/session-store";
 import { useSettingsStore } from "../../state/settings-store";
-import { DailyPromptScreen } from "../daily-prompt/daily-prompt-screen";
 import { OnboardingScreen } from "../onboarding/onboarding-screen";
 import { SignInScreen } from "../sign-in/sign-in-screen";
 import { GatedDailySurface } from "./gated-daily-surface";
@@ -29,11 +34,33 @@ import { ResumeOffer } from "./resume-offer";
 // unpurchased trial gets the gated day — the paywall letter where the
 // prompt's questions would be, Progress and Settings doors intact
 // (ADR-0009 §3 — her history, points and skills stay hers regardless);
-// everyone else lands on the daily prompt with no comment.
+// everyone else lands on the home hub with no comment (ADR-0013 §4 —
+// the destination changed, the order did not).
+//
+// This surface renders the gates and hands off; it never renders the
+// hub or the four questions itself. That keeps "/" free of the tab bar
+// (sign-in and onboarding are full-screen moments) while the hub lives
+// inside the tab group at /home.
+
+/** The gating order as one value; "home"/"promptHandoff" are handoffs. */
+type LaunchStage =
+  | "waiting"
+  | "resume"
+  | "signIn"
+  | "onboarding"
+  | "gated"
+  | "promptHandoff"
+  | "home";
 
 interface LaunchScreenProps {
-  /** The prompt generated today's session — go to the preview. */
-  onSessionReady: () => void;
+  /** Every gate passed — the hub owns the day from here. */
+  onHome: () => void;
+  /**
+   * Onboarding just finished: go straight to the four questions with the
+   * handoff eyebrow (ADR-0009 §1), skipping the hub's extra tap on the
+   * one run where Gate 3 is measured.
+   */
+  onPromptHandoff: () => void;
   /** She chose to keep going — back into the player where she stopped. */
   onResumeSession: () => void;
   /** The session is done (or she called it done) — apply it on finish. */
@@ -41,16 +68,15 @@ interface LaunchScreenProps {
 }
 
 export function LaunchScreen({
-  onSessionReady,
+  onHome,
+  onPromptHandoff,
   onResumeSession,
   onResumeFinished,
 }: LaunchScreenProps) {
-  const profileHydrated = useProfileStore((s) => s.hydrated);
-  const ledgerHydrated = useLedgerStore((s) => s.hydrated);
-  const settingsHydrated = useSettingsStore((s) => s.hydrated);
-  const activeHydrated = useActiveSessionStore((s) => s.hydrated);
-  const entitlementHydrated = useEntitlementStore((s) => s.hydrated);
-  const identityHydrated = useIdentityStore((s) => s.hydrated);
+  // The persisted-store hydration set — the six stores every gate here
+  // reads, and the same set the route guard waits on. One definition,
+  // shared, so a store added to the set can never be forgotten here.
+  const { hydrated, failed: hydrationFailed } = useStoreHydration();
   const identity = useIdentityStore((s) => s.identity);
   const restoreActiveSession = useSessionStore((s) => s.restoreActiveSession);
   const finishSessionEarly = useSessionStore((s) => s.finishSessionEarly);
@@ -60,17 +86,15 @@ export function LaunchScreen({
   const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
   const purchase = useEntitlementStore((s) => s.purchase);
 
-  const [offerResume, setOfferResume] = useState(false);
+  // What the crash snapshot meant for THIS launch. "pending" until the
+  // decision has run: nothing downstream (least of all a handoff to the
+  // hub) may be decided while a session might still be in flight.
+  const [restore, setRestore] = useState<
+    "pending" | RestoreActiveSessionResult
+  >("pending");
   const [handoff, setHandoff] = useState(false);
   const decided = useRef(false);
-
-  const hydrated =
-    profileHydrated &&
-    ledgerHydrated &&
-    settingsHydrated &&
-    activeHydrated &&
-    entitlementHydrated &&
-    identityHydrated;
+  const handedOff = useRef(false);
 
   // Gate 3 t0: the launch surface's first mount this JS lifetime. Marked
   // in a mount effect (first commit; native pre-JS launch time is not
@@ -89,10 +113,9 @@ export function LaunchScreen({
     // this same launch keeps it a first run.
     firstMovementTracker.markFirstRun(!onboardingCompleted && !hasHistory);
     const result = restoreActiveSession(todayIso());
+    setRestore(result);
     if (result === "completedUnsaved") {
       onResumeFinished();
-    } else if (result === "inProgress") {
-      setOfferResume(true);
     }
   }, [
     hydrated,
@@ -102,7 +125,42 @@ export function LaunchScreen({
     hasHistory,
   ]);
 
-  if (offerResume) {
+  // The gating order, as one value. Entitlement is app-layer policy
+  // (never engine), evaluated offline from persisted state with the
+  // daily prompt's local-date source.
+  const stage: LaunchStage = ((): LaunchStage => {
+    if (!hydrated || restore === "pending") return "waiting";
+    // A finished-but-unsaved session is already on its way to the finish
+    // screen's retrying save path; nothing else is decided this launch.
+    if (restore === "completedUnsaved") return "waiting";
+    if (restore === "inProgress") return "resume";
+    if (!identity) return "signIn";
+    if (!onboardingCompleted && !hasHistory) return "onboarding";
+    if (
+      !isEntitled(
+        entitlementStatus({ trialStartDate, purchase, today: todayIso() }),
+      )
+    ) {
+      return "gated";
+    }
+    return handoff ? "promptHandoff" : "home";
+  })();
+
+  // The two stages that are handoffs rather than screens. Latched: the
+  // callbacks are inline props, so without the ref a re-render would
+  // navigate twice.
+  useEffect(() => {
+    if (stage !== "home" && stage !== "promptHandoff") return;
+    if (handedOff.current) return;
+    handedOff.current = true;
+    if (stage === "promptHandoff") {
+      onPromptHandoff();
+    } else {
+      onHome();
+    }
+  }, [stage, onHome, onPromptHandoff]);
+
+  if (stage === "resume") {
     return (
       <ResumeOffer
         onContinue={onResumeSession}
@@ -117,31 +175,52 @@ export function LaunchScreen({
   // Sign-in runs while no identity exists (ADR-0011): one screen, three
   // options with equal dignity, guest is one tap. Continuing is
   // store-driven — the identity landing re-renders this surface onward.
-  if (hydrated && !identity) {
+  if (stage === "signIn") {
     return <SignInScreen />;
   }
 
   // Onboarding runs once, ever: never completed AND no profile history
   // (an install that trained before this flag existed is not re-onboarded).
-  if (hydrated && !onboardingCompleted && !hasHistory) {
+  if (stage === "onboarding") {
     return <OnboardingScreen onDone={() => setHandoff(true)} />;
   }
 
-  // Entitlement gate (app-layer policy, never engine): only an expired,
-  // unpurchased trial blocks generating a NEW session. Evaluated offline
-  // from persisted state, with the daily prompt's local-date source.
-  // The gate renders the day's surface in its gated state — the paywall
-  // letter where the questions would be, with the Progress and Settings
-  // doors intact (ADR-0009 §3: her record stays hers).
-  if (
-    hydrated &&
-    !isEntitled(entitlementStatus({ trialStartDate, purchase, today: todayIso() }))
-  ) {
+  // The gated day: the paywall letter where the questions would be, with
+  // the Progress and Settings doors intact (ADR-0009 §3: her record
+  // stays hers). It stays on "/" — the hub and the questions are what a
+  // subscription gates, nothing else.
+  if (stage === "gated") {
     return <GatedDailySurface />;
   }
 
-  // The prompt screen renders the hydration wait/failure states itself.
+  if (stage === "waiting") {
+    return (
+      <Screen>
+        <View style={styles.holding}>
+          <AppText variant="bodySoft">
+            {hydrationFailed
+              ? strings.errors.storageUnavailable
+              : strings.errors.preparing}
+          </AppText>
+        </View>
+      </Screen>
+    );
+  }
+
+  // Handing off to the hub (or, once ever, straight to the questions):
+  // the app's own frame, silent. Nothing is claimed here — the
+  // destination is already replacing this surface.
   return (
-    <DailyPromptScreen onSessionReady={onSessionReady} showHandoff={handoff} />
+    <Screen>
+      <View style={styles.holding} testID="launch-handoff" />
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  holding: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

@@ -180,7 +180,8 @@ describe("dev first-run reset (persistence-layer wipe)", () => {
 
     const screen = render(
       <LaunchScreen
-        onSessionReady={jest.fn()}
+        onHome={jest.fn()}
+        onPromptHandoff={jest.fn()}
         onResumeSession={jest.fn()}
         onResumeFinished={jest.fn()}
       />,

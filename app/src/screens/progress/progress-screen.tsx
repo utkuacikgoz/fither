@@ -1,12 +1,5 @@
 import { ScrollView, StyleSheet, View } from "react-native";
-import {
-  MAX_TIER,
-  milestoneMovement,
-  PATTERNS,
-  type MovementLibrary,
-  type Pattern,
-  type Tier,
-} from "@fither/engine";
+import { MAX_TIER, PATTERNS, type Pattern, type Tier } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -14,6 +7,7 @@ import { Screen } from "../../design/primitives/screen";
 import { useTheme } from "../../design/theme";
 import { glyph, radius, spacing } from "../../design/tokens";
 import { loadLibrary } from "../../session/load-library";
+import { skillLabel } from "../../session/skill-name";
 import { totalPoints, useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 
@@ -25,20 +19,10 @@ import { useProfileStore } from "../../state/profile-store";
 // uses), points summed by the ledger module's own totalPoints. No rule,
 // threshold or derived value is computed on this screen.
 
-/** The canonical ladder-step name at (pattern, tier) — skill rows only.
- * Ladder rows use strings.profile.patterns.names; this resolves earned
- * skills to their movement names, the same lookup ApplyResult uses. */
-function skillLabel(
-  library: MovementLibrary | null,
-  pattern: Pattern,
-  tier: Tier,
-): string {
-  // Fallback mirrors toPlayerBlocks' movementId fallback: a build without
-  // the library is already a degraded state everywhere; raw pattern data
-  // beats an invented (forbidden) literal.
-  if (!library) return pattern;
-  return milestoneMovement(library, pattern, tier)?.name ?? pattern;
-}
+// Skill rows resolve their names through session/skill-name.ts (the
+// engine's milestoneMovement) — the same lookup the home hub uses, so
+// one skill is never named two ways. Ladder rows use
+// strings.profile.patterns.names.
 
 /**
  * A calm six-step track (length from MAX_TIER, never a hardcoded 6):
@@ -164,9 +148,9 @@ export function ProgressScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    // Clears the transparent navigation header the progress route adds
-    // (same pushed-route shape as settings), then breathes normally.
-    paddingTop: spacing.xxl,
+    // A tab, not a pushed route (ADR-0013 §4): no header to clear, so
+    // the title starts just below the safe area and breathes normally.
+    paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
   title: {

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { router } from "expo-router";
 import type { BodyArea, DailyPrompt, Energy, SessionMinutes } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
@@ -14,7 +13,6 @@ import { spacing } from "../../design/tokens";
 import { BODY_AREAS } from "../../lib/body-areas";
 import { needsCareMoment } from "../../lib/care-moment";
 import { todayIso } from "../../lib/dates";
-import { useTodayIso } from "../../lib/use-today";
 import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 import { useActiveSessionStore } from "../../state/active-session-store";
@@ -71,18 +69,12 @@ export function DailyPromptScreen({
   const identityFailed = useIdentityStore((s) => s.hydrationFailed);
 
   const appendCareNote = useCareNoteStore((s) => s.append);
-  // Reactive across midnight: a prompt left open overnight refreshes its
-  // date on the next foreground, so yesterday's done-state can't linger.
-  const today = useTodayIso();
 
-  // Completed-today detection (audit wave 2): today counts as done only
-  // when an entry recorded at least one COMPLETED block — reading the
-  // engine-written outcomes, never re-deriving rules. An all-skipped
-  // session enters history too, and it is not training: it renders the
-  // normal four questions. Training again is HER choice: "Another
-  // session" flips this launch back to the questions, nothing pushes her.
-  const historyEntries = useProfileStore((s) => s.history.entries);
-  const [anotherSession, setAnotherSession] = useState(false);
+  // Whether today already holds completed work is the HUB's question now
+  // (ADR-0013 §4): home renders the calm done state and owns "Another
+  // session", from the one shared definition in state/today-training.ts.
+  // Arriving here at all means she chose to build a session, so this
+  // screen simply asks the four questions.
 
   const [step, setStep] = useState<Step>("time");
   const [devTimingVisible, setDevTimingVisible] = useState(false);
@@ -210,6 +202,10 @@ export function DailyPromptScreen({
     </AppText>
   );
 
+  // Just the day label now. The corner doors are gone: Progress and
+  // Settings are tabs on the hub (ADR-0013 §4), and this screen is a
+  // pushed flow whose one job is the four questions — the way back is
+  // the route's own back chevron.
   const header = (
     <View style={styles.header}>
       {__DEV__ ? (
@@ -222,75 +218,8 @@ export function DailyPromptScreen({
       ) : (
         dayLabel
       )}
-      {/* The quiet corner doors to progress and settings — pushed
-          routes, so her answers survive the round trip. Deliberately
-          the smallest interactive things here: the day's one decision
-          stays the screen's focal point. */}
-      <View style={styles.headerActions}>
-        <QuietButton
-          testID="open-progress"
-          outlined
-          label={strings.profile.title}
-          onPress={() => router.push("/progress")}
-        />
-        <QuietButton
-          testID="open-settings"
-          outlined
-          label={strings.settings.title}
-          onPress={() => router.push("/settings")}
-        />
-      </View>
     </View>
   );
-
-  // The calm done-state: today already holds an applied session with real
-  // completed work, and it offers one quiet action — no reward framing,
-  // no urgency. The minutes claim is made only when it is TRUE: every
-  // block of every trained entry completed (genuinely full sessions), so
-  // the entry's planned minutes were actually trained. Any partial entry
-  // means we can't honestly total minutes — lineSome claims none. Corner
-  // doors stay; first runs never land here (no history yet), so the
-  // handoff eyebrow and Gate 3 instrumentation are untouched.
-  const trainedToday = historyEntries.filter(
-    (entry) =>
-      entry.date === today &&
-      entry.blocks.some((block) => block.outcome === "completed"),
-  );
-  if (trainedToday.length > 0 && !anotherSession) {
-    const everyBlockCompleted = trainedToday.every((entry) =>
-      entry.blocks.every((block) => block.outcome === "completed"),
-    );
-    const minutesToday = trainedToday.reduce(
-      (sum, entry) => sum + entry.minutes,
-      0,
-    );
-    return (
-      <Screen>
-        {header}
-        <View style={styles.doneState}>
-          <AppText variant="title" accessibilityRole="header">
-            {strings.prompt.completedToday.headline}
-          </AppText>
-          <AppText
-            variant="bodySoft"
-            style={styles.doneLine}
-            testID="completed-today-line"
-          >
-            {everyBlockCompleted
-              ? strings.prompt.completedToday.line(minutesToday)
-              : strings.prompt.completedToday.lineSome}
-          </AppText>
-        </View>
-        <View style={styles.doneAction}>
-          <QuietButton
-            testID="another-session"
-            label={strings.prompt.completedToday.action}
-            onPress={() => setAnotherSession(true)}
-          />
-        </View>
-      </Screen>
-    );
-  }
 
   return (
     <Screen>
@@ -482,14 +411,11 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
   dayLabel: {
-    marginTop: spacing.md,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    // Clears the transparent navigation header the /prompt route adds
+    // (the back chevron lives up there), then breathes normally.
+    marginTop: spacing.xxl,
   },
   handoffLine: {
     marginTop: spacing.xs,
@@ -520,17 +446,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  doneState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  doneLine: {
-    marginTop: spacing.sm,
-    textAlign: "center",
-  },
-  doneAction: {
-    paddingBottom: spacing.md,
   },
 });
