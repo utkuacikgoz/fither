@@ -1,7 +1,7 @@
 # Where the build stands — 2026-09-04 (phase 3 shipped: the visual language)
 
 Read `CLAUDE.md` first, then this. Everything below is on `main` at
-`7f53e97` with green GitHub CI verified per wave commit (runs #90–#107).
+`01b9711` with green GitHub CI verified per wave commit (runs #90 onward).
 
 ## Verified green
 
@@ -12,7 +12,10 @@ pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
 engine + app typecheck               pass
 engine tests                         75/75
-app tests                            457/457 (47 suites, 0 act() warnings)
+app tests                            467/467 (47 suites, 0 act() warnings)
+                                     (01b9711's message says 469 — the
+                                     real count is 467; recorded here
+                                     rather than rewriting pushed history)
 pnpm bundle:ios                      pass — full production Hermes bundle
                                      exports (2.7MB), zero resolution errors
 expo prebuild --platform ios         pass — native project generates with
@@ -180,7 +183,7 @@ ones.
 | Copy nits | `7f53e97` | "+1 point"; the hard-denied notification line |
 | Docs | `c158600` | STATE, feature-set, code skill, brand README |
 | Share export | `343bd76` | The unlock card captured and shared as a PNG; text share as fallback (adds react-native-view-shot + expo-sharing: owner rebuild) |
-| Voice | — | Generator + offline playback + Settings card + the quiet-day rule; audio files pending the owner's voice (adds expo-audio: owner rebuild) |
+| Voice | `01b9711` | Generator + offline playback + Settings card + the quiet-day rule; audio files pending the owner's voice (adds expo-audio: owner rebuild) |
 
 **Reviews**
 
