@@ -224,23 +224,32 @@ describe("the glances", () => {
     expect(label).toContain(strings.profile.tier(1, MAX_TIER));
   });
 
-  it("names the skill she has earned from the movement library", () => {
-    const profile = createInitialProfile();
-    profile.unlockedMilestones = [{ pattern: "push", tier: 4 }];
-    seedProfile(profile);
+  it("names the NEXT skill from the library, with how far ahead it is", () => {
+    // A fresh profile: every pattern at tier 1, so the nearest milestone
+    // is push tier 4 — three tiers ahead. The engine picks it; the screen
+    // only renders what it returns.
     const screen = render(<HomeScreen />);
 
+    expect(screen.getByTestId("home-next-skill")).toBeTruthy();
     expect(screen.getByText(ladderName("push", 4))).toBeTruthy();
+    expect(screen.getByText(strings.home.skills.away(3))).toBeTruthy();
     expect(screen.queryByTestId("home-skills-empty")).toBeNull();
 
     fireEvent.press(screen.getByTestId("home-skills"));
     expect(router.push).toHaveBeenCalledWith("/progress");
   });
 
-  it("shows the forward-looking empty line before the first skill", () => {
+  it("moves the card on to the next milestone once one is earned", () => {
+    const profile = createInitialProfile();
+    profile.patterns.push.tier = 4;
+    profile.unlockedMilestones = [{ pattern: "push", tier: 4 }];
+    seedProfile(profile);
     const screen = render(<HomeScreen />);
-    expect(screen.getByTestId("home-skills-empty")).toBeTruthy();
-    expect(screen.getByText(strings.home.skills.empty)).toBeTruthy();
+
+    // Push tier 6 is now nearest (2 ahead) — the earned skill is behind
+    // her and belongs to Progress, not the forward-looking card.
+    expect(screen.getByText(ladderName("push", 6))).toBeTruthy();
+    expect(screen.getByText(strings.home.skills.away(2))).toBeTruthy();
   });
 
   it("tolerates a profile persisted before milestones existed", () => {
@@ -248,7 +257,19 @@ describe("the glances", () => {
     delete profile.unlockedMilestones;
     seedProfile(profile);
     const screen = render(<HomeScreen />);
+    // No crash, and it still points somewhere real.
+    expect(screen.getByTestId("home-next-skill")).toBeTruthy();
+  });
+
+  it("says every skill is reached only when none remain", () => {
+    const profile = createInitialProfile();
+    for (const pattern of ["push", "pull", "squat", "hinge", "core"] as const) {
+      profile.patterns[pattern].tier = 6;
+    }
+    seedProfile(profile);
+    const screen = render(<HomeScreen />);
     expect(screen.getByTestId("home-skills-empty")).toBeTruthy();
+    expect(screen.getByText(strings.home.skills.empty)).toBeTruthy();
   });
 });
 
@@ -262,13 +283,21 @@ describe("copy", () => {
     const allowed = collectStringValues(strings);
     // Parameterised strings.ts values, explicitly enumerated.
     allowed.add(strings.prompt.completedToday.line(10));
-    // Library-sourced (a movement name), not copy.
-    allowed.add(ladderName("push", 4));
+    // Library-sourced movement names are DATA, not copy — the same
+    // allowance the Progress screen's audit makes. Which one the card
+    // names depends on the engine's nearest-milestone answer, so allow
+    // the library rather than guessing.
+    for (const movement of loadLibrary()?.movements ?? []) {
+      allowed.add(movement.name);
+    }
+    // Parameterised distance caption, every value the card can render.
+    for (let n = 1; n <= 5; n += 1) allowed.add(strings.home.skills.away(n));
     // A decorative glyph token, not copy (same allowance as progress).
     allowed.add(glyph.check);
     const screen = render(<HomeScreen />);
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
-      expect(allowed.has(leaf)).toBe(true);
+      // Name the offender on failure instead of just `false`.
+      expect(allowed.has(leaf) ? true : leaf).toBe(true);
     }
   });
 });

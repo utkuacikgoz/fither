@@ -48,13 +48,32 @@ export const strings = {
       start: "Build today's session",
     },
     skills: {
-      // Heading is profile.skills.title; only the empty line is new.
-      // profile.skills.empty explains in two sentences where skills come
-      // from — right for the full list, too long for a glance card that
-      // otherwise holds a single name. Same vocabulary ("lands here"),
-      // one line, forward-looking: nothing about absence, nothing about
-      // when, no "yet".
-      empty: "Your first named skill lands here.",
+      // Heading is profile.skills.title. The card now names the NEAREST
+      // milestone she has not reached yet (engine `nextMilestone`), with
+      // the movement's figure beside it — so both lines below describe a
+      // forward view, not a record.
+      //
+      // Caption under the skill name, e.g. "Full Push-Up" / "2 tiers
+      // ahead". Vocabulary is deliberate: she already reads "Tier 2 of 6"
+      // (profile.tier) and "as you reach new tiers"
+      // (profile.skills.empty), so "tier" is a word she owns — inventing
+      // "steps"/"levels" here would give the same ladder two names.
+      // "ahead" places the skill on the path in front of her; "away"
+      // measures a gap and "to go" implies something owed. No "only", no
+      // "just", no when — this orients, it does not set a target.
+      // Numerals match profile.points.total, the other counted caption.
+      // Callsite only renders unearned milestones, so tiers is 1–3; the
+      // function stays total anyway.
+      away: (tiers: number) =>
+        tiers === 1 ? "1 tier ahead" : `${tiers} tiers ahead`,
+      // Now reachable only when every milestone is behind her — the card
+      // has no next skill to name. So this is the top of every ladder,
+      // not an empty beginning: "Your first named skill lands here."
+      // would have been plainly wrong for the one user who sees it.
+      // States the achievement and stops. No "nothing left", no "that's
+      // all", nothing that reads as an ending. "reached" is the same
+      // honest tier-entry verb as profile.skills.empty and ADR-0012 §3.
+      empty: "You've reached every named skill.",
     },
   },
   prompt: {

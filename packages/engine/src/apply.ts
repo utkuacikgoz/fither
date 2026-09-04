@@ -8,6 +8,7 @@ import type {
   PatternState,
   Profile,
   SessionResult,
+  SkillMilestone,
   Tier,
 } from "./types";
 import {
@@ -50,6 +51,51 @@ export function milestoneMovement(
     library.movements.find((m) => m.pattern === pattern && m.tier === tier) ??
     null
   );
+}
+
+/**
+ * The nearest milestone she has NOT yet earned — what the app points at
+ * next (ADR-0013's home hub asked for it; the UI must never derive this,
+ * because "already unlocked" and the legacy-profile case are engine
+ * rules, not display logic).
+ *
+ * Nearest means fewest tiers away from where that pattern stands today;
+ * ties break in PATTERNS order so the answer is deterministic. A tier
+ * already at or past a milestone counts it as earned even when
+ * `unlockedMilestones` has no entry — profiles that trained before that
+ * field existed must not be promised a skill they already hold. Null
+ * only when every milestone in every pattern is behind her.
+ */
+export function nextMilestone(profile: Profile): SkillMilestone | null {
+  const unlocked = profile.unlockedMilestones ?? [];
+  let best: { milestone: SkillMilestone; distance: number } | null = null;
+  for (const pattern of PATTERNS) {
+    const tier = profile.patterns[pattern].tier;
+    for (const milestoneTier of SKILL_MILESTONE_TIERS) {
+      if (milestoneTier <= tier) continue; // reached — earned or legacy
+      if (
+        unlocked.some(
+          (m) => m.pattern === pattern && m.tier === milestoneTier,
+        )
+      ) {
+        continue;
+      }
+      const distance = milestoneTier - tier;
+      if (best === null || distance < best.distance) {
+        best = { milestone: { pattern, tier: milestoneTier }, distance };
+      }
+      break; // milestone tiers ascend: the first unearned one is nearest
+    }
+  }
+  return best?.milestone ?? null;
+}
+
+/** How many tiers she is from `milestone` in its own pattern. */
+export function tiersToMilestone(
+  profile: Profile,
+  milestone: SkillMilestone,
+): number {
+  return Math.max(0, milestone.tier - profile.patterns[milestone.pattern].tier);
 }
 
 export function applySessionResult(

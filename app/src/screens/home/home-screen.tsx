@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { milestoneMovement, nextMilestone, tiersToMilestone } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -12,6 +13,7 @@ import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useTodayIso } from "../../lib/use-today";
 import { isFinished } from "../../session/player-machine";
 import { loadLibrary } from "../../session/load-library";
+import { MovementFigure } from "../../design/primitives/movement-figure";
 import { skillLabel } from "../../session/skill-name";
 import { useProfileStore } from "../../state/profile-store";
 import { useSessionStore } from "../../state/session-store";
@@ -50,11 +52,13 @@ export function HomeScreen() {
   const inFlight = session !== null && player !== null && !isFinished(player);
 
   const library = loadLibrary();
-  // Absence tolerated per the engine contract (types.ts): an empty list.
-  // Skills are never lost, so this list only ever grows; the last entry
-  // is the most recently earned (the engine appends).
-  const milestones = profile.unlockedMilestones ?? [];
-  const latestSkill = milestones[milestones.length - 1];
+  // What she is working toward — the engine decides which milestone is
+  // nearest and how a legacy profile is treated (nextMilestone); this
+  // screen only renders the answer. Forward-looking on purpose: the last
+  // skill earned is already celebrated on the unlock screen and listed
+  // in Progress; home points at what is coming.
+  const upcoming = nextMilestone(profile);
+  const tiersAway = upcoming ? tiersToMilestone(profile, upcoming) : 0;
 
   return (
     <Screen>
@@ -154,21 +158,26 @@ export function HomeScreen() {
           <AppText variant="caption" style={styles.cardHeading}>
             {strings.profile.skills.title}
           </AppText>
-          {latestSkill ? (
-            <View style={styles.skillRow} testID="home-latest-skill">
-              {/* Gold marks the earned moment (design system: skill
-                  unlocks only). Decorative — the name carries the row. */}
-              <AppText
-                variant="body"
-                color={colors.gold}
-                importantForAccessibility="no"
-                accessibilityElementsHidden
-              >
-                {glyph.check}
-              </AppText>
-              <AppText variant="body" style={styles.skillName}>
-                {skillLabel(library, latestSkill.pattern, latestSkill.tier)}
-              </AppText>
+          {upcoming ? (
+            <View style={styles.skillRow} testID="home-next-skill">
+              {/* The movement she is climbing toward, drawn — the same
+                  figure she will meet in the session (ADR-0013). */}
+              <MovementFigure
+                movementId={
+                  (library &&
+                    milestoneMovement(library, upcoming.pattern, upcoming.tier)
+                      ?.id) ||
+                  ""
+                }
+              />
+              <View style={styles.skillName}>
+                <AppText variant="body">
+                  {skillLabel(library, upcoming.pattern, upcoming.tier)}
+                </AppText>
+                <AppText variant="caption">
+                  {strings.home.skills.away(tiersAway)}
+                </AppText>
+              </View>
             </View>
           ) : (
             <AppText variant="bodySoft" testID="home-skills-empty">
