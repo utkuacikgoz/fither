@@ -20,6 +20,8 @@ export {
   applySessionResult,
   calendarDaysBetween,
   milestoneMovement,
+  nextMilestone,
+  tiersToMilestone,
   SKILL_MILESTONE_TIERS,
 } from "./apply";
 export { createInitialProfile, PATTERNS } from "./profile";
