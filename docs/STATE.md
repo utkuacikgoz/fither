@@ -148,6 +148,12 @@ ones.
   options each show the figure of a tier-one movement she can do with
   exactly that equipment (ids pinned to the library by a test). The
   staggered answer row is one primitive shared with the daily prompt.
+- In the session: the progress line fills as a movement (left-anchored
+  scale on the native driver) instead of jumping; the rest and
+  side-switch phases enter as one breath and keep the movement's figure;
+  the feedback rows enter staggered. The countdown numeral deliberately
+  does not animate per tick. The work phase is unchanged: the session
+  is sacred.
 
 **Reviews**
 

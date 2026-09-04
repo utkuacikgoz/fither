@@ -66,6 +66,30 @@ describe("SessionPlayerScreen", () => {
     expect(screen.getByTestId("player-set-done")).toBeTruthy();
   });
 
+  it("keeps the movement's face through the rest — the exhale is never a blank", () => {
+    const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("player-begin"));
+    fireEvent.press(screen.getByTestId("player-set-done"));
+    expect(screen.getByText(strings.player.rest)).toBeTruthy();
+    // Decorative, like every figure: the name and count carry the facts.
+    expect(
+      screen.getByTestId("player-figure-rest", { includeHiddenElements: true }),
+    ).toBeTruthy();
+  });
+
+  it("the feedback rows enter staggered but answer on their first frame", () => {
+    const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("player-begin"));
+    fireEvent.press(screen.getByTestId("player-set-done"));
+    fireEvent.press(screen.getByTestId("player-end-rest"));
+    fireEvent.press(screen.getByTestId("player-set-done"));
+    expect(screen.getByText(strings.player.feedback.question)).toBeTruthy();
+    // No timers advanced: the press lands mid-entrance, as a hand that
+    // knows the flow would tap.
+    fireEvent.press(screen.getByTestId("feedback-hard"));
+    expect(useSessionStore.getState().player?.outcomes).toEqual(["struggled"]);
+  });
+
   it("rests between sets, counting down each second", () => {
     const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
     fireEvent.press(screen.getByTestId("player-begin"));
