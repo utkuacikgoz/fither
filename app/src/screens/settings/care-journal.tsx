@@ -7,7 +7,7 @@ import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { useTheme } from "../../design/theme";
-import { hairline, radius, spacing } from "../../design/tokens";
+import { hairline, spacing } from "../../design/tokens";
 import {
   useCareNoteStore,
   type CareNoteEntry,
@@ -82,7 +82,7 @@ export function CareJournal() {
         </AppText>
       )}
 
-      {notes.map(({ entry, key }) => {
+      {notes.map(({ entry, key }, index) => {
         const editing = action?.kind === "edit" && action.key === key;
         const confirming =
           action?.kind === "confirmDelete" && action.key === key;
@@ -90,9 +90,17 @@ export function CareJournal() {
           <View
             key={key}
             testID={`care-journal-note-${key}`}
+            // Notes are rows in the journal's own card, separated by
+            // hairlines — not cards of their own. A surface card nested
+            // inside a surface card (ADR-0013 gave the section one) is
+            // white on white: the note would vanish into its container
+            // and the doubled border would read as a mistake.
             style={[
               styles.note,
-              { backgroundColor: colors.surface, borderColor: colors.line },
+              index < notes.length - 1 && {
+                borderBottomWidth: hairline,
+                borderBottomColor: colors.line,
+              },
             ]}
           >
             <AppText variant="caption" style={styles.noteDate}>
@@ -181,11 +189,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   note: {
-    borderRadius: radius.card,
-    borderWidth: hairline,
-    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    marginBottom: spacing.sm + spacing.xs,
     gap: spacing.sm,
   },
   noteDate: {

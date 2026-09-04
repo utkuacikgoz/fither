@@ -4,12 +4,14 @@ import { router } from "expo-router";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { Card } from "../../design/primitives/card";
+import { OptionRow } from "../../design/primitives/option-row";
 import { QuietButton } from "../../design/primitives/quiet-button";
-import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
 import { spacing } from "../../design/tokens";
 import { appVersion } from "../../lib/app-version";
 import { BODY_AREAS } from "../../lib/body-areas";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 import {
   seedFinishPreviewForDev,
   seedFreshEntitlementForDev,
@@ -29,8 +31,16 @@ import { CareJournal } from "./care-journal";
 
 // The settings screen (ADR-0009 left restore + dev controls "until a
 // settings screen exists" — this is it). Quiet sections in a fixed
-// order — persistent avoid areas, subscription restore, the care journal
-// (ADR-0012 §4), dev tools — and a version footer. The avoid list is
+// order — persistent avoid areas, where she trains, subscription
+// restore, the daily invitation, the care journal (ADR-0012 §4), dev
+// tools — and a version footer.
+//
+// Each section is a Card (ADR-0013), the same card the hub and progress
+// use, and its choices are OptionRows grouped inside it. The old shape
+// stacked full-bordered RowButtons — the prompt's answer unit — straight
+// onto the page, which turned a preferences screen into a wall of
+// identical boxes with no grouping. Same choices, same store calls, same
+// testIDs: only the grouping changed. The avoid list is
 // preference data only: what "avoid" means to a session is decided
 // entirely engine-side; this screen just edits the stored list the daily
 // prompt merges into every day's input.
@@ -83,6 +93,7 @@ export function SettingsScreen({
   );
   const disableReminders = useReminderStore((s) => s.disable);
 
+  const reduceMotion = useReducedMotion();
   const [busy, setBusy] = useState(false);
   const [restoreNotice, setRestoreNotice] = useState<RestoreNotice>("none");
   const [devTimingVisible, setDevTimingVisible] = useState(false);
@@ -110,30 +121,36 @@ export function SettingsScreen({
     <Screen>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        // Signifiers: the owner could not tell a tab scrolled, and this
+        // is the longest screen in the app.
+        showsVerticalScrollIndicator
       >
-        <AppText variant="title" style={styles.title}>
+        <AppText
+          variant="title"
+          style={styles.title}
+          accessibilityRole="header"
+        >
           {strings.settings.title}
         </AppText>
 
-        <View style={styles.section}>
+        <Card order={0} reduceMotion={reduceMotion} testID="settings-avoid">
           <AppText variant="caption" style={styles.sectionHeading}>
             {strings.settings.avoid.title}
           </AppText>
           <AppText variant="bodySoft" style={styles.sectionBody}>
             {strings.settings.avoid.body}
           </AppText>
-          {BODY_AREAS.map((area) => (
-            <RowButton
+          {BODY_AREAS.map((area, index) => (
+            <OptionRow
               key={area}
               testID={`avoid-${area}`}
               label={strings.prompt.soreness.areas[area]}
               selected={alwaysAvoid.includes(area)}
-              multiSelect
+              divider={index < BODY_AREAS.length - 1}
               onPress={() => toggleAlwaysAvoid(area)}
             />
           ))}
-        </View>
+        </Card>
 
         {/* Audit S6: the onboarding floor/chair answer was a one-shot —
             editable here now. Same two options, same strings, same
@@ -141,31 +158,36 @@ export function SettingsScreen({
             so it stays on both paths — the engine rule is never
             re-derived, these are onboarding's own constants mirrored
             through the store). */}
-        <View style={styles.section}>
+        <Card order={1} reduceMotion={reduceMotion} testID="settings-equipment">
           <AppText variant="caption" style={styles.sectionHeading}>
             {strings.onboarding.equipment.question}
           </AppText>
-          <RowButton
+          <OptionRow
             testID="equipment-floor-only"
             label={strings.onboarding.equipment.options.floorOnly}
             selected={!equipment.includes("chair")}
             onPress={() => setEquipment(["none", "wall"])}
           />
-          <RowButton
+          <OptionRow
             testID="equipment-chair"
             label={strings.onboarding.equipment.options.chair}
             selected={equipment.includes("chair")}
+            divider={false}
             onPress={() => setEquipment(["none", "chair", "wall"])}
           />
-        </View>
+        </Card>
 
-        <View style={styles.section}>
+        <Card order={2} reduceMotion={reduceMotion} testID="settings-subscription">
           <AppText variant="caption" style={styles.sectionHeading}>
             {strings.settings.restore.title}
           </AppText>
-          <RowButton
+          {/* An action, not a choice: no selectable state to carry, so
+              the accent label is what says "tappable" (affordance). */}
+          <OptionRow
             testID="settings-restore"
             label={strings.paywall.restore}
+            emphasis="action"
+            divider={false}
             onPress={() => {
               void restore();
             }}
@@ -188,7 +210,7 @@ export function SettingsScreen({
               {strings.paywall.restoreEmpty}
             </AppText>
           )}
-        </View>
+        </Card>
 
         {/* The daily invitation (launch-checklist rules): three slots +
             "No invitation", all equal-dignity rows, current state
@@ -199,12 +221,12 @@ export function SettingsScreen({
             in-context a permission ask gets. On an OS denial nothing
             schedules and "No invitation" honestly stays selected — the
             OS dialog she just answered is the feedback. */}
-        <View style={styles.section}>
+        <Card order={3} reduceMotion={reduceMotion} testID="settings-reminders">
           <AppText variant="caption" style={styles.sectionHeading}>
             {strings.settings.reminders.title}
           </AppText>
           {REMINDER_SLOTS.map((slot) => (
-            <RowButton
+            <OptionRow
               key={slot}
               testID={`reminder-${slot}`}
               label={strings.notifications.time[slot]}
@@ -214,25 +236,26 @@ export function SettingsScreen({
               }}
             />
           ))}
-          <RowButton
+          <OptionRow
             testID="reminder-off"
             label={strings.settings.reminders.off}
             selected={reminderSlot === null}
+            divider={false}
             onPress={() => {
               void disableReminders();
             }}
           />
-        </View>
+        </Card>
 
-        <View style={styles.section}>
+        <Card order={4} reduceMotion={reduceMotion} testID="settings-journal">
           <CareJournal />
-        </View>
+        </Card>
 
         {devToolsEnabled && (
           // Dev-only tools. The long-press entries elsewhere keep working;
           // these are the findable front doors (ADR-0009's interim homes
           // retire to here).
-          <View style={styles.section}>
+          <Card order={5} reduceMotion={reduceMotion} testID="settings-dev">
             <AppText variant="caption" style={styles.sectionHeading}>
               {strings.settings.dev.title}
             </AppText>
@@ -314,7 +337,7 @@ export function SettingsScreen({
                 router.push("/finish");
               }}
             />
-          </View>
+          </Card>
         )}
 
         {version !== null && (
@@ -335,10 +358,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   title: {
-    marginBottom: spacing.xl,
-  },
-  section: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   sectionHeading: {
     marginBottom: spacing.sm,
@@ -351,6 +371,6 @@ const styles = StyleSheet.create({
   },
   version: {
     textAlign: "center",
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
 });

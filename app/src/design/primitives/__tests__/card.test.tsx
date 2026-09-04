@@ -2,8 +2,8 @@ import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { Text } from "react-native";
 
-import { motion } from "../../../design/tokens";
-import { HomeCard } from "../home-card";
+import { motion } from "../../tokens";
+import { Card } from "../card";
 
 // Motion is the default now (ADR-0013 §3), and Reduce Motion is honoured
 // absolutely: the final state, never a half-played frame.
@@ -23,9 +23,9 @@ function entranceStyle(tree: unknown): {
 
 it("renders the final state immediately when Reduce Motion is on", () => {
   const screen = render(
-    <HomeCard reduceMotion order={2}>
+    <Card reduceMotion order={2}>
       <Text>card</Text>
-    </HomeCard>,
+    </Card>,
   );
   const style = entranceStyle(screen.toJSON());
   expect(style.opacity).toBe(1);
@@ -35,9 +35,9 @@ it("renders the final state immediately when Reduce Motion is on", () => {
 
 it("otherwise enters from below, faded out, staggered by its order", () => {
   const screen = render(
-    <HomeCard reduceMotion={false} order={1}>
+    <Card reduceMotion={false} order={1}>
       <Text>card</Text>
-    </HomeCard>,
+    </Card>,
   );
   const style = entranceStyle(screen.toJSON());
   expect(style.opacity).toBe(0);
@@ -50,18 +50,18 @@ it("otherwise enters from below, faded out, staggered by its order", () => {
 it("a card that navigates says so; a card that only informs does not", () => {
   const onPress = jest.fn();
   const door = render(
-    <HomeCard reduceMotion onPress={onPress} testID="door">
+    <Card reduceMotion onPress={onPress} testID="door">
       <Text>door</Text>
-    </HomeCard>,
+    </Card>,
   );
   expect(door.getByTestId("door").props.accessibilityRole).toBe("button");
   fireEvent.press(door.getByTestId("door"));
   expect(onPress).toHaveBeenCalledTimes(1);
 
   const plain = render(
-    <HomeCard reduceMotion testID="plain">
+    <Card reduceMotion testID="plain">
       <Text>plain</Text>
-    </HomeCard>,
+    </Card>,
   );
   expect(plain.getByTestId("plain").props.accessibilityRole).toBeUndefined();
 });
