@@ -73,7 +73,7 @@ works in airplane mode.
 |---|---|---|---|
 | Points ledger | Points for work done: 20/25/30 per completed session for 10/20/30 minutes (a 15-point base for showing up plus 5 per ten minutes), +5 per block at a newly reached tier, +25 per skill unlock. | Points are only ever added — no decay, deductions or expiry; the ledger is append-only by construction. Points buy nothing and gate nothing. The base dominates: equal consistency is never halved by session length (gamification.md, ADR-0008). | Built |
 | Named skill unlocks | Tier milestones become human-meaningful skills — e.g. reaching push tier 4 unlocks "Full Push-Up" — with an unlock screen. | Skills are never lost, even if a tier later regresses. Names come from the movement library, not invented in UI code. Milestone tiers are 4 and 6 (ADR-0005); each unlocks once per lifetime — never lost, never re-earned (ADR-0007). | Built |
-| Shareable skill card | A card on the unlock screen, one per skill, shared as text via the system sheet; multi-skill unlocks celebrate one at a time. | States the skill honestly ("now in my training"), never anything about the body. Image export is a later one-component swap. | Built |
+| Shareable skill card | A card on the unlock screen, one per skill — the drawn mark, the skill name, the honest line — captured as rendered and shared as an image through the system sheet; the v1 text share stands behind it as the fallback so the moment never meets a dead end. Multi-skill unlocks celebrate one at a time. | States the skill honestly ("now in my training"), never anything about the body. Theme-fixed: it looks the same wherever it lands. Nothing touches the network. | Built |
 
 ### Onboarding
 

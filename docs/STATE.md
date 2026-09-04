@@ -178,6 +178,8 @@ ones.
 | Finish | `f23c50e` | Three beats; figures of completed blocks; reminder ask |
 | Test hygiene | `4fac363` | 54 act() warnings → 0; the hook unit-tested |
 | Copy nits | `7f53e97` | "+1 point"; the hard-denied notification line |
+| Docs | `c158600` | STATE, feature-set, code skill, brand README |
+| Share export | — | The unlock card captured and shared as a PNG; text share as fallback (adds react-native-view-shot + expo-sharing: owner rebuild) |
 
 **Reviews**
 
@@ -211,11 +213,11 @@ ones.
 5. **Reviewer pass on phase 3** — a fresh-context adversarial read of
    the ten waves above (the machine gates ran green; no human or
    reviewer-agent has read the diffs). Should-fixes close before new UI.
-6. Build side, owner-directed (2026-09-04): share-card image export;
-   voice audio (ElevenLabs is the decided provider — build-system §9;
-   the voice itself is the owner's one-time choice, and the API key is
-   the owner's). Both offline-safe by construction: generated assets
-   are committed, never fetched at runtime.
+6. Build side, owner-directed (2026-09-04): share-card image export is
+   done; voice audio next (ElevenLabs is the decided provider —
+   build-system §9; the voice itself is the owner's one-time choice, and
+   the API key is the owner's). Offline-safe by construction: generated
+   assets are committed, never fetched at runtime.
 
 ## Deferred, recorded
 

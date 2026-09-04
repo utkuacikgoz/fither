@@ -13,18 +13,25 @@ import { useTheme } from "../theme";
 
 const source = require("../../../assets/brand/mark.png");
 
-type MarkSize = "hero";
+type MarkSize = "hero" | "small";
 
 const DIMENSIONS: Record<MarkSize, number> = {
   hero: 160,
+  small: 40,
 };
 
 interface BrandMarkProps {
   size?: MarkSize;
+  /**
+   * Override the theme accent — for a surface that is deliberately
+   * theme-fixed (the share card, which must look the same wherever it
+   * lands). Everything else leaves this unset.
+   */
+  tint?: string;
   testID?: string;
 }
 
-export function BrandMark({ size = "hero", testID }: BrandMarkProps) {
+export function BrandMark({ size = "hero", tint, testID }: BrandMarkProps) {
   const colors = useTheme();
   const box = DIMENSIONS[size];
   return (
@@ -37,7 +44,7 @@ export function BrandMark({ size = "hero", testID }: BrandMarkProps) {
       <Image
         source={source}
         resizeMode="contain"
-        style={[styles.image, { tintColor: colors.accent }]}
+        style={[styles.image, { tintColor: tint ?? colors.accent }]}
       />
     </View>
   );
