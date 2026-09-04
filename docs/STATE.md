@@ -179,7 +179,8 @@ ones.
 | Test hygiene | `4fac363` | 54 act() warnings → 0; the hook unit-tested |
 | Copy nits | `7f53e97` | "+1 point"; the hard-denied notification line |
 | Docs | `c158600` | STATE, feature-set, code skill, brand README |
-| Share export | — | The unlock card captured and shared as a PNG; text share as fallback (adds react-native-view-shot + expo-sharing: owner rebuild) |
+| Share export | `343bd76` | The unlock card captured and shared as a PNG; text share as fallback (adds react-native-view-shot + expo-sharing: owner rebuild) |
+| Voice | — | Generator + offline playback + Settings card + the quiet-day rule; audio files pending the owner's voice (adds expo-audio: owner rebuild) |
 
 **Reviews**
 
@@ -213,11 +214,21 @@ ones.
 5. **Reviewer pass on phase 3** — a fresh-context adversarial read of
    the ten waves above (the machine gates ran green; no human or
    reviewer-agent has read the diffs). Should-fixes close before new UI.
-6. Build side, owner-directed (2026-09-04): share-card image export is
-   done; voice audio next (ElevenLabs is the decided provider —
-   build-system §9; the voice itself is the owner's one-time choice, and
-   the API key is the owner's). Offline-safe by construction: generated
-   assets are committed, never fetched at runtime.
+6. **Owner: pick the voice and generate the audio.** Everything else is
+   built — the pipeline, the offline playback, the Settings card, the
+   quiet-day rule. One command, once, with the ElevenLabs key and the
+   chosen voice id:
+
+   ```
+   ELEVENLABS_API_KEY=… ELEVENLABS_VOICE_ID=… node scripts/generate-voice-audio.mjs
+   ```
+
+   180 unique cues, 5,621 characters (one run). Commit the mp3s and the
+   regenerated manifest; the Settings card appears on the next build.
+   Until then the app builds with an empty manifest and voice has
+   nothing to say. Default is OFF — an owner call worth confirming:
+   audio she did not ask for, next to a sleeping child, is the wrong
+   first surprise.
 
 ## Deferred, recorded
 

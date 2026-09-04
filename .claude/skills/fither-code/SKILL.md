@@ -126,9 +126,12 @@ validates `data/movements.json` on every edit — keep it working, and keep
   pass it down; a primitive never calls the hook itself.
 - Nothing an animation touches may gate a press: rows are hittable from
   their first frame at their drawn position. Tests press mid-entrance.
-- Generated art is committed, never hand-edited: figures from
+- Generated assets are committed, never hand-edited: figures from
   `scripts/generate-movement-figures.py`, the mark from
-  `scripts/generate-brand-assets.py`. Regenerate; do not retouch.
+  `scripts/generate-brand-assets.py`, spoken cues from
+  `scripts/generate-voice-audio.mjs` (needs the owner's ElevenLabs key
+  and voice; `--manifest-only` rebuilds the manifest from what exists).
+  Regenerate; do not retouch. Nothing is fetched at runtime.
 - Tests: `app/jest-setup.ts` mocks `useReducedMotion` to the settled
   default so screen tests carry no `act()` noise; the hook has its own
   unit test via `jest.requireActual`. Keep the suite at zero warnings.

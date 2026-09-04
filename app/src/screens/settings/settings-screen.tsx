@@ -20,6 +20,7 @@ import {
   seedUnlockPreviewForDev,
 } from "../../state/dev-preview";
 import { REMINDER_SLOTS } from "../../notifications/notifications";
+import { hasVoiceAudio } from "../../session/voice-manifest";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useReminderStore } from "../../state/reminder-store";
 import { useSettingsStore } from "../../state/settings-store";
@@ -93,6 +94,8 @@ export function SettingsScreen({
   );
   const disableReminders = useReminderStore((s) => s.disable);
   const reminderDenied = useReminderStore((s) => s.permissionDenied);
+  const voice = useSettingsStore((s) => s.voice);
+  const setVoice = useSettingsStore((s) => s.setVoice);
 
   const reduceMotion = useReducedMotion();
   const [busy, setBusy] = useState(false);
@@ -261,7 +264,34 @@ export function SettingsScreen({
           )}
         </Card>
 
-        <Card order={4} reduceMotion={reduceMotion} testID="settings-journal">
+        {/* Constraints: what can't apply is not rendered. The card exists
+            only when spoken cues are bundled (the generator has run with
+            the owner's voice); a switch for silence would be a lie. */}
+        {hasVoiceAudio() && (
+          <Card order={4} reduceMotion={reduceMotion} testID="settings-voice">
+            <AppText variant="caption" style={styles.sectionHeading}>
+              {strings.settings.voice.title}
+            </AppText>
+            <AppText variant="bodySoft" style={styles.sectionBody}>
+              {strings.settings.voice.body}
+            </AppText>
+            <OptionRow
+              testID="voice-on"
+              label={strings.settings.voice.on}
+              selected={voice}
+              onPress={() => setVoice(true)}
+            />
+            <OptionRow
+              testID="voice-off"
+              label={strings.settings.voice.off}
+              selected={!voice}
+              divider={false}
+              onPress={() => setVoice(false)}
+            />
+          </Card>
+        )}
+
+        <Card order={5} reduceMotion={reduceMotion} testID="settings-journal">
           <CareJournal />
         </Card>
 
@@ -269,7 +299,7 @@ export function SettingsScreen({
           // Dev-only tools. The long-press entries elsewhere keep working;
           // these are the findable front doors (ADR-0009's interim homes
           // retire to here).
-          <Card order={5} reduceMotion={reduceMotion} testID="settings-dev">
+          <Card order={6} reduceMotion={reduceMotion} testID="settings-dev">
             <AppText variant="caption" style={styles.sectionHeading}>
               {strings.settings.dev.title}
             </AppText>

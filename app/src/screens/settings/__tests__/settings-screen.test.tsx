@@ -22,7 +22,14 @@ import {
   collectStringValues,
   renderedTextLeaves,
 } from "../../../test-utils/copy-audit";
+import { hasVoiceAudio } from "../../../session/voice-manifest";
 import { DEV_TIMING_TITLE } from "../../dev-timing/first-movement-readout";
+
+jest.mock("../../../session/voice-manifest", () => ({
+  voiceCues: {},
+  voiceCue: () => null,
+  hasVoiceAudio: jest.fn(() => false),
+}));
 import { formatNoteDate } from "../care-journal";
 import {
   DEV_ENTITLEMENT_RESET_LABEL,
@@ -304,6 +311,23 @@ describe("SettingsScreen", () => {
     expect(screen.queryByTestId("reminder-off-check", hidden)).toBeNull();
   });
 
+  it("offers the voice only when spoken cues are actually bundled", () => {
+    // Constraints: a switch for silence would be a lie. The generated
+    // manifest is empty until the owner runs the generator.
+    const screen = render(<SettingsScreen />);
+    expect(screen.queryByTestId("settings-voice")).toBeNull();
+
+    jest.mocked(hasVoiceAudio).mockReturnValue(true);
+    const withAudio = render(<SettingsScreen />);
+    expect(withAudio.getByTestId("settings-voice")).toBeTruthy();
+    // Off by default, and the choice is hers.
+    expect(withAudio.getByTestId("voice-off-check", { includeHiddenElements: true })).toBeTruthy();
+    fireEvent.press(withAudio.getByTestId("voice-on"));
+    expect(useSettingsStore.getState().voice).toBe(true);
+    expect(withAudio.getByTestId("voice-on-check", { includeHiddenElements: true })).toBeTruthy();
+    jest.mocked(hasVoiceAudio).mockReturnValue(false);
+  });
+
   it("renders no user-facing text outside strings.ts", async () => {
     const allowed = collectStringValues(strings);
     // Parameterised and dev-only values are allowed explicitly.
@@ -323,10 +347,12 @@ describe("SettingsScreen", () => {
     // accessibility, which reads the selected state instead) — not copy.
     allowed.add(glyph.check);
 
+    jest.mocked(hasVoiceAudio).mockReturnValue(true);
     const screen = render(<SettingsScreen />);
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
       expect(allowed.has(leaf)).toBe(true);
     }
+    jest.mocked(hasVoiceAudio).mockReturnValue(false);
 
     // The restore notices are strings.ts copy too.
     fireEvent.press(screen.getByTestId("settings-restore"));

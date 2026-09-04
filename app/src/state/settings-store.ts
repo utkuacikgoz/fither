@@ -34,6 +34,14 @@ interface SettingsState {
    * the onboarding list). Persists immediately via the store layer.
    */
   toggleAlwaysAvoid: (area: BodyArea) => void;
+  /**
+   * Spoken cues during a session. OFF by default: audio she did not ask
+   * for, on a first session at 6am next to a sleeping child, is the
+   * wrong surprise — she turns it on in Settings. The quiet answer in
+   * the daily prompt silences it regardless (player rule).
+   */
+  voice: boolean;
+  setVoice: (voice: boolean) => void;
 }
 
 // The two equipment shapes the product offers — "Just me and the floor"
@@ -58,6 +66,8 @@ export const useSettingsStore = create<SettingsState>()(
       sessionSalt: generateSalt(),
       hydrated: false,
       hydrationFailed: false,
+      voice: false,
+      setVoice: (voice) => set({ voice }),
       setEquipment: (equipment) => set({ equipment }),
       completeOnboarding: (equipment, alwaysAvoid) =>
         set({ equipment, alwaysAvoid, onboardingCompleted: true }),
@@ -76,6 +86,7 @@ export const useSettingsStore = create<SettingsState>()(
         onboardingCompleted: state.onboardingCompleted,
         alwaysAvoid: state.alwaysAvoid,
         sessionSalt: state.sessionSalt,
+        voice: state.voice,
       }),
       onRehydrateStorage: () => (_state, error) => {
         Promise.resolve().then(() =>
