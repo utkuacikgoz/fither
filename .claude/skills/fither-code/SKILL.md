@@ -105,7 +105,30 @@ possible; one sneaky dependency breaks the whole validation story.
 ## Brief 0 checklist (scaffold session)
 
 When scaffolding, also wire the safety net: a `.githooks/pre-commit` hook
-running `pnpm test`, plus `pnpm sim` when `packages/engine` or `data/`
-changed; CI doing the same. The `.claude/settings.json` hook already
+running `pnpm typecheck` FIRST, then `pnpm test`, plus `pnpm sim` when
+`packages/engine` or `data/` changed; CI doing the same. Typecheck comes
+first because vitest and jest happily execute code `tsc` rejects — a
+type error in a test file passed locally and broke CI once (e619761). The `.claude/settings.json` hook already
 validates `data/movements.json` on every edit — keep it working, and keep
 `core.hooksPath` pointed at `.githooks`.
+
+## Design primitives and motion (ADR-0013)
+
+- Reuse before adding. `app/src/design/primitives/` holds the shared
+  vocabulary: `card` (every hub surface), `track` + `flow-progress` +
+  `progress-line` (the app's progress forms — one 4pt pill everywhere),
+  `answer-row` (a short answer list entering staggered), `option-row`
+  (a settings choice inside a card), `row-button` (the prompt's answer
+  unit; optional leading `figure`), `movement-figure` and `brand-mark`
+  (one white asset tinted to the accent), `fade-in`.
+- Every animated primitive takes `reduceMotion` as a prop and renders its
+  final state when it is true. Screens read `useReducedMotion()` once and
+  pass it down; a primitive never calls the hook itself.
+- Nothing an animation touches may gate a press: rows are hittable from
+  their first frame at their drawn position. Tests press mid-entrance.
+- Generated art is committed, never hand-edited: figures from
+  `scripts/generate-movement-figures.py`, the mark from
+  `scripts/generate-brand-assets.py`. Regenerate; do not retouch.
+- Tests: `app/jest-setup.ts` mocks `useReducedMotion` to the settled
+  default so screen tests carry no `act()` noise; the hook has its own
+  unit test via `jest.requireActual`. Keep the suite at zero warnings.

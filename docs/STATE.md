@@ -1,7 +1,7 @@
-# Where the build stands — 2026-09-02 (post-audit, all waves shipped)
+# Where the build stands — 2026-09-04 (phase 3 shipped: the visual language)
 
 Read `CLAUDE.md` first, then this. Everything below is on `main` at
-`b9f80ab` with green GitHub CI verified per wave commit.
+`7f53e97` with green GitHub CI verified per wave commit (runs #90–#107).
 
 ## Verified green
 
@@ -11,15 +11,17 @@ node scripts/validate-movements.mjs  OK — 60 movements, ladders complete,
 pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
 engine + app typecheck               pass
-engine tests                         69/69
-app tests                            391/391 (35 suites)
+engine tests                         75/75
+app tests                            457/457 (47 suites, 0 act() warnings)
 pnpm bundle:ios                      pass — full production Hermes bundle
                                      exports (2.7MB), zero resolution errors
 expo prebuild --platform ios         pass — native project generates with
                                      splash storyboard, icon assets, and
                                      the notification/store-review pods
                                      autolinked (compile itself needs macOS)
-simulation (seed 20260831, 500 users, 26 weeks, 36767 sessions)
+simulation (seed 20260831, 500 users, 26 weeks, 36767 sessions) —
+  last run at e619761, the only engine change of phase 3 (nextMilestone,
+  a pure addition); every phase-3 wave since touched the app only
   G1 PASS  84/84 4x-week users at push tier >=4 by week 12, median week 8
   G2 PASS  0 tier regressions; low-capability difficult blocks 767/28270
   G3 PASS  0 sessions over budget (utilization 90.0-100.0%)
@@ -162,6 +164,21 @@ ones.
   flow indicator on purpose, since its second step exists only after
   the OS grants.
 
+**Phase 3, wave by wave (2026-09-04, each deployed to main separately)**
+
+| Wave | Commit | Scope |
+|---|---|---|
+| Hub | `105ed42` | `/(tabs)` Home / Progress / Settings; prompt moves to `/prompt`; unlock choreography |
+| Home | `e619761` | Next skill from the engine's `nextMilestone` (the one engine change) |
+| Gate fix | `3c62dc9` | Red CI from a test-file type error; pre-commit now typechecks first |
+| Progress + Settings | `31ecf4a` | Shared Card, animated ladders, figures on skills, grouped option rows |
+| Prompt | `857a488` | Four-segment flow indicator, staggered rows, shared Track |
+| Onboarding | `3bb68cd` | The drawn mark on the welcome; figures on the equipment options |
+| Session | `0d818a0` | Progress line fills as motion; rest and side switch keep the face |
+| Finish | `f23c50e` | Three beats; figures of completed blocks; reminder ask |
+| Test hygiene | `4fac363` | 54 act() warnings → 0; the hook unit-tested |
+| Copy nits | `7f53e97` | "+1 point"; the hard-denied notification line |
+
 **Reviews**
 
 - Two adversarial pre-merge reviews (waves 1–2), an engine-change
@@ -169,6 +186,10 @@ ones.
   (docs/review/2026-09-02-exercise-experience-audit.md tracks the
   earlier Codex audit; the Norman audit's 3 blockers and 10 should-fixes
   are all closed, its polish list shipped).
+- **Not yet reviewed:** the ten phase-3 waves shipped on the machine
+  gates alone (typecheck, tests, release-check, bundle export, CI). No
+  adversarial reviewer pass has read them. That pass is owed before
+  Gate 3 testers see the build — listed under Next.
 
 ## Next, in order
 
@@ -187,10 +208,14 @@ ones.
    ops SDKs (Sentry/PostHog/Resend/Canny), store preparation.
 4. **Owner: commission Brief 6** (movement animations; 6 reference
    clips first) and the **human coach review** of the 60 movements.
-5. Build side, unblocked now (small): share-card image export when
-   wanted; voice audio after the owner's voice choice. (The two flagged
-   copy nits — "+1 point" and the hard-denied notification line — are
-   closed.)
+5. **Reviewer pass on phase 3** — a fresh-context adversarial read of
+   the ten waves above (the machine gates ran green; no human or
+   reviewer-agent has read the diffs). Should-fixes close before new UI.
+6. Build side, owner-directed (2026-09-04): share-card image export;
+   voice audio (ElevenLabs is the decided provider — build-system §9;
+   the voice itself is the owner's one-time choice, and the API key is
+   the owner's). Both offline-safe by construction: generated assets
+   are committed, never fetched at runtime.
 
 ## Deferred, recorded
 
