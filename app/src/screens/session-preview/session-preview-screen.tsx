@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { MovementFigure } from "../../design/primitives/movement-figure";
 import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
@@ -87,7 +88,10 @@ export function SessionPreviewScreen({
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        // The owner could not tell the list scrolled (Norman: signifiers
+        // — a hidden scrollbar removes the only cue that content
+        // continues). Shown here; the session player stays clean.
+        showsVerticalScrollIndicator
       >
         {care && (
           <View style={styles.care}>
@@ -132,15 +136,20 @@ export function SessionPreviewScreen({
               testID={`preview-block-${index}`}
               style={[styles.blockRow, { borderBottomColor: colors.line }]}
             >
-              <AppText variant="bodyLarge">{block.name}</AppText>
-              <AppText variant="caption">
-                {strings.player.blockPlan(
-                  block.sets,
-                  block.amount,
-                  block.timingType === "seconds",
-                  block.unilateral,
-                )}
-              </AppText>
+              {/* Every movement has a face (ADR-0013) — she sees the
+                  shape of the work, not just its name. */}
+              <MovementFigure movementId={block.movementId} />
+              <View style={styles.blockText}>
+                <AppText variant="bodyLarge">{block.name}</AppText>
+                <AppText variant="caption">
+                  {strings.player.blockPlan(
+                    block.sets,
+                    block.amount,
+                    block.timingType === "seconds",
+                    block.unilateral,
+                  )}
+                </AppText>
+              </View>
             </View>
           ))}
         </View>
@@ -180,7 +189,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.xl,
+    // Generous tail so the last block ends cleanly above the footer
+    // instead of being sliced mid-word at the scroll edge (owner report).
+    paddingBottom: spacing.xxl,
   },
   headline: {
     marginTop: spacing.sm,
@@ -196,9 +207,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   blockRow: {
-    gap: spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: hairline,
+  },
+  blockText: {
+    flex: 1,
+    gap: spacing.xs,
   },
   bottom: {
     gap: spacing.sm,
