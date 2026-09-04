@@ -133,6 +133,58 @@ describe("DailyPromptScreen", () => {
     expect(screen.getByText(strings.prompt.soreness.question)).toBeTruthy();
   });
 
+  it("keeps every answer row hittable from its first frame, mid-entrance", () => {
+    // Gate 3 budget: a returning user who knows the flow taps ahead of
+    // the fade. The rows enter staggered (ADR-0013) but nothing gates
+    // the press, so four taps still complete the prompt with no wait.
+    const onSessionReady = jest.fn();
+    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+
+    fireEvent.press(screen.getByTestId("time-30"));
+    fireEvent.press(screen.getByTestId("energy-strong"));
+    fireEvent.press(screen.getByTestId("quiet-no"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+
+    expect(onSessionReady).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows how far through the four questions she is, one segment per question", () => {
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    const bar = () => screen.getByTestId("prompt-flow");
+
+    // ADR-0003 fixes the flow at four questions and the domain rule
+    // forbids a fifth; the indicator counts from that structure, so a
+    // question added without reading the rule would fail here.
+    expect(bar().props.accessibilityValue).toEqual({ min: 1, max: 4, now: 1 });
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    expect(bar().props.accessibilityValue.now).toBe(2);
+
+    fireEvent.press(screen.getByTestId("energy-low"));
+    expect(bar().props.accessibilityValue.now).toBe(3);
+
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    expect(bar().props.accessibilityValue.now).toBe(4);
+  });
+
+  it("stops counting where the flow stops — the can't-build state is not a step", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+
+    // A bar that kept counting through an outcome would be lying about
+    // where she is; adjusting her answers puts her back on question one.
+    expect(screen.queryByTestId("prompt-flow")).toBeNull();
+    fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+    expect(screen.getByTestId("prompt-flow").props.accessibilityValue.now).toBe(
+      1,
+    );
+  });
+
   it("completes in four taps with the one-tap 'All good' default", () => {
     const onSessionReady = jest.fn();
     const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);

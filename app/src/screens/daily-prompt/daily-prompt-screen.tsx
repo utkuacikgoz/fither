@@ -1,18 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { BodyArea, DailyPrompt, Energy, SessionMinutes } from "@fither/engine";
+import type {
+  BodyArea,
+  DailyPrompt,
+  Energy,
+  SessionMinutes,
+} from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { FadeIn } from "../../design/primitives/fade-in";
+import { FlowProgress } from "../../design/primitives/flow-progress";
 import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
-import { spacing } from "../../design/tokens";
+import { motion, spacing } from "../../design/tokens";
 import { BODY_AREAS } from "../../lib/body-areas";
 import { needsCareMoment } from "../../lib/care-moment";
 import { todayIso } from "../../lib/dates";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 import { useActiveSessionStore } from "../../state/active-session-store";
@@ -31,6 +39,14 @@ const ENERGY: Energy[] = ["low", "okay", "strong"];
 
 type Step = "time" | "energy" | "quiet" | "soreness" | "noSession" | "error";
 
+/**
+ * The four decided questions, in order (ADR-0003). The flow indicator
+ * counts from this, so the product's structure is never re-typed as a
+ * literal — and adding a fifth question would have to happen HERE,
+ * where the domain rule against it is impossible to miss.
+ */
+const QUESTIONS: Step[] = ["time", "energy", "quiet", "soreness"];
+
 interface DailyPromptScreenProps {
   /** Called when the session is generated and ready to play. */
   onSessionReady: () => void;
@@ -42,10 +58,41 @@ interface DailyPromptScreenProps {
   showHandoff?: boolean;
 }
 
+/**
+ * An answer row entering with its siblings. Short lists only — the three
+ * option questions. The soreness list is eight rows and a stagger across
+ * it becomes a wave travelling down the screen, which is the opposite of
+ * "motion is breath"; that one fades as a single block.
+ *
+ * The row is hittable from the first frame, offset and all: a returning
+ * user who knows the flow and taps ahead of the fade still lands on what
+ * she sees, so nothing here spends Gate 3's budget.
+ */
+function AnswerRow({
+  index,
+  reduceMotion,
+  children,
+}: {
+  index: number;
+  reduceMotion: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <FadeIn
+      reduceMotion={reduceMotion}
+      delayMs={index * motion.staggerMs}
+      rise={motion.riseDistance}
+    >
+      {children}
+    </FadeIn>
+  );
+}
+
 export function DailyPromptScreen({
   onSessionReady,
   showHandoff = false,
 }: DailyPromptScreenProps) {
+  const reduceMotion = useReducedMotion();
   const startSession = useSessionStore((s) => s.startSession);
   const previousPrompt = useSessionStore((s) => s.prompt);
   const equipment = useSettingsStore((s) => s.equipment);
@@ -221,6 +268,11 @@ export function DailyPromptScreen({
     </View>
   );
 
+  // Where she is in the four questions. Rendered only while a question
+  // is on screen — the can't-build and error states are not steps of the
+  // flow, and a bar that kept counting through them would lie.
+  const questionIndex = QUESTIONS.indexOf(step);
+
   return (
     <Screen>
       {header}
@@ -230,114 +282,147 @@ export function DailyPromptScreen({
         </AppText>
       )}
 
+      {questionIndex >= 0 && (
+        <View style={styles.flow}>
+          <FlowProgress
+            testID="prompt-flow"
+            total={QUESTIONS.length}
+            current={questionIndex + 1}
+            reduceMotion={reduceMotion}
+          />
+        </View>
+      )}
+
       {step === "time" && (
-        <View style={styles.question}>
+        <FadeIn
+          reduceMotion={reduceMotion}
+          rise={motion.riseDistance}
+          style={styles.question}
+        >
           <AppText variant="title" style={styles.title}>
             {strings.prompt.time.question}
           </AppText>
-          {MINUTES.map((m) => (
-            <RowButton
-              key={m}
-              testID={`time-${m}`}
-              label={strings.prompt.time.minutes[m]}
-              selected={minutes === m}
-              onPress={() => {
-                setMinutes(m);
-                setStep("energy");
-              }}
-            />
+          {MINUTES.map((m, index) => (
+            <AnswerRow key={m} index={index} reduceMotion={reduceMotion}>
+              <RowButton
+                testID={`time-${m}`}
+                label={strings.prompt.time.minutes[m]}
+                selected={minutes === m}
+                onPress={() => {
+                  setMinutes(m);
+                  setStep("energy");
+                }}
+              />
+            </AnswerRow>
           ))}
-        </View>
+        </FadeIn>
       )}
 
       {step === "energy" && (
-        <View style={styles.question}>
+        <FadeIn
+          reduceMotion={reduceMotion}
+          rise={motion.riseDistance}
+          style={styles.question}
+        >
           <AppText variant="title" style={styles.title}>
             {strings.prompt.energy.question}
           </AppText>
-          {ENERGY.map((e) => (
-            <RowButton
-              key={e}
-              testID={`energy-${e}`}
-              label={strings.prompt.energy.options[e]}
-              selected={energy === e}
-              onPress={() => {
-                setEnergy(e);
-                setStep("quiet");
-              }}
-            />
+          {ENERGY.map((e, index) => (
+            <AnswerRow key={e} index={index} reduceMotion={reduceMotion}>
+              <RowButton
+                testID={`energy-${e}`}
+                label={strings.prompt.energy.options[e]}
+                selected={energy === e}
+                onPress={() => {
+                  setEnergy(e);
+                  setStep("quiet");
+                }}
+              />
+            </AnswerRow>
           ))}
-        </View>
+        </FadeIn>
       )}
 
       {step === "quiet" && (
-        <View style={styles.question}>
+        <FadeIn
+          reduceMotion={reduceMotion}
+          rise={motion.riseDistance}
+          style={styles.question}
+        >
           <AppText variant="title" style={styles.title}>
             {strings.prompt.quiet.question}
           </AppText>
-          <RowButton
-            testID="quiet-yes"
-            label={strings.prompt.quiet.yes}
-            selected={quiet === true}
-            onPress={() => {
-              setQuiet(true);
-              setStep("soreness");
-            }}
-          />
-          <RowButton
-            testID="quiet-no"
-            label={strings.prompt.quiet.no}
-            selected={quiet === false}
-            onPress={() => {
-              setQuiet(false);
-              setStep("soreness");
-            }}
-          />
-        </View>
+          <AnswerRow index={0} reduceMotion={reduceMotion}>
+            <RowButton
+              testID="quiet-yes"
+              label={strings.prompt.quiet.yes}
+              selected={quiet === true}
+              onPress={() => {
+                setQuiet(true);
+                setStep("soreness");
+              }}
+            />
+          </AnswerRow>
+          <AnswerRow index={1} reduceMotion={reduceMotion}>
+            <RowButton
+              testID="quiet-no"
+              label={strings.prompt.quiet.no}
+              selected={quiet === false}
+              onPress={() => {
+                setQuiet(false);
+                setStep("soreness");
+              }}
+            />
+          </AnswerRow>
+        </FadeIn>
       )}
 
       {step === "soreness" && (
         <ScrollView
           style={styles.question}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+          // Signifiers: seven areas plus the confirm run past the fold on
+          // a small phone, and a hidden bar is the only cue missing.
+          showsVerticalScrollIndicator
         >
-          <AppText variant="title" style={styles.title}>
-            {strings.prompt.soreness.question}
-          </AppText>
-          {avoid.length === 0 && (
-            <RowButton
-              testID="soreness-all-good"
-              label={strings.prompt.soreness.allGood}
-              onPress={() => finish([])}
-            />
-          )}
-          {BODY_AREAS.map((area) => (
-            <RowButton
-              key={area}
-              testID={`soreness-${area}`}
-              label={strings.prompt.soreness.areas[area]}
-              selected={avoid.includes(area)}
-              multiSelect
-              onPress={() => toggleArea(area)}
-            />
-          ))}
-          {avoid.length > 0 && (
-            <View style={styles.confirm}>
-              <AppText
-                variant="caption"
-                style={styles.countCue}
-                testID="soreness-count"
-              >
-                {strings.prompt.soreness.areasNoted(avoid.length)}
-              </AppText>
-              <PrimaryButton
-                testID="soreness-confirm"
-                label={strings.prompt.soreness.confirm}
-                onPress={() => finish(avoid)}
+          <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
+            <AppText variant="title" style={styles.title}>
+              {strings.prompt.soreness.question}
+            </AppText>
+            {avoid.length === 0 && (
+              <RowButton
+                testID="soreness-all-good"
+                label={strings.prompt.soreness.allGood}
+                onPress={() => finish([])}
               />
-            </View>
-          )}
+            )}
+            {BODY_AREAS.map((area) => (
+              <RowButton
+                key={area}
+                testID={`soreness-${area}`}
+                label={strings.prompt.soreness.areas[area]}
+                selected={avoid.includes(area)}
+                multiSelect
+                onPress={() => toggleArea(area)}
+              />
+            ))}
+            {avoid.length > 0 && (
+              <View style={styles.confirm}>
+                <AppText
+                  variant="caption"
+                  style={styles.countCue}
+                  testID="soreness-count"
+                >
+                  {strings.prompt.soreness.areasNoted(avoid.length)}
+                </AppText>
+                <PrimaryButton
+                  testID="soreness-confirm"
+                  label={strings.prompt.soreness.confirm}
+                  onPress={() => finish(avoid)}
+                />
+              </View>
+            )}
+          </FadeIn>
         </ScrollView>
       )}
 
@@ -370,7 +455,7 @@ export function DailyPromptScreen({
             <ScrollView
               style={styles.question}
               contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator
             >
               {care && (
                 <AppText
@@ -419,6 +504,9 @@ const styles = StyleSheet.create({
   },
   handoffLine: {
     marginTop: spacing.xs,
+  },
+  flow: {
+    marginTop: spacing.md,
   },
   question: {
     marginTop: spacing.xl,
