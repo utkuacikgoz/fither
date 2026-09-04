@@ -26,6 +26,8 @@ import { router } from "expo-router";
 import { strings } from "../copy/strings";
 import { AppText } from "../design/primitives/app-text";
 import { Screen } from "../design/primitives/screen";
+import { todayIso } from "./dates";
+import { entitlementStatus, isEntitled } from "../monetization/entitlement";
 import { isFinished } from "../session/player-machine";
 import { useActiveSessionStore } from "../state/active-session-store";
 import { useEntitlementStore } from "../state/entitlement-store";
@@ -40,6 +42,14 @@ import { useSettingsStore } from "../state/settings-store";
 export type RouteRequirement =
   /** Persisted stores hydrated — the route shows owned records only. */
   | "hydratedOnly"
+  /**
+   * /home and /prompt: hydrated AND allowed to generate a new session.
+   * An expired, unpurchased trial belongs on the gated day at "/" (the
+   * paywall letter), not in front of four questions whose answer it
+   * cannot act on. The decision is the monetization module's, unchanged
+   * and app-layer — this guard only asks it (ADR-0009 §3).
+   */
+  | "entitledToStart"
   /** /preview: a generated session waiting to be played. */
   | "generatedSession"
   /** /session: a session and player in flight. */
@@ -101,6 +111,12 @@ function requirementMet(requirement: RouteRequirement): boolean {
   switch (requirement) {
     case "hydratedOnly":
       return true;
+    case "entitledToStart": {
+      const { trialStartDate, purchase } = useEntitlementStore.getState();
+      return isEntitled(
+        entitlementStatus({ trialStartDate, purchase, today: todayIso() }),
+      );
+    }
     case "generatedSession":
     case "activeSession":
       return session !== null && player !== null;

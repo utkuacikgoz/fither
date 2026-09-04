@@ -6,6 +6,57 @@
 import type { BodyArea, Energy, Pattern, SessionMinutes } from "@fither/engine";
 
 export const strings = {
+  // COPY-WRITER: home hub (2026-09-04, ADR-0013 §4) — the app's face
+  // between sessions. Three cards; only the day's card carries a primary
+  // action. Most of this screen REUSES keys that already exist, and the
+  // reuses are load-bearing, not thrift:
+  //   · in-flight card → resume.headline + resume.continueLabel ("Keep
+  //     going"). Same act, same words as the resume screen itself; a
+  //     home-only twin would let the two drift apart. No `today.resume`
+  //     key here — do not add one.
+  //   · done-for-today card → prompt.completedToday.*
+  //   · card headings → profile.patterns.title ("Patterns") and
+  //     profile.skills.title ("Skills"). Both cards tap through to
+  //     Progress, so the heading must be the word she lands on; a warmer
+  //     home-only heading would name the same thing twice and break the
+  //     mapping. The patterns row also speaks profile.patterns.title in
+  //     its own accessibility label, so a different visible heading
+  //     would make the screen say one thing and VoiceOver another.
+  // Three keys are new, and each earns it below.
+  home: {
+    today: {
+      // The nothing-yet state, under the "Today" label (prompt.dayLabel).
+      // This is the decided product/daily tagline verbatim (ADR-0006) —
+      // not a rival slogan, and this is the one surface it was decided
+      // for: the daily card, before a session exists. It promises a fit,
+      // never a built session waiting (the truth rule under
+      // `notifications`). Onboarding's welcome headline keeps the BRAND
+      // tagline; the two never share a screen.
+      line: "A workout that fits today.",
+      // The only primary action on the hub. It names its outcome, not its
+      // mechanism: the tap opens the four questions and what comes out is
+      // today's session. "Start" would lie — nothing starts for another
+      // four taps.
+      //
+      // Same words as prompt.soreness.confirm, deliberately NOT the same
+      // key: that button is the last of the four questions, this one is
+      // the entrance to them — the promise made here is kept there. One
+      // shared key would couple two screens that must stay free to
+      // diverge (the confirm sits under the "1 area noted" cue and may
+      // shorten), and a prompt key imported into the home screen would
+      // read as a bug at review.
+      start: "Build today's session",
+    },
+    skills: {
+      // Heading is profile.skills.title; only the empty line is new.
+      // profile.skills.empty explains in two sentences where skills come
+      // from — right for the full list, too long for a glance card that
+      // otherwise holds a single name. Same vocabulary ("lands here"),
+      // one line, forward-looking: nothing about absence, nothing about
+      // when, no "yet".
+      empty: "Your first named skill lands here.",
+    },
+  },
   prompt: {
     dayLabel: "Today",
     time: {

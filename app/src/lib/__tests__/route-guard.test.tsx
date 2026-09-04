@@ -6,9 +6,9 @@ import { createInitialProfile } from "@fither/engine";
 
 import FinishRoute from "../../../app/finish";
 import PreviewRoute from "../../../app/preview";
-import ProgressRoute from "../../../app/progress";
+import ProgressRoute from "../../../app/(tabs)/progress";
 import SessionRoute from "../../../app/session";
-import SettingsRoute from "../../../app/settings";
+import SettingsRoute from "../../../app/(tabs)/settings";
 import SignInRoute from "../../../app/sign-in";
 import UnlockRoute from "../../../app/unlock";
 import { useDevAuthSessionStore } from "../../auth/dev-auth";

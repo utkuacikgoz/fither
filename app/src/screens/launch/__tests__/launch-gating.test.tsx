@@ -29,10 +29,21 @@ import { LaunchScreen } from "../launch-screen";
 
 function callbacks() {
   return {
-    onSessionReady: jest.fn(),
+    onHome: jest.fn(),
+    onPromptHandoff: jest.fn(),
     onResumeSession: jest.fn(),
     onResumeFinished: jest.fn(),
   };
+}
+
+/**
+ * Render the launch surface with its handoff callbacks reachable: the
+ * surface no longer RENDERS the day (ADR-0013 §4), it hands off to the
+ * hub, so "she reached her normal day" is now an assertion on onHome.
+ */
+function renderLaunch() {
+  const cbs = callbacks();
+  return { ...render(<LaunchScreen {...cbs} />), cbs };
 }
 
 function isoDaysAgo(days: number): string {
@@ -123,13 +134,13 @@ beforeEach(() => {
 describe("sign-in placement (ADR-0011)", () => {
   it("no identity opens into sign-in, before onboarding", () => {
     useIdentityStore.setState({ identity: null });
-    const screen = render(<LaunchScreen {...callbacks()} />);
+    const screen = renderLaunch();
     expect(screen.getByText(strings.auth.guest)).toBeTruthy();
     // Onboarding's absence is asserted via its body line (historically
     // the headline text was shared with sign-in; the assertion stays on
     // the unambiguous string).
     expect(screen.queryByText(strings.onboarding.welcome.body)).toBeNull();
-    expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
   });
 
   it("guest is one tap and continues into onboarding, store-driven", async () => {
@@ -151,44 +162,44 @@ describe("sign-in placement (ADR-0011)", () => {
   it("the resume decision wins over sign-in", () => {
     useIdentityStore.setState({ identity: null });
     seedTodaySnapshot();
-    const screen = render(<LaunchScreen {...callbacks()} />);
+    const screen = renderLaunch();
     expect(screen.getByText(strings.resume.continueLabel)).toBeTruthy();
     expect(screen.queryByText(strings.auth.guest)).toBeNull();
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
   });
 });
 
 describe("onboarding placement", () => {
-  it("a fresh profile opens into onboarding, not the prompt", () => {
-    const screen = render(<LaunchScreen {...callbacks()} />);
+  it("a fresh profile opens into onboarding, not the hub", () => {
+    const screen = renderLaunch();
     expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
-    expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
   });
 
-  it("completing onboarding lands on the prompt with the handoff eyebrow, once", () => {
-    const screen = render(<LaunchScreen {...callbacks()} />);
+  it("completing onboarding goes straight to the questions, handoff and all, once", () => {
+    const screen = renderLaunch();
     fireEvent.press(screen.getByTestId("onboarding-begin"));
     fireEvent.press(screen.getByTestId("onboarding-chair"));
     fireEvent.press(screen.getByTestId("onboarding-avoid-nothing"));
 
-    // The drafted handoff: eyebrow + one line atop the first question.
-    expect(screen.getByText(strings.onboarding.handoff.eyebrow)).toBeTruthy();
-    expect(screen.getByText(strings.onboarding.handoff.line)).toBeTruthy();
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    // Her first run never spends the hub's extra tap: the four questions
+    // come next, carrying the drafted handoff eyebrow (ADR-0013 §5).
+    expect(screen.cbs.onPromptHandoff).toHaveBeenCalledTimes(1);
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
     expect(useSettingsStore.getState().onboardingCompleted).toBe(true);
 
     // Simulated relaunch: a fresh mount skips onboarding AND the handoff.
     screen.unmount();
-    const relaunch = render(<LaunchScreen {...callbacks()} />);
-    expect(relaunch.getByText(strings.prompt.time.question)).toBeTruthy();
+    const relaunch = renderLaunch();
+    expect(relaunch.cbs.onHome).toHaveBeenCalledTimes(1);
+    expect(relaunch.cbs.onPromptHandoff).not.toHaveBeenCalled();
     expect(relaunch.queryByText(strings.onboarding.welcome.headline)).toBeNull();
-    expect(relaunch.queryByText(strings.onboarding.handoff.eyebrow)).toBeNull();
-    expect(relaunch.getByText(strings.prompt.dayLabel)).toBeTruthy();
   });
 
   it("a profile with history is never onboarded, even without the flag", () => {
     seedHistoryEntry();
-    const screen = render(<LaunchScreen {...callbacks()} />);
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    const screen = renderLaunch();
+    expect(screen.cbs.onHome).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(strings.onboarding.welcome.headline)).toBeNull();
   });
 
@@ -208,20 +219,21 @@ describe("entitlement gating (ADR-0009 §3)", () => {
 
   it("an active trial generates sessions as normal", () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(6) });
-    const screen = render(<LaunchScreen {...callbacks()} />);
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    const screen = renderLaunch();
+    expect(screen.cbs.onHome).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
     expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
   });
 
   it("an expired trial swaps new-session generation for the paywall, in its expired voice", () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
-    const screen = render(<LaunchScreen {...callbacks()} />);
+    const screen = renderLaunch();
     expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
     // Never the pre-trial "free week ahead" letter once the week is spent.
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
     expect(screen.queryByText(strings.paywall.cta)).toBeNull();
-    expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
+    // And never a handoff to the hub: the gated day IS her day.
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
     // Her record is untouched — gating blocks nothing already earned.
     expect(useProfileStore.getState().history.entries).toHaveLength(1);
   });
@@ -241,16 +253,14 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     expect(screen.getByTestId("paywall-restore")).toBeTruthy();
   });
 
-  it("restoring a purchase from the gated day unlocks the prompt", async () => {
+  it("restoring a purchase from the gated day opens the hub", async () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
     useDevReceiptStore.setState({
       receipt: { plan: "annual", date: isoDaysAgo(10) },
     });
-    const screen = render(<LaunchScreen {...callbacks()} />);
+    const screen = renderLaunch();
     fireEvent.press(screen.getByTestId("paywall-restore"));
-    await waitFor(() =>
-      expect(screen.getByText(strings.prompt.time.question)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.cbs.onHome).toHaveBeenCalledTimes(1));
   });
 
   it("an empty restore leaves the gated day standing — doors intact, honest message", async () => {
@@ -269,8 +279,8 @@ describe("entitlement gating (ADR-0009 §3)", () => {
       trialStartDate: isoDaysAgo(30),
       purchase: { plan: "annual", date: isoDaysAgo(10) },
     });
-    const screen = render(<LaunchScreen {...callbacks()} />);
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    const screen = renderLaunch();
+    expect(screen.cbs.onHome).toHaveBeenCalledTimes(1);
   });
 
   it("the resume offer wins over the paywall — a session in flight is never interrupted", () => {
@@ -287,13 +297,11 @@ describe("entitlement gating (ADR-0009 §3)", () => {
 
   it("buying on the paywall unlocks for real: the prompt appears and the grant persists", async () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
-    const screen = render(<LaunchScreen {...callbacks()} />);
+    const screen = renderLaunch();
     expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
 
     fireEvent.press(screen.getByTestId("paywall-purchase"));
-    await waitFor(() =>
-      expect(screen.getByText(strings.prompt.time.question)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.cbs.onHome).toHaveBeenCalledTimes(1));
     expect(useEntitlementStore.getState().purchase).toMatchObject({
       plan: "annual",
     });
@@ -301,10 +309,10 @@ describe("entitlement gating (ADR-0009 §3)", () => {
 
   it("waits for the entitlement store to hydrate before deciding anything", () => {
     useEntitlementStore.setState({ hydrated: false });
-    const screen = render(<LaunchScreen {...callbacks()} />);
+    const screen = renderLaunch();
     expect(screen.getByText(strings.errors.preparing)).toBeTruthy();
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
     expect(screen.queryByText(strings.onboarding.welcome.headline)).toBeNull();
-    expect(screen.queryByText(strings.prompt.time.question)).toBeNull();
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
   });
 });

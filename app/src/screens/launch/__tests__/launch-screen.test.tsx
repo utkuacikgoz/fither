@@ -22,7 +22,8 @@ import { LaunchScreen } from "../launch-screen";
 
 function callbacks() {
   return {
-    onSessionReady: jest.fn(),
+    onHome: jest.fn(),
+    onPromptHandoff: jest.fn(),
     onResumeSession: jest.fn(),
     onResumeFinished: jest.fn(),
   };
@@ -83,10 +84,13 @@ beforeEach(() => {
 });
 
 describe("LaunchScreen", () => {
-  it("opens straight into the daily prompt when nothing is persisted", () => {
+  it("hands off to the hub when nothing is persisted", () => {
     const cbs = callbacks();
     const screen = render(<LaunchScreen {...cbs} />);
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    // The launch surface renders no day content of its own now
+    // (ADR-0013 §4): it gates, then hands the day to /home.
+    expect(cbs.onHome).toHaveBeenCalledTimes(1);
+    expect(cbs.onPromptHandoff).not.toHaveBeenCalled();
     expect(screen.queryByText(strings.resume.headline)).toBeNull();
     expect(cbs.onResumeFinished).not.toHaveBeenCalled();
   });
@@ -129,12 +133,12 @@ describe("LaunchScreen", () => {
     // The finish route's completeSession will apply exactly these.
   });
 
-  it("silently discards a previous day's session and shows the prompt", () => {
+  it("silently discards a previous day's session and hands off to the hub", () => {
     seedSnapshot("2000-01-01");
     const cbs = callbacks();
     const screen = render(<LaunchScreen {...cbs} />);
 
-    expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
+    expect(cbs.onHome).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(strings.resume.headline)).toBeNull();
     expect(useActiveSessionStore.getState().snapshot).toBeNull();
     expect(cbs.onResumeSession).not.toHaveBeenCalled();

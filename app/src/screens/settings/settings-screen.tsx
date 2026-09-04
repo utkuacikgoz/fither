@@ -329,9 +329,9 @@ export function SettingsScreen({
 
 const styles = StyleSheet.create({
   scrollContent: {
-    // Clears the transparent navigation header the settings route adds
-    // (the back chevron lives up there), then breathes normally.
-    paddingTop: spacing.xxl,
+    // A tab, not a pushed route (ADR-0013 §4): no header to clear, so
+    // the title starts just below the safe area and breathes normally.
+    paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
   title: {
