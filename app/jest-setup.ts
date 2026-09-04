@@ -92,3 +92,15 @@ jest.mock("expo-store-review", () => ({
   hasAction: jest.fn(async () => true),
   requestReview: jest.fn(async () => undefined),
 }));
+
+// Reduce Motion, in screen tests: the real hook reads the OS setting
+// asynchronously and sets state when the promise lands — outside any
+// act() a test can wrap, so every screen using it warned on every test
+// (54 warnings, one source line). Screens get the settled default here.
+// Nothing is lost: every primitive's Reduce Motion path is tested with
+// the explicit prop (card, track, answer-row, progress-line), and the
+// hook itself has its own unit test that reaches past this mock with
+// jest.requireActual.
+jest.mock("./src/lib/use-reduced-motion", () => ({
+  useReducedMotion: () => false,
+}));
