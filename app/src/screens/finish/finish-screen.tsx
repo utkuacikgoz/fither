@@ -3,9 +3,12 @@ import { AccessibilityInfo, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { FadeIn } from "../../design/primitives/fade-in";
+import { MovementFigure } from "../../design/primitives/movement-figure";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { Screen } from "../../design/primitives/screen";
-import { spacing } from "../../design/tokens";
+import { motion, spacing } from "../../design/tokens";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useSessionStore, type FinishSummary } from "../../state/session-store";
 
 interface FinishScreenProps {
@@ -47,6 +50,22 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   const finish = useSessionStore((s) => s.finish);
   const saveFailed = useSessionStore((s) => s.saveFailed);
   const saving = useSessionStore((s) => s.saving);
+  const player = useSessionStore((s) => s.player);
+  const reduceMotion = useReducedMotion();
+
+  // What she did, drawn: the figure of every block whose outcome the
+  // player recorded as completed (ADR-0013 — the landing after the
+  // effort shows the effort, not a sentence about it). Read straight off
+  // the player's own outcomes, index-aligned to its blocks; the store
+  // keeps the player until she continues, so this is the same record the
+  // engine was handed. Nothing-done renders none, which is the honest
+  // close showing nothing to show.
+  const completedMovementIds =
+    player === null
+      ? []
+      : player.blocks
+          .filter((_, index) => player.outcomes[index] === "completed")
+          .map((block) => block.movementId);
 
   // A session with zero completed blocks gets the honest close — no
   // "complete", no "counts", no points row (ADR-0012 / audit P0 #5).
@@ -78,26 +97,58 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
     completeSession();
   }, [completeSession]);
 
+  // Three beats once the close is known — the movements she did, the
+  // headline, then the points — in the unlock's own rhythm. The saving
+  // and failed states are waiting states and get no choreography; the
+  // Continue button sits outside it and is tappable the moment it
+  // renders. The points rise in once and do not count up: a ticking
+  // total is slot-machine energy, and points buy nothing here.
+  const settled = finish !== null;
+  const beat = (index: number) => ({
+    reduceMotion,
+    rise: settled ? motion.riseDistance : 0,
+    delayMs: settled ? index * motion.staggerMs : 0,
+  });
+
   return (
     <Screen>
       <View style={styles.center}>
-        <AppText variant="title">{headline}</AppText>
-        <AppText variant="bodySoft" style={styles.note}>
-          {note}
-        </AppText>
+        {completedMovementIds.length > 0 && (
+          <FadeIn {...beat(0)}>
+            <View style={styles.figures} testID="finish-figures">
+              {completedMovementIds.map((movementId, index) => (
+                <MovementFigure
+                  key={`${index}-${movementId}`}
+                  movementId={movementId}
+                  testID={`finish-figure-${index}`}
+                />
+              ))}
+            </View>
+          </FadeIn>
+        )}
+        <FadeIn {...beat(1)}>
+          <AppText variant="title" style={styles.headline}>
+            {headline}
+          </AppText>
+          <AppText variant="bodySoft" style={styles.note}>
+            {note}
+          </AppText>
+        </FadeIn>
         {finish && !nothingDone && (
-          <View style={styles.points}>
-            <AppText variant="numeral" testID="finish-points">
-              {`+${finish.pointsEarned}`}
-            </AppText>
-            {/* strings.finish.pointsLabel is the static plural unit; a
-                parameterised singular does not exist yet (flagged for the
-                copy-writer), so exactly one point renders unitless rather
-                than as the false "+1 points". */}
-            {finish.pointsEarned !== 1 && (
-              <AppText variant="caption">{strings.finish.pointsLabel}</AppText>
-            )}
-          </View>
+          <FadeIn {...beat(2)}>
+            <View style={styles.points}>
+              <AppText variant="numeral" testID="finish-points">
+                {`+${finish.pointsEarned}`}
+              </AppText>
+              {/* strings.finish.pointsLabel is the static plural unit; a
+                  parameterised singular does not exist yet (flagged for the
+                  copy-writer), so exactly one point renders unitless rather
+                  than as the false "+1 points". */}
+              {finish.pointsEarned !== 1 && (
+                <AppText variant="caption">{strings.finish.pointsLabel}</AppText>
+              )}
+            </View>
+          </FadeIn>
         )}
       </View>
       <View style={styles.bottom}>
@@ -119,8 +170,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  figures: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  headline: {
+    textAlign: "center",
+  },
   note: {
     marginTop: spacing.sm,
+    textAlign: "center",
   },
   points: {
     alignItems: "center",
