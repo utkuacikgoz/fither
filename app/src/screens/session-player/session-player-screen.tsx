@@ -10,6 +10,7 @@ import { useKeepAwake } from "expo-keep-awake";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { AnswerRow } from "../../design/primitives/answer-row";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { ProgressLine } from "../../design/primitives/progress-line";
@@ -17,7 +18,7 @@ import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { Screen } from "../../design/primitives/screen";
-import { minTouchTarget, spacing } from "../../design/tokens";
+import { minTouchTarget, motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import {
   completedSets,
@@ -141,6 +142,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
         fraction={progressFraction(player)}
         completed={completedSets(player)}
         total={totalSets(player)}
+        reduceMotion={reduceMotion}
       />
 
       {confirmingSkip && (
@@ -300,14 +302,25 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
       {phase.kind === "sideSwitch" && !confirmingSkip && (
         <>
-          <View style={styles.center}>
+          {/* The same movement, other side: its figure stays with her
+              across the switch (every movement has a face — ADR-0013),
+              and the phase enters as one quiet breath. */}
+          <FadeIn
+            reduceMotion={reduceMotion}
+            rise={motion.riseDistance}
+            style={styles.center}
+          >
+            <MovementFigure
+              movementId={block.movementId}
+              testID="player-figure-side"
+            />
             <AppText variant="title" accessibilityRole="header">
               {strings.player.sides.switchTitle}
             </AppText>
             <AppText variant="bodySoft" style={styles.subline}>
               {strings.player.sides.switchBody}
             </AppText>
-          </View>
+          </FadeIn>
           <View style={styles.bottom}>
             <PrimaryButton
               testID="player-start-right"
@@ -325,7 +338,21 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
       {phase.kind === "rest" && !confirmingSkip && (
         <>
-          <View style={styles.center}>
+          {/* The calmest screen in the app — a deliberate exhale. It
+              enters as one slow breath; the figure of the movement she
+              is resting from sits small above the count, so the rest
+              never reads as a blank between two screens. The number
+              itself does not animate per tick: sixty tiny movements a
+              minute is the opposite of calm. */}
+          <FadeIn
+            reduceMotion={reduceMotion}
+            rise={motion.riseDistance}
+            style={styles.center}
+          >
+            <MovementFigure
+              movementId={block.movementId}
+              testID="player-figure-rest"
+            />
             <AppText variant="title">{strings.player.rest}</AppText>
             <AppText
               variant="numeral"
@@ -337,7 +364,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             </AppText>
             <AppText variant="caption">{strings.player.holdLabel}</AppText>
             <AppText variant="caption">{strings.player.restNote}</AppText>
-          </View>
+          </FadeIn>
           <View style={styles.bottom}>
             <PrimaryButton
               testID="player-end-rest"
@@ -369,21 +396,27 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
               off completed/struggled), so nothing is dropped here — do
               not add outcome kinds to preserve it.
             */}
-            <RowButton
-              testID="feedback-felt-strong"
-              label={strings.player.feedback.options.feltStrong}
-              onPress={() => dispatchPlayer({ type: "feedback", outcome: "completed" })}
-            />
-            <RowButton
-              testID="feedback-good"
-              label={strings.player.feedback.options.good}
-              onPress={() => dispatchPlayer({ type: "feedback", outcome: "completed" })}
-            />
-            <RowButton
-              testID="feedback-hard"
-              label={strings.player.feedback.options.hard}
-              onPress={() => dispatchPlayer({ type: "feedback", outcome: "struggled" })}
-            />
+            <AnswerRow index={0} reduceMotion={reduceMotion}>
+              <RowButton
+                testID="feedback-felt-strong"
+                label={strings.player.feedback.options.feltStrong}
+                onPress={() => dispatchPlayer({ type: "feedback", outcome: "completed" })}
+              />
+            </AnswerRow>
+            <AnswerRow index={1} reduceMotion={reduceMotion}>
+              <RowButton
+                testID="feedback-good"
+                label={strings.player.feedback.options.good}
+                onPress={() => dispatchPlayer({ type: "feedback", outcome: "completed" })}
+              />
+            </AnswerRow>
+            <AnswerRow index={2} reduceMotion={reduceMotion}>
+              <RowButton
+                testID="feedback-hard"
+                label={strings.player.feedback.options.hard}
+                onPress={() => dispatchPlayer({ type: "feedback", outcome: "struggled" })}
+              />
+            </AnswerRow>
           </View>
         </>
       )}
