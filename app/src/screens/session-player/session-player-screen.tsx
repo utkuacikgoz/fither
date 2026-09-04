@@ -15,6 +15,7 @@ import { PrimaryButton } from "../../design/primitives/primary-button";
 import { ProgressLine } from "../../design/primitives/progress-line";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
+import { MovementFigure } from "../../design/primitives/movement-figure";
 import { Screen } from "../../design/primitives/screen";
 import { minTouchTarget, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
@@ -185,6 +186,12 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             contentContainerStyle={styles.introContent}
             showsVerticalScrollIndicator={false}
           >
+            <MovementFigure
+              movementId={block.movementId}
+              size="hero"
+              onWash
+              testID="player-figure-intro"
+            />
             <AppText variant="display" accessibilityRole="header">{block.name}</AppText>
             <AppText variant="bodySoft" style={styles.subline}>
               {strings.player.blockPlan(
@@ -230,7 +237,15 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       {phase.kind === "work" && !confirmingSkip && (
         <>
           <View style={styles.top}>
-            <AppText variant="title" accessibilityRole="header">{block.name}</AppText>
+            <View style={styles.workHeading}>
+              <MovementFigure
+                movementId={block.movementId}
+                testID="player-figure-work"
+              />
+              <AppText variant="title" accessibilityRole="header" style={styles.workName}>
+                {block.name}
+              </AppText>
+            </View>
             {block.cues.length > 0 && (
               <AppText variant="bodySoft" style={styles.subline}>
                 {block.cues[
@@ -377,6 +392,14 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  workHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  workName: {
+    flex: 1,
+  },
   top: {
     marginTop: spacing.xl,
   },

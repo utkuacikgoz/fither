@@ -9,8 +9,13 @@ values. One hardcoded hex in a screen is a bug.
 
 ## Principles
 
-1. **Calm beats clever.** One focal point per screen. If a screen has two
-   competing calls to action, cut one. Empty space is a feature we ship.
+1. **Calm beats clever — but calm is not bare (ADR-0013).** One focal
+   point per screen; if two calls to action compete, cut one. Whitespace
+   must be COMPOSED, not left over: a screen with room to breathe and a
+   screen that looks unfinished are different things, and the difference
+   is whether what remains is crafted. Every screen carries at least one
+   considered visual element — an illustration, a card, a rendered
+   progress form. A wall of text is a bug, not restraint.
 2. **The session is sacred.** During a workout the screen shows: the
    movement, the count/timer, the cue. Nothing else. No chrome, no tab
    bar, no points ticking up mid-set.
@@ -18,16 +23,27 @@ values. One hardcoded hex in a screen is a bug.
    are huge (48–72pt). One type hierarchy per screen: an eyebrow
    caption, one title, body — never two competing titles or two
    competing captions in one content group; numerals live on their own
-   scale. (Amended 2026-09-02: the earlier "two sizes per screen" rule
-   contradicted every shipped screen's caption/title/body rhythm — the
-   rhythm is the standard, so the rule now names it instead of
-   forbidding it.)
-4. **Motion is breath, not fireworks.** 250–350ms ease-out fades and
-   gentle slides. Nothing bounces. One exception: the skill-unlock moment
-   gets one considered, generous animation — it's the emotional payoff.
-   Respect Reduce Motion always.
+   scale. Type alone is never the whole design: if a screen's only
+   content is set text, it is not finished (ADR-0013).
+4. **Motion is breath — and it breathes everywhere (ADR-0013).**
+   250–350ms ease-out fades and slides on screen transitions, list
+   entrances, number changes and progress fills. Nothing bounces,
+   nothing springs, nothing spins. The skill-unlock moment still gets
+   the most generous animation in the product — it is the emotional
+   payoff — but it is no longer the ONLY one; the previous rule produced
+   a static app. Reduce Motion is honoured absolutely: every animated
+   element renders in its final state, never a half-played frame.
 5. **Touch targets 44pt+, everything reachable one-handed** at the bottom
    of the screen during a session — her hands may be shaking.
+
+## Every movement has a face
+
+No exercise screen shows a movement by name alone. A line figure drawn
+from that movement's pose data accompanies it in the preview list, the
+block intro and the work phase. Figures are generated (see
+`scripts/generate-movement-figures.py`) so they regenerate rather than
+drift, and are placeholder art with real intent: Brief 6's commissioned
+animation replaces the rendering, not the pose data.
 
 ## Norman's principles — every screen answers all six
 
