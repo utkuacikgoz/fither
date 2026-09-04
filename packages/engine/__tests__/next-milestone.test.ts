@@ -40,11 +40,13 @@ describe("nextMilestone", () => {
   });
 
   it("never promises a skill a legacy profile already holds", () => {
-    // Trained past tier 4 before unlockedMilestones existed: no entry,
-    // but the tier proves she has it. She is pointed at tier 6, not 4.
-    const legacy = profileAt({ push: 5 }, undefined);
-    const next = nextMilestone({ ...legacy, unlockedMilestones: undefined });
-    expect(next).not.toEqual({ pattern: "push", tier: 4 });
+    // Trained past tier 4 before unlockedMilestones existed: the field is
+    // ABSENT (not undefined — exactOptionalPropertyTypes means those are
+    // different shapes, and absent is what a v0 profile actually
+    // deserialises to), but the tier proves she has it.
+    const { unlockedMilestones: _omitted, ...legacy } = profileAt({ push: 5 });
+    expect("unlockedMilestones" in legacy).toBe(false);
+    expect(nextMilestone(legacy)).not.toEqual({ pattern: "push", tier: 4 });
   });
 
   it("returns null once every milestone is behind her", () => {
