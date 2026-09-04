@@ -45,14 +45,7 @@ export function phaseAnnouncement(state: PlayerState): string | null {
         block.unilateral,
       )}`;
     case "work": {
-      // The exact cue the screen renders for this set and side.
-      const cue =
-        block.cues.length > 0
-          ? block.cues[
-              (phase.setIndex + (phase.side === "right" ? 1 : 0)) %
-                block.cues.length
-            ]
-          : undefined;
+      const cue = workCue(state);
       const sideLabel =
         phase.side !== null ? strings.player.sides[phase.side] : null;
       const parts = [sideLabel, cue ?? block.name].filter(
@@ -65,4 +58,22 @@ export function phaseAnnouncement(state: PlayerState): string | null {
     case "rest":
       return `${strings.player.rest}. ${phase.remainingSeconds} ${strings.player.holdLabel}`;
   }
+}
+
+/**
+ * The exact cue the screen renders for the current work set and side —
+ * the ONE definition shared by the screen, VoiceOver and the spoken
+ * voice, so all three say the same line. Null outside work or for a
+ * block without cues.
+ */
+export function workCue(state: PlayerState): string | null {
+  const { phase } = state;
+  if (phase.kind !== "work") return null;
+  const block = state.blocks[phase.blockIndex];
+  if (!block || block.cues.length === 0) return null;
+  return (
+    block.cues[
+      (phase.setIndex + (phase.side === "right" ? 1 : 0)) % block.cues.length
+    ] ?? null
+  );
 }

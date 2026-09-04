@@ -28,7 +28,9 @@ import {
   totalSets,
 } from "../../session/player-machine";
 import { useSessionStore } from "../../state/session-store";
-import { announcementKey, phaseAnnouncement } from "./announcements";
+import { speakCue } from "../../session/voice";
+import { useSettingsStore } from "../../state/settings-store";
+import { announcementKey, phaseAnnouncement, workCue } from "./announcements";
 
 // The session is sacred: movement name, complete setup, one live cue, one
 // huge number, a thin progress line. Nothing else. No points mid-set.
@@ -52,6 +54,11 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const reconcileTimer = useSessionStore((s) => s.reconcileTimer);
   const rebaseCountdown = useSessionStore((s) => s.rebaseCountdown);
   const reduceMotion = useReducedMotion();
+  const voiceOn = useSettingsStore((s) => s.voice);
+  // "Do you need to be quiet right now?" — a yes silences the voice for
+  // the whole session, whatever Settings says. Read from the prompt the
+  // engine was handed; absent (a resumed legacy snapshot) means not quiet.
+  const quietDay = useSessionStore((s) => s.prompt?.quiet ?? false);
 
   const counting = player !== null && isCountingDown(player);
   const finished = player !== null && isFinished(player);
@@ -122,10 +129,20 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     if (announcement !== null) {
       AccessibilityInfo.announceForAccessibility(announcement);
     }
+    // The spoken voice says the cue she is looking at, once per work set
+    // (the same transition, the same key — never per tick). Whether it
+    // speaks at all is decided HERE, where both facts are: her Settings
+    // choice, and never on a day she answered "quiet" (the prompt the
+    // engine already saw — no rule re-derived, just read). The silent
+    // switch wins on top of that, inside the port.
+    const cue = player === null ? null : workCue(player);
+    if (cue !== null && voiceOn && !quietDay) {
+      void speakCue(cue);
+    }
     // player is intentionally read, not depended on: ticks change it
     // without changing the position the key names.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmingSkip, phaseKey]);
+  }, [confirmingSkip, phaseKey, voiceOn, quietDay]);
 
   if (!player || player.phase.kind === "done") {
     return <Screen>{null}</Screen>;
@@ -134,6 +151,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const { phase } = player;
   const block = player.blocks[phase.blockIndex];
   if (!block) return <Screen>{null}</Screen>;
+  const currentCue = workCue(player);
 
   return (
     <Screen>
@@ -248,12 +266,9 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
                 {block.name}
               </AppText>
             </View>
-            {block.cues.length > 0 && (
+            {currentCue !== null && (
               <AppText variant="bodySoft" style={styles.subline}>
-                {block.cues[
-                  (phase.setIndex + (phase.side === "right" ? 1 : 0)) %
-                    block.cues.length
-                ]}
+                {currentCue}
               </AppText>
             )}
           </View>

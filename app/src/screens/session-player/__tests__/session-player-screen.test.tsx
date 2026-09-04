@@ -13,6 +13,12 @@ import {
   SessionPlayerScreen,
   SKIP_REVEAL_DELAY_MS,
 } from "../session-player-screen";
+import { speakCue } from "../../../session/voice";
+import { useSettingsStore } from "../../../state/settings-store";
+
+jest.mock("../../../session/voice", () => ({
+  speakCue: jest.fn(async () => true),
+}));
 
 function seedStore() {
   useSessionStore.setState({
@@ -47,6 +53,48 @@ afterEach(() => {
 });
 
 describe("SessionPlayerScreen", () => {
+  describe("the spoken voice", () => {
+    beforeEach(() => {
+      useSettingsStore.setState({ voice: true });
+      useSessionStore.setState({
+        prompt: { minutes: 10, energy: "okay", quiet: false, avoid: [], date: "2026-09-04", equipment: ["none", "chair", "wall"] },
+      });
+    });
+
+    it("speaks the cue she is looking at, once per work set, never per tick", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      expect(speakCue).not.toHaveBeenCalled(); // the intro is read, not spoken
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(speakCue).toHaveBeenCalledTimes(1);
+      expect(speakCue).toHaveBeenCalledWith("Push through your palms.");
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+      expect(speakCue).toHaveBeenCalledTimes(1);
+      // The next set shows (and speaks) the next cue.
+      fireEvent.press(screen.getByTestId("player-set-done"));
+      fireEvent.press(screen.getByTestId("player-end-rest"));
+      expect(speakCue).toHaveBeenCalledTimes(2);
+      expect(speakCue).toHaveBeenLastCalledWith("Keep your body in one line.");
+    });
+
+    it("stays silent for the whole session on a day she answered quiet", () => {
+      useSessionStore.setState({
+        prompt: { minutes: 10, energy: "okay", quiet: true, avoid: [], date: "2026-09-04", equipment: ["none", "chair", "wall"] },
+      });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(speakCue).not.toHaveBeenCalled();
+    });
+
+    it("stays silent when she has not turned it on — off is the default", () => {
+      useSettingsStore.setState({ voice: false });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(speakCue).not.toHaveBeenCalled();
+    });
+  });
+
   it("shows the block intro: movement name and plan, one call to action", () => {
     const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
     expect(screen.getByText("Wall Push-Up")).toBeTruthy();

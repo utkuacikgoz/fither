@@ -507,6 +507,23 @@ export const strings = {
       denied:
         "Notifications for FITHER are off in your iPhone's Settings. Turn them on there and the slot you pick here will work.",
     },
+    // COPY-WRITER: coach voice (2026-09-04). The one recorded voice reads
+    // each movement's cue aloud during a session — the same cue lines
+    // already on screen, nothing extra. Off by default; she turns it on
+    // here. The body states two facts and stops: what it reads, and that
+    // it stays silent on a day she answered "Keep it quiet" in the daily
+    // prompt (same words as prompt.quiet.yes, on purpose — one promise,
+    // kept where she made it). No voice name, no provider, no "coming
+    // soon", nothing sold. The heading is one word because the body does
+    // the explaining. The two rows name the plain state she gets —
+    // "Spoken" / "Silent" — with equal dignity: off is not a loss, and
+    // neither row mentions the other.
+    voice: {
+      title: "Voice",
+      body: "Reads each movement's cue aloud during your session. Stays silent on any day you keep it quiet.",
+      on: "Spoken",
+      off: "Silent",
+    },
     // COPY-WRITER: care journal (2026-09-02, ADR-0012 §4). Her heavy-day
     // notes, listed with delete. The privacy line is care.notePrivacy —
     // reuse it at the callsite, never duplicate it. Deleting is confirmed
