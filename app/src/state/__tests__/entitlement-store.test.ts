@@ -120,3 +120,34 @@ describe("entitlement store", () => {
     expect(useEntitlementStore.getState().hydrationFailed).toBe(false);
   });
 });
+
+describe("the store's word (ADR-0014 §6)", () => {
+  it("a purchase marks the free week as used, and stays used after a lapse", async () => {
+    await useEntitlementStore.getState().purchasePlan("annual");
+    expect(useEntitlementStore.getState().trialUsed).toBe(true);
+    expect(useEntitlementStore.getState().purchase?.trial).toBe(true);
+  });
+
+  it("refresh adopts the store's word — grant, revoke — and 'no opinion' changes nothing", async () => {
+    const { getBilling } = jest.requireActual<typeof import("../../monetization/billing")>(
+      "../../monetization/billing",
+    );
+    const billing = getBilling();
+    const spy = jest.spyOn(billing, "refreshEntitlement");
+    useEntitlementStore.setState({ purchase: { plan: "annual", date: "2026-09-01", trial: true }, trialUsed: true });
+
+    spy.mockResolvedValueOnce(undefined); // offline, or the dev adapter
+    await useEntitlementStore.getState().refreshFromStore();
+    expect(useEntitlementStore.getState().purchase?.plan).toBe("annual");
+
+    spy.mockResolvedValueOnce(null); // the store says the trial lapsed
+    await useEntitlementStore.getState().refreshFromStore();
+    expect(useEntitlementStore.getState().purchase).toBeNull();
+    expect(useEntitlementStore.getState().trialUsed).toBe(true);
+
+    spy.mockResolvedValueOnce({ plan: "lifetime", date: "2026-09-05" });
+    await useEntitlementStore.getState().refreshFromStore();
+    expect(useEntitlementStore.getState().purchase?.plan).toBe("lifetime");
+    spy.mockRestore();
+  });
+});

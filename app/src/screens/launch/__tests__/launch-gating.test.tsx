@@ -217,16 +217,37 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     seedHistoryEntry();
   });
 
-  it("an active trial generates sessions as normal", () => {
-    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(6) });
+  it("the first session is never gated: no entitlement, no completed session, straight to the hub", () => {
+    useEntitlementStore.setState({ trialStartDate: null, purchase: null, trialUsed: false });
+    const screen = renderLaunch();
+    expect(screen.cbs.onHome).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(strings.paywall.headline)).toBeNull();
+  });
+
+  it("after the first completed session, without a trial, the day is gated with the free week AHEAD", () => {
+    // ADR-0014 §6: the free week is the store's, started from this letter.
+    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(1), purchase: null, trialUsed: false });
+    const screen = renderLaunch();
+    expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.cta)).toBeTruthy();
+    expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
+  });
+
+  it("a store trial in progress generates sessions as normal", () => {
+    useEntitlementStore.setState({
+      trialStartDate: isoDaysAgo(6),
+      purchase: { plan: "annual", date: isoDaysAgo(5), trial: true },
+      trialUsed: true,
+    });
     const screen = renderLaunch();
     expect(screen.cbs.onHome).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
     expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
   });
 
-  it("an expired trial swaps new-session generation for the paywall, in its expired voice", () => {
-    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
+  it("a lapsed trial swaps new-session generation for the paywall, in its expired voice", () => {
+    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8), purchase: null, trialUsed: true });
     const screen = renderLaunch();
     expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
     // Never the pre-trial "free week ahead" letter once the week is spent.

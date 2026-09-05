@@ -25,13 +25,27 @@ interface EntitlementStoreState {
   hydrated: boolean;
   hydrationFailed: boolean;
   /**
-   * Local date of the FIRST completed session — the trial start
-   * (ADR-0009 §2). Stamped exactly once by completeSession; an unused
-   * install spends no trial.
+   * Local date of the FIRST completed session. Stamped exactly once by
+   * completeSession; the paywall never blocks the first session
+   * (ADR-0009 §2). The persisted key keeps its historical name: under
+   * ADR-0014 §6 the free week is the store's, and this date only says
+   * "she has trained once" — the gate opens after it.
    */
   trialStartDate: string | null;
   /** The granted purchase, if any. Written only via the billing port. */
   purchase: PurchaseRecord | null;
+  /**
+   * An entitlement was held at some point (a store trial counts). Once
+   * true it stays true: a lapsed trial shows the paywall's expired
+   * letter, never a second "free week ahead" promise.
+   */
+  trialUsed: boolean;
+  /**
+   * Ask the store for its current word and adopt it: grant, or revoke a
+   * lapsed one. No opinion (dev adapter, offline) changes nothing — the
+   * app-side record stands, so airplane mode never locks her out.
+   */
+  refreshFromStore: () => Promise<void>;
   /** Stamp the trial start. Idempotent: only the first call sticks. */
   markSessionCompleted: (date: string) => void;
   /** Buy through the billing port and persist the grant. */
@@ -52,8 +66,18 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
     (set, get) => ({
       trialStartDate: null,
       purchase: null,
+      trialUsed: false,
       hydrated: false,
       hydrationFailed: false,
+
+      refreshFromStore: async () => {
+        const record = await getBilling().refreshEntitlement();
+        if (record === undefined) return;
+        set((state) => ({
+          purchase: record,
+          trialUsed: state.trialUsed || record !== null,
+        }));
+      },
 
       markSessionCompleted: (date) => {
         if (get().trialStartDate !== null) return;
@@ -63,7 +87,7 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
       purchasePlan: async (plan) => {
         const outcome = await getBilling().purchase(plan);
         if (!outcome.ok) return outcome.reason;
-        set({ purchase: outcome.purchase });
+        set({ purchase: outcome.purchase, trialUsed: true });
         return "purchased";
       },
 
@@ -72,11 +96,11 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
         if (!outcome.ok) {
           return outcome.reason === "nothingToRestore" ? "empty" : "failed";
         }
-        set({ purchase: outcome.purchase });
+        set({ purchase: outcome.purchase, trialUsed: true });
         return "restored";
       },
 
-      resetForDev: () => set({ trialStartDate: null, purchase: null }),
+      resetForDev: () => set({ trialStartDate: null, purchase: null, trialUsed: false }),
     }),
     {
       name: "fither/entitlement-v1",
@@ -84,6 +108,7 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
       partialize: (state) => ({
         trialStartDate: state.trialStartDate,
         purchase: state.purchase,
+        trialUsed: state.trialUsed,
       }),
       onRehydrateStorage: () => (_state, error) => {
         Promise.resolve().then(() =>

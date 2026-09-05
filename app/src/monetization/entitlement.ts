@@ -1,48 +1,44 @@
-// Trial + entitlement policy (ADR-0009 §2–3). App-layer only — this is
-// commercial policy, not training logic, and it must NEVER move into
-// packages/engine. Pure functions over persisted dates: evaluated offline,
-// on device, with the same local-date source as the daily prompt
-// (todayIso — the caller passes the date in, this module reads no clock).
-
+// Trial + entitlement policy (ADR-0009 §2–3 as amended by ADR-0014 §6).
+// App-layer only — this is commercial policy, not training logic, and it
+// must NEVER move into packages/engine. Pure functions over persisted
+// state: evaluated offline, on device, no clock read.
+//
+// The free week is the STORE's introductory offer, started from the
+// paywall ("Start my free week" purchases the plan she picked, with its
+// 7 free days). The app keeps two facts and no calendar arithmetic:
+// whether a session has ever completed (the paywall never blocks the
+// first session), and whether the store currently entitles her (a
+// purchase record, which a store trial is). "Expired" is the store's
+// word too: it means an entitlement that was granted and then lapsed.
 import type { PurchaseRecord } from "./billing";
 
-/** ADR-0002: 7-day free trial, starting at the first COMPLETED session. */
-export const TRIAL_DAYS = 7;
-
 export type EntitlementStatus =
-  /** No session ever completed — the trial has not begun and nothing gates. */
+  /** No session ever completed — nothing gates; she trains first. */
   | "beforeTrial"
-  | "trialActive"
-  | "trialExpired"
-  | "purchased";
-
-/** Whole calendar days from `fromIso` to `toIso` (both local yyyy-mm-dd). */
-export function daysBetweenIso(fromIso: string, toIso: string): number {
-  const ms = Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`);
-  return Math.round(ms / 86_400_000);
-}
+  /** The store entitles her: a trial in progress, or a paid plan. */
+  | "purchased"
+  /** A session completed and no entitlement — the paywall, before any trial. */
+  | "gated"
+  /** A session completed, an entitlement was held once and has lapsed. */
+  | "trialExpired";
 
 export function entitlementStatus(input: {
   /** Local date of the first completed session, or null if none yet. */
-  trialStartDate: string | null;
+  firstCompletedDate: string | null;
   purchase: PurchaseRecord | null;
-  /** Today's local date (todayIso()). */
-  today: string;
+  /** An entitlement (trial or paid) was held at some point. */
+  trialUsed: boolean;
 }): EntitlementStatus {
   if (input.purchase) return "purchased";
-  if (!input.trialStartDate) return "beforeTrial";
-  // Day of the first completed session counts as day 0; day 7 is the
-  // first gated day. A clock moved backwards (negative day count) is
-  // treated as active — clock weirdness never locks her out.
-  const day = daysBetweenIso(input.trialStartDate, input.today);
-  return day < TRIAL_DAYS ? "trialActive" : "trialExpired";
+  if (!input.firstCompletedDate) return "beforeTrial";
+  return input.trialUsed ? "trialExpired" : "gated";
 }
 
 /**
- * Whether generating a NEW session is allowed. Only an expired,
- * unpurchased trial gates — the paywall never blocks the first session,
- * and history/points/skills/settings stay reachable regardless.
+ * Whether generating a NEW session is allowed. Only the gated states
+ * block — the paywall never blocks the first session, and history,
+ * points, skills and settings stay reachable regardless.
  */
 export function isEntitled(status: EntitlementStatus): boolean {
-  return status !== "trialExpired";
+  return status === "beforeTrial" || status === "purchased";
 }

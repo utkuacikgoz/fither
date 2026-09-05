@@ -23,7 +23,8 @@ async function flushPersistence() {
 const LONG_EXPIRED_TRIAL_START = "2000-01-01";
 
 function seedExpiredTrial() {
-  useEntitlementStore.setState({ trialStartDate: LONG_EXPIRED_TRIAL_START });
+  // ADR-0014 §6: a lapsed store trial — held once, nothing active now.
+  useEntitlementStore.setState({ trialStartDate: LONG_EXPIRED_TRIAL_START, purchase: null, trialUsed: true });
 }
 
 beforeEach(async () => {
@@ -31,6 +32,7 @@ beforeEach(async () => {
   useEntitlementStore.setState({
     trialStartDate: null,
     purchase: null,
+    trialUsed: false,
     hydrated: true,
     hydrationFailed: false,
   });

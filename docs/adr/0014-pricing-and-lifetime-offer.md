@@ -37,19 +37,29 @@ prices were GBP reference prices for a UK-first launch.
    Apple's subscriptions page as the fallback without the key.
 5. **Closing the store sheet is not a failure.** The port distinguishes
    `cancelled` from `failed`; only a process failure shows the retry line.
+6. **The store trial is the trial** (owner, 2026-09-05). The free week
+   is the introductory offer on BOTH subscription products (so "Start my
+   free week" is true whichever plan she picks), started from the
+   paywall. The app keeps two facts and no calendar arithmetic: whether
+   a session has ever completed (the paywall never blocks the first
+   session — ADR-0009 §2 stands), and whether the store entitles her (a
+   trial in progress is a purchase record with `trial: true`). After the
+   first completed session and until `fither_pro` is active, the day is
+   gated with the pre-trial letter; a lapsed trial gates with the expired
+   letter, never a second free-week promise. The app-side record stays
+   canonical and offline; the launch surface asks the store once per
+   launch and adopts its word (grant or revoke) when it has one, so a
+   lapse is learned online and airplane mode never locks her out.
 
 ## Consequences
 
-- The trial model question is now live: the app-side trial (starts at
-  the first completed session, gates on day 7 — ADR-0009 §2) and the
-  store's introductory trial (starts at subscription) are two free
-  weeks. **DECIDE (owner):** either the paywall's "Start my free week"
-  starts the store trial and the app-side gate becomes "paywall when
-  the store says so", or the app-side week stays and the store product
-  has no introductory offer. The lifetime trigger needs a store trial to
-  exist; until that decision it fires only in the dev previewer.
+- The app-side "7 days from the first completed session" gate is gone
+  (`entitlement.ts` reads no clock). The persisted `trialStartDate` key
+  keeps its name and now means only "first completed session".
+- The lifetime trigger is live wherever the store adapter is: it reads
+  `periodType === "TRIAL" && willRenew === false` from customer info.
 - Two native modules (`react-native-purchases`, `react-native-purchases-ui`)
   and one (`expo-apple-authentication`, for the sign-in adapter that
   follows): the next build is a rebuild.
 - `fither-domain` §Pricing and `fither-voice`'s paywall example carry
-  the new prices; the audit's §0 row 4 is resolved.
+  the new prices; the audit's §0 rows 4 and 5 (trial model) are resolved.

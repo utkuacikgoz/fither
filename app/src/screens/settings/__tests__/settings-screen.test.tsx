@@ -8,10 +8,7 @@ import { strings } from "../../../copy/strings";
 import { glyph } from "../../../design/tokens";
 import { todayIso } from "../../../lib/dates";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
-import {
-  daysBetweenIso,
-  entitlementStatus,
-} from "../../../monetization/entitlement";
+import { entitlementStatus } from "../../../monetization/entitlement";
 import { useCareNoteStore } from "../../../state/care-note-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useFirstMovementStore } from "../../../state/first-movement-store";
@@ -632,32 +629,31 @@ describe("SettingsScreen daily invitation", () => {
 });
 
 describe("SettingsScreen dev flow previewer", () => {
-  it("paywall (expired): seeds a spent trial with nothing to restore, then goes home", () => {
+  it("paywall (expired): seeds a lapsed store trial with nothing to restore, then goes home", () => {
     const screen = render(<SettingsScreen />);
     fireEvent.press(screen.getByTestId("settings-dev-paywall-expired"));
 
-    const { trialStartDate, purchase } = useEntitlementStore.getState();
+    const { trialStartDate, purchase, trialUsed } = useEntitlementStore.getState();
     expect(trialStartDate).not.toBeNull();
-    expect(daysBetweenIso(trialStartDate ?? "", todayIso())).toBe(8);
     expect(purchase).toBeNull();
+    expect(trialUsed).toBe(true);
     expect(useDevReceiptStore.getState().receipt).toBeNull();
     // The real gate will render: the seeded state IS trialExpired.
     expect(
-      entitlementStatus({ trialStartDate, purchase, today: todayIso() }),
+      entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
     ).toBe("trialExpired");
     expect(router.replace).toHaveBeenCalledWith("/");
   });
 
-  it("paywall (trial active): seeds a trial that started today, then goes home", () => {
+  it("paywall (trial active): seeds a store trial in progress, then goes home", () => {
     const screen = render(<SettingsScreen />);
     fireEvent.press(screen.getByTestId("settings-dev-paywall-trial-active"));
 
-    const { trialStartDate, purchase } = useEntitlementStore.getState();
-    expect(trialStartDate).toBe(todayIso());
-    expect(purchase).toBeNull();
+    const { trialStartDate, purchase, trialUsed } = useEntitlementStore.getState();
+    expect(purchase).toEqual({ plan: "annual", date: todayIso(), trial: true });
     expect(
-      entitlementStatus({ trialStartDate, purchase, today: todayIso() }),
-    ).toBe("trialActive");
+      entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
+    ).toBe("purchased");
     expect(router.replace).toHaveBeenCalledWith("/");
   });
 

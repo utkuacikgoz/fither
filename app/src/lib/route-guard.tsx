@@ -26,7 +26,6 @@ import { router } from "expo-router";
 import { strings } from "../copy/strings";
 import { AppText } from "../design/primitives/app-text";
 import { Screen } from "../design/primitives/screen";
-import { todayIso } from "./dates";
 import { entitlementStatus, isEntitled } from "../monetization/entitlement";
 import { isFinished } from "../session/player-machine";
 import { useActiveSessionStore } from "../state/active-session-store";
@@ -112,9 +111,9 @@ function requirementMet(requirement: RouteRequirement): boolean {
     case "hydratedOnly":
       return true;
     case "entitledToStart": {
-      const { trialStartDate, purchase } = useEntitlementStore.getState();
+      const { trialStartDate, purchase, trialUsed } = useEntitlementStore.getState();
       return isEntitled(
-        entitlementStatus({ trialStartDate, purchase, today: todayIso() }),
+        entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
       );
     }
     case "generatedSession":

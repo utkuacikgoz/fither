@@ -127,12 +127,13 @@ function recordOf(info: CustomerInfo): PurchaseRecord | null {
     (Object.keys(PRODUCT_IDS) as PlanId[]).find(
       (candidate) => PRODUCT_IDS[candidate] === entitlement.productIdentifier,
     ) ?? null;
-  return {
+  const record: PurchaseRecord = {
     // A product we cannot map still entitles her — the entitlement is
     // the store's word; the plan label is ours.
     plan: plan ?? "annual",
     date: entitlement.latestPurchaseDate.slice(0, 10) || todayIso(),
   };
+  return entitlement.periodType === "TRIAL" ? { ...record, trial: true } : record;
 }
 
 /** Whole days from an ISO instant to today, local. */
@@ -198,6 +199,17 @@ export const revenueCatBilling: BillingPort = {
       return purchase ? { ok: true, purchase } : { ok: false, reason: "nothingToRestore" };
     } catch {
       return { ok: false, reason: "failed" };
+    }
+  },
+
+  async refreshEntitlement(): Promise<PurchaseRecord | null | undefined> {
+    try {
+      ensureConfigured();
+      const info = await Purchases.getCustomerInfo();
+      lastInfo = info;
+      return recordOf(info);
+    } catch {
+      return undefined;
     }
   },
 
