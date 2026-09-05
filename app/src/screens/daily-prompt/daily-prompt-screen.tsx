@@ -12,8 +12,8 @@ import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { FlowProgress } from "../../design/primitives/flow-progress";
-import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
+import { PromptError, PromptNoSession } from "./prompt-outcomes";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
@@ -21,14 +21,10 @@ import { motion, spacing } from "../../design/tokens";
 import { BODY_AREAS } from "../../lib/body-areas";
 import { needsCareMoment } from "../../lib/care-moment";
 import { todayIso } from "../../lib/dates";
+import { useStoreHydration } from "../../lib/route-guard";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
-import { useActiveSessionStore } from "../../state/active-session-store";
-import { useEntitlementStore } from "../../state/entitlement-store";
-import { useIdentityStore } from "../../state/identity-store";
-import { useLedgerStore } from "../../state/ledger-store";
-import { useProfileStore } from "../../state/profile-store";
 import { useSettingsStore } from "../../state/settings-store";
 import { FirstMovementReadout } from "../dev-timing/first-movement-readout";
 
@@ -68,23 +64,12 @@ export function DailyPromptScreen({
   const previousPrompt = useSessionStore((s) => s.prompt);
   const equipment = useSettingsStore((s) => s.equipment);
   const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
-  const settingsHydrated = useSettingsStore((s) => s.hydrated);
-  const settingsFailed = useSettingsStore((s) => s.hydrationFailed);
-  const profileHydrated = useProfileStore((s) => s.hydrated);
-  const profileFailed = useProfileStore((s) => s.hydrationFailed);
-  const ledgerHydrated = useLedgerStore((s) => s.hydrated);
-  const ledgerFailed = useLedgerStore((s) => s.hydrationFailed);
-  const activeHydrated = useActiveSessionStore((s) => s.hydrated);
-  const activeFailed = useActiveSessionStore((s) => s.hydrationFailed);
-  const entitlementHydrated = useEntitlementStore((s) => s.hydrated);
-  const entitlementFailed = useEntitlementStore((s) => s.hydrationFailed);
-  // Identity belongs to the same hydration set: the launch surface gates
-  // on it, so the prompt waiting on it too means a slow identity key can
-  // never flash an interactive prompt that sign-in then yanks away, and a
-  // corrupt one surfaces the same honest storage state as every other
-  // store instead of silently disabling launch's gates.
-  const identityHydrated = useIdentityStore((s) => s.hydrated);
-  const identityFailed = useIdentityStore((s) => s.hydrationFailed);
+  // The same six-store hydration set the launch surface and the route
+  // guards wait on — one definition (lib/route-guard.ts), so a store
+  // added there is waited on here too. Identity is in it: a slow
+  // identity key can never flash an interactive prompt that sign-in then
+  // yanks away.
+  const { hydrated, failed: hydrationFailed } = useStoreHydration();
 
   const appendCareNote = useCareNoteStore((s) => s.append);
 
@@ -172,20 +157,6 @@ export function DailyPromptScreen({
     setStep("time");
   };
 
-  const hydrated =
-    settingsHydrated &&
-    profileHydrated &&
-    ledgerHydrated &&
-    activeHydrated &&
-    entitlementHydrated &&
-    identityHydrated;
-  const hydrationFailed =
-    settingsFailed ||
-    profileFailed ||
-    ledgerFailed ||
-    activeFailed ||
-    entitlementFailed ||
-    identityFailed;
 
   if (!hydrated) {
     return (
@@ -413,68 +384,25 @@ export function DailyPromptScreen({
         </ScrollView>
       )}
 
-      {step === "error" && (
-        <View style={styles.question}>
-          <AppText variant="body" style={styles.title}>
-            {strings.errors.sessionUnavailable}
-          </AppText>
-          {/* Audit S4b: "Try again" truthfully names a retry — the same
-              answers go back through generation; nothing resets. */}
-          <QuietButton
-            testID="prompt-try-again"
-            label={strings.errors.tryAgain}
-            onPress={() => finish(avoid)}
-          />
-        </View>
-      )}
+      {step === "error" && <PromptError onRetry={() => finish(avoid)} />}
 
-      {step === "noSession" &&
-        (() => {
-          // The engine couldn't build around her selection — if body areas
-          // were part of it, this is the "everything hurts" moment: lead
-          // with care, never a dead end. Whether a session was possible
-          // was decided engine-side; here we only read that result.
-          const mergedAvoidCount = BODY_AREAS.filter(
-            (area) => alwaysAvoid.includes(area) || avoid.includes(area),
-          ).length;
-          const care = needsCareMoment(mergedAvoidCount, false);
-          return (
-            <ScrollView
-              style={styles.question}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator
-            >
-              {care && (
-                <AppText
-                  variant="title"
-                  style={styles.careAcknowledgment}
-                  testID="care-acknowledgment"
-                >
-                  {strings.care.acknowledgment}
-                </AppText>
-              )}
-              <AppText variant="body" style={styles.title}>
-                {strings.errors.noSession}
-              </AppText>
-              {care && (
-                <View style={styles.careNote}>
-                  <NoteField
-                    testID="care-note"
-                    prompt={strings.care.notePrompt}
-                    privacyNote={strings.care.notePrivacy}
-                    value={careNoteText}
-                    onChangeText={setCareNoteText}
-                  />
-                </View>
-              )}
-              <QuietButton
-                testID="prompt-adjust-answers"
-                label={strings.preview.changeAnswers}
-                onPress={adjustAnswers}
-              />
-            </ScrollView>
-          );
-        })()}
+      {step === "noSession" && (
+        // The engine couldn't build around her selection — if body areas
+        // were part of it, this is the "everything hurts" moment: lead
+        // with care, never a dead end. Whether a session was possible was
+        // decided engine-side; here we only read that result.
+        <PromptNoSession
+          care={needsCareMoment(
+            BODY_AREAS.filter(
+              (area) => alwaysAvoid.includes(area) || avoid.includes(area),
+            ).length,
+            false,
+          )}
+          careNoteText={careNoteText}
+          onChangeCareNote={setCareNoteText}
+          onAdjust={adjustAnswers}
+        />
+      )}
     </Screen>
   );
 }
@@ -507,12 +435,6 @@ const styles = StyleSheet.create({
   countCue: {
     marginBottom: spacing.sm,
     textAlign: "center",
-  },
-  careAcknowledgment: {
-    marginBottom: spacing.md,
-  },
-  careNote: {
-    marginBottom: spacing.xl,
   },
   scrollContent: {
     paddingBottom: spacing.xl,
