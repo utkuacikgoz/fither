@@ -46,7 +46,26 @@ describe("nextMilestone", () => {
     // deserialises to), but the tier proves she has it.
     const { unlockedMilestones: _omitted, ...legacy } = profileAt({ push: 5 });
     expect("unlockedMilestones" in legacy).toBe(false);
-    expect(nextMilestone(legacy)).not.toEqual({ pattern: "push", tier: 4 });
+    // Tier 4 is behind her, so the next is push's tier 6 (1 away) — a
+    // negative assertion here would pass for null or any other pattern.
+    expect(nextMilestone(legacy)).toEqual({ pattern: "push", tier: 6 });
+    expect(tiersToMilestone(legacy, { pattern: "push", tier: 6 })).toBe(1);
+  });
+
+  it("a regressed pattern keeps its earned milestone and points past it", () => {
+    // Earned push 4, then regressed to 3: 4 is not promised again (it is
+    // hers for life), so push points at 6 — 3 away, tied with the other
+    // patterns' 3 to their tier 4, and PATTERNS order keeps push first.
+    const profile = profileAt({ push: 3 }, [{ pattern: "push", tier: 4 }]);
+    expect(nextMilestone(profile)).toEqual({ pattern: "push", tier: 6 });
+    expect(tiersToMilestone(profile, { pattern: "push", tier: 6 })).toBe(3);
+  });
+
+  it("a legacy profile at tier 6 everywhere has nothing left to reach", () => {
+    const { unlockedMilestones: _omitted, ...legacy } = profileAt({
+      push: 6, pull: 6, squat: 6, hinge: 6, core: 6,
+    });
+    expect(nextMilestone(legacy)).toBeNull();
   });
 
   it("returns null once every milestone is behind her", () => {

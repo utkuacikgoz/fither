@@ -11,6 +11,7 @@ import {
 } from "@fither/engine";
 
 import { strings } from "../../../copy/strings";
+import { skillLabel } from "../../../session/skill-name";
 import { glyph } from "../../../design/tokens";
 import { loadLibrary } from "../../../session/load-library";
 import {
@@ -283,13 +284,20 @@ describe("the glances", () => {
     expect(screen.getByText(strings.home.skills.away(2))).toBeTruthy();
   });
 
-  it("tolerates a profile persisted before milestones existed", () => {
+  it("never promises a legacy profile a skill it already holds", () => {
+    // Trained past tier 4 before unlockedMilestones existed: the field is
+    // absent, the tier proves she has it. The card must point at push's
+    // tier 6, not re-promise tier 4 — the case a tier-1 profile with the
+    // field deleted never exercised.
     const profile = createInitialProfile();
+    profile.patterns.push = { tier: 5, cleanCount: 0, struggleCount: 0, volumeReduced: false };
     delete profile.unlockedMilestones;
     seedProfile(profile);
     const screen = render(<HomeScreen />);
-    // No crash, and it still points somewhere real.
     expect(screen.getByTestId("home-next-skill")).toBeTruthy();
+    expect(screen.getByText(skillLabel(loadLibrary(), "push", 6))).toBeTruthy();
+    expect(screen.queryByText(skillLabel(loadLibrary(), "push", 4))).toBeNull();
+    expect(screen.getByText(strings.home.skills.away(1))).toBeTruthy();
   });
 
   it("says every skill is reached only when none remain", () => {

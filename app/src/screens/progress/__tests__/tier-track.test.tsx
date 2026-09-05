@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
+import { Animated } from "react-native";
 import { MAX_TIER } from "@fither/engine";
 
 import { motion } from "../../../design/tokens";
@@ -37,6 +38,7 @@ it("renders reached steps at full strength immediately under Reduce Motion", () 
 });
 
 it("otherwise the reached steps draw themselves in, left to right", () => {
+  const timing = jest.spyOn(Animated, "timing");
   const screen = render(
     <TierTrack pattern="push" tier={4} reduceMotion={false} />,
   );
@@ -49,6 +51,14 @@ it("otherwise the reached steps draw themselves in, left to right", () => {
   expect(motion.fillStaggerMs * (MAX_TIER - 1) + motion.fadeMs).toBeLessThan(
     1000,
   );
+  // "Left to right" is an ordering claim: the four reached steps start
+  // one fill-stagger apart, in step order, and each arrives at 1.
+  const delays = timing.mock.calls.map(([, config]) => (config as { delay?: number }).delay ?? 0);
+  expect(delays).toEqual([0, 1, 2, 3].map((i) => i * motion.fillStaggerMs));
+  for (const [, config] of timing.mock.calls) {
+    expect(config).toEqual(expect.objectContaining({ toValue: 1, duration: motion.fadeMs }));
+  }
+  timing.mockRestore();
 });
 
 it("draws exactly MAX_TIER steps and fills none beyond the current tier", () => {
