@@ -19,7 +19,10 @@ import {
   seedTrialExpiredForDev,
   seedUnlockPreviewForDev,
 } from "../../state/dev-preview";
+import { useDevReceiptStore } from "../../monetization/dev-billing";
+import { manageSubscription } from "../../monetization/manage-subscription";
 import { REMINDER_SLOTS } from "../../notifications/notifications";
+import { useLifetimeOfferStore } from "../../state/lifetime-offer-store";
 import { hasVoiceAudio } from "../../session/voice-manifest";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useReminderStore } from "../../state/reminder-store";
@@ -68,6 +71,7 @@ export const DEV_PREVIEW_LABELS = {
   finishEndedEarly: "[dev] Preview finish (ended early)",
   finishOutOfTime: "[dev] Preview finish (out of time)",
   finishNothingDone: "[dev] Preview finish (nothing done)",
+  lifetimeOffer: "[dev] Preview lifetime offer (day-3 canceller)",
 } as const;
 
 interface SettingsScreenProps {
@@ -191,9 +195,20 @@ export function SettingsScreen({
             testID="settings-restore"
             label={strings.paywall.restore}
             emphasis="action"
-            divider={false}
             onPress={() => {
               void restore();
+            }}
+          />
+          {/* Change plan, cancel, refund — Apple's own flows through the
+              store's Customer Center, or Apple's subscriptions page
+              without the key (ADR-0014). Never a dead end. */}
+          <OptionRow
+            testID="settings-manage-subscription"
+            label={strings.settings.restore.manage}
+            emphasis="action"
+            divider={false}
+            onPress={() => {
+              void manageSubscription();
             }}
           />
           {restoreNotice === "failed" && (
@@ -371,6 +386,18 @@ export function SettingsScreen({
               onPress={() => {
                 seedFinishPreviewForDev("outOfTime");
                 router.push("/finish");
+              }}
+            />
+            {/* ADR-0014: simulate the store fact (trial cancelled, day 3)
+                in the dev adapter, forget the one ask, and open the offer
+                through the hub's own trigger. */}
+            <QuietButton
+              testID="settings-dev-lifetime-offer"
+              label={DEV_PREVIEW_LABELS.lifetimeOffer}
+              onPress={() => {
+                useDevReceiptStore.getState().setTrialCancelled(true);
+                useLifetimeOfferStore.getState().resetForDev();
+                router.replace("/home");
               }}
             />
             <QuietButton

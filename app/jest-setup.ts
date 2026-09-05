@@ -141,3 +141,26 @@ jest.mock("expo-audio", () => {
     __players: players,
   };
 });
+
+// RevenueCat (ADR-0014): never selected in tests (no key), but the
+// adapter module is imported by the port, so its natives are shimmed.
+// The adapter's own unit test drives these mocks directly.
+jest.mock("react-native-purchases", () => {
+  const PACKAGE_TYPE = { ANNUAL: "ANNUAL", MONTHLY: "MONTHLY", LIFETIME: "LIFETIME", CUSTOM: "CUSTOM" };
+  const PURCHASES_ERROR_CODE = { PURCHASE_CANCELLED_ERROR: "1" };
+  const LOG_LEVEL = { DEBUG: "DEBUG" };
+  const Purchases = {
+    configure: jest.fn(),
+    setLogLevel: jest.fn(),
+    addCustomerInfoUpdateListener: jest.fn(),
+    getOfferings: jest.fn(async () => ({ current: null })),
+    purchasePackage: jest.fn(),
+    restorePurchases: jest.fn(),
+    getCustomerInfo: jest.fn(),
+  };
+  return { __esModule: true, default: Purchases, PACKAGE_TYPE, PURCHASES_ERROR_CODE, LOG_LEVEL };
+});
+jest.mock("react-native-purchases-ui", () => ({
+  __esModule: true,
+  default: { presentCustomerCenter: jest.fn(async () => undefined) },
+}));

@@ -328,6 +328,20 @@ describe("SettingsScreen", () => {
     jest.mocked(hasVoiceAudio).mockReturnValue(false);
   });
 
+  it("offers 'Manage subscription' beside Restore — never a dead end", async () => {
+    const { manageSubscription } = jest.requireActual<
+      typeof import("../../../monetization/manage-subscription")
+    >("../../../monetization/manage-subscription");
+    const Linking = jest.requireActual<typeof import("react-native")>("react-native").Linking;
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    const screen = render(<SettingsScreen />);
+    expect(screen.getByText(strings.settings.restore.manage)).toBeTruthy();
+    // Without the store key the row opens Apple's own subscriptions page.
+    await manageSubscription();
+    expect(open).toHaveBeenCalledWith("https://apps.apple.com/account/subscriptions");
+    open.mockRestore();
+  });
+
   it("renders no user-facing text outside strings.ts", async () => {
     const allowed = collectStringValues(strings);
     // Parameterised and dev-only values are allowed explicitly.

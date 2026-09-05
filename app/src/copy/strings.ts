@@ -295,14 +295,31 @@ export const strings = {
     plans: {
       annual: {
         label: "Yearly",
-        // GBP reference price (ADR-0002). The billing port's offering is
+        // USD reference prices (owner decision 2026-09-05, superseding
+        // ADR-0002's GBP; ADR in progress). The billing port's offering is
         // the display source; these are the fallback strings it carries.
-        price: "£39.99/year",
-        note: "£3.33 a month, billed once a year",
+        // The note is plain arithmetic on the real price: 59.99 / 12.
+        price: "$59.99/year",
+        note: "$5.00 a month, billed once a year",
       },
       monthly: {
         label: "Monthly",
-        price: "£5.99/month",
+        price: "$12.99/month",
+      },
+      // COPY-WRITER (2026-09-05, owner decision): the one-time purchase.
+      // NOT a row on the main paywall — it is offered once, on day 3 of
+      // the free week, only to someone who has switched off auto-renew,
+      // and it renders on the `lifetimeOffer` screen below alongside
+      // that block's letter. Same shape as its siblings so the row reads
+      // the same. `price` says what the number is: one payment, not a
+      // rate. `note` is the single fact one-time means — it never
+      // renews. No "forever", no "best value", nothing struck through.
+      // Never render afterTrialNote or legal.autoRenew beside this plan:
+      // both describe renewal, and this plan has none.
+      lifetime: {
+        label: "Lifetime",
+        price: "$99 once",
+        note: "One payment. It never renews.",
       },
     },
     cta: "Start my free week",
@@ -351,6 +368,27 @@ export const strings = {
       "Skill milestones as you get stronger",
       "No ads, ever",
     ],
+  },
+  // COPY-WRITER (2026-09-05, owner decision): the one-time offer screen.
+  // Shown ONCE, on day 3 of her free week, and only after she has
+  // switched off the trial's auto-renew in her App Store settings. One
+  // decision: take the lifetime purchase, or not. Same register as the
+  // paywall letter. The body acknowledges her choice as a plain fact —
+  // no guilt, no question, no "are you sure" — then states the offer:
+  // one payment, everything, no renewal. The price is not in the prose,
+  // exactly as the paywall letter carries none: the screen must render
+  // paywall.plans.lifetime (label, price, note) beside this body, or she
+  // never sees the amount. "We'll only ask once" is the one true fact
+  // about frequency, stated flatly; no countdown, no "last chance", no
+  // "only today". `cta` names the outcome she gets. `decline` names the
+  // plain state she is already in, with equal dignity — it is the
+  // default path, not a loss.
+  lifetimeOffer: {
+    headline: "One other option",
+    body:
+      "You've switched off auto-renew, so your free week ends as a free week and nothing is charged. There is one other way to keep FITHER: one payment covers everything — every session, every length, working offline — with no subscription and no renewal, ever. We'll only ask once.",
+    cta: "Pay once, keep everything",
+    decline: "Finish my free week as planned",
   },
   // Notifications — docs/copy/draft-strings.md §4. Strings only for now;
   // no notification code exists yet. Invitations, never nags.
@@ -489,6 +527,14 @@ export const strings = {
     },
     restore: {
       title: "Subscription",
+      // COPY-WRITER (2026-09-05): action row beside "Restore purchase" that
+      // opens Apple's subscription management (RevenueCat Customer Center
+      // when the store is connected, else the App Store subscriptions
+      // page). Names the action plainly, parallel to paywall.restore.
+      // Deliberately not "Cancel subscription": cancelling is one of
+      // several things the page does, and naming it reads as an
+      // invitation to leave.
+      manage: "Manage subscription",
     },
     // COPY-WRITER: new keys (2026-09-02, owner decision). The Settings
     // section for the daily invitation: change the slot (reuse

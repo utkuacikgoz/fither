@@ -102,8 +102,10 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
     // A false here is a provider/process failure (audit S2) — never her
     // declining. Say so calmly; success is store-driven (the grant lands
     // and the gate re-renders away), so there is nothing to say on true.
-    const ok = await purchasePlan(selected);
-    if (!ok) setNotice("purchaseFailed");
+    const result = await purchasePlan(selected);
+    // Closing the store sheet is her decision, not a failure — nothing
+    // is said. Only a process failure gets the calm retry line.
+    if (result === "failed") setNotice("purchaseFailed");
     setBusy(false);
   };
 

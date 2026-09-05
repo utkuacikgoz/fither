@@ -246,3 +246,17 @@ describe("PaywallScreen", () => {
     }
   });
 });
+
+it("closing the store sheet says nothing — only a process failure gets the retry line", async () => {
+  const { getBilling } = jest.requireActual<typeof import("../../../monetization/billing")>(
+    "../../../monetization/billing",
+  );
+  const spy = jest
+    .spyOn(getBilling(), "purchase")
+    .mockResolvedValueOnce({ ok: false, reason: "cancelled" });
+  const screen = render(<PaywallScreen />);
+  fireEvent.press(screen.getByTestId("paywall-purchase"));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(screen.queryByTestId("paywall-purchase-error")).toBeNull();
+  spy.mockRestore();
+});

@@ -18,6 +18,9 @@ import { getBilling, type PlanId, type PurchaseRecord } from "../monetization/bi
  */
 export type RestoreResult = "restored" | "empty" | "failed";
 
+/** What a purchase attempt meant: granted, she closed the sheet, or the process failed. */
+export type PurchaseResult = "purchased" | "cancelled" | "failed";
+
 interface EntitlementStoreState {
   hydrated: boolean;
   hydrationFailed: boolean;
@@ -32,7 +35,7 @@ interface EntitlementStoreState {
   /** Stamp the trial start. Idempotent: only the first call sticks. */
   markSessionCompleted: (date: string) => void;
   /** Buy through the billing port and persist the grant. */
-  purchasePlan: (plan: PlanId) => Promise<boolean>;
+  purchasePlan: (plan: PlanId) => Promise<PurchaseResult>;
   /** Restore through the billing port; grants only on "restored". */
   restorePurchases: () => Promise<RestoreResult>;
   /**
@@ -59,9 +62,9 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
 
       purchasePlan: async (plan) => {
         const outcome = await getBilling().purchase(plan);
-        if (!outcome.ok) return false;
+        if (!outcome.ok) return outcome.reason;
         set({ purchase: outcome.purchase });
-        return true;
+        return "purchased";
       },
 
       restorePurchases: async () => {

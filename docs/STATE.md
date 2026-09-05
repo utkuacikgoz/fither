@@ -184,6 +184,9 @@ ones.
 | Docs | `c158600` | STATE, feature-set, code skill, brand README |
 | Share export | `343bd76` | The unlock card captured and shared as a PNG; text share as fallback (adds react-native-view-shot + expo-sharing: owner rebuild) |
 | Voice | `01b9711` | Generator + offline playback + Settings card + the quiet-day rule; audio files pending the owner's voice (adds expo-audio: owner rebuild) |
+| Review fixes 1–3 | `f06ecb0` `038e74e` `c4fbb24` | Two blockers; motion/a11y; the finish. Waves 4–7 of the reviewer's should-fixes are still open (recorded in AUDIT.md) |
+| Audit | `a7f7df4` | AUDIT.md — phase 1 of the audit-and-ship brief |
+| Pricing + store | — | ADR-0014: $59.99/$12.99/$99 lifetime; RevenueCat adapter behind the port, Customer Center, the day-3 lifetime offer; owner's key via env (three native deps: owner rebuild) |
 
 **Reviews**
 
@@ -207,7 +210,12 @@ ones.
 2. **Owner: GATE 3** — five real users, under 60s to first movement
    (docs/gate-3-protocol.md; the protocol now names sign-in as the
    post-reset first screen).
-3. **Owner: Apple Developer enrollment + EAS link**
+3. **Owner: App Store Connect products + RevenueCat offering** per
+   docs/revenuecat-setup.md, then sandbox verification. **DECIDE** the
+   trial model (ADR-0014 consequences) — the two free weeks stack today.
+   Then the Sign in with Apple adapter (expo-apple-authentication is
+   installed; the port is `auth.ts`).
+   *(was: Apple Developer enrollment + EAS link — done 2026-09-05)*
    (docs/release-builds.md). Unblocks: real Apple/Google sign-in
    adapters, App Store Connect subscription products → RevenueCat
    adapter + sandbox testing + offline-lockout re-review, TestFlight,

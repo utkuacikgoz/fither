@@ -104,12 +104,16 @@ analytics, not in settings, not "optional":
 If a feature idea needs one of these to work, the feature is wrong for this
 product. Flag it; do not build it.
 
-## Pricing (decided, ADR-0002)
+## Pricing (decided, ADR-0014 — supersedes ADR-0002's prices)
 
-Subscription via RevenueCat: **£5.99/month or £39.99/year, 7-day free
-trial** (GBP reference prices; other storefronts via Apple's price tiers).
-Annual is the plan we lead with on the paywall. Entitlements must work
-offline once granted — a paying user in airplane mode is never locked out.
+Subscription via RevenueCat: **$12.99/month or $59.99/year, 7-day free
+trial** (USD reference prices; other storefronts via Apple's price
+tiers). Annual is the plan we lead with on the paywall. A **$99 lifetime**
+purchase exists but is never on the paywall: it is offered once, on day 3
+of the trial, only to someone who has switched off auto-renew. No
+countdowns, no "last chance" — we say we'll only ask once, and we don't.
+Entitlements must work offline once granted — a paying user in airplane
+mode is never locked out.
 
 ## Movement library
 

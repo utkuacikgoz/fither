@@ -18,6 +18,7 @@ import { skillLabel } from "../../session/skill-name";
 import { useProfileStore } from "../../state/profile-store";
 import { useSessionStore } from "../../state/session-store";
 import { todaySessionState } from "../../state/today-session";
+import { useLifetimeOffer } from "../../state/use-lifetime-offer";
 import { todayTraining } from "../../state/today-training";
 import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
 
@@ -36,6 +37,9 @@ import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
 export function HomeScreen() {
   const colors = useTheme();
   const reduceMotion = useReducedMotion();
+  // The one lifetime ask (ADR-0014), if it is due — decided by the offer
+  // store and the billing port, never here.
+  useLifetimeOffer();
   // Reactive across midnight: the hub left open overnight refreshes its
   // date on the next foreground, so yesterday's done state can't linger.
   const today = useTodayIso();

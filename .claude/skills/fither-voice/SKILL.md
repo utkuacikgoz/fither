@@ -86,7 +86,7 @@ Never, in any surface, including notifications, store listing and scripts:
 | Unlock | "You crushed it! 🔥" | "That's your first full push-up. It counts." |
 | Low energy day | "No excuses — push harder!" | "Short and steady today. Ten minutes, all yours." |
 | Return after 2 weeks | "We missed you! Your streak reset." | "Ready when you are. Today: 10 minutes, push and core." |
-| Paywall | "Unlock your dream body!" | "Every session, adapted daily. £5.99/month or £39.99/year after your free week." |
+| Paywall | "Unlock your dream body!" | "Every session, adapted daily. $12.99/month or $59.99/year after your free week." |
 
 Every string lives in `app/src/copy/strings.ts` — if you find user-facing
 text hardcoded in a component, that placement is itself a bug to report.
