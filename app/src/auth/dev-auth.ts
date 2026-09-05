@@ -14,6 +14,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { todayIso } from "../lib/dates";
 import type {
   AuthPort,
+  AuthProvider,
   IdentityKind,
   IdentityRecord,
   SignInOutcome,
@@ -84,7 +85,7 @@ export const devAuth: AuthPort = {
     return useDevAuthSessionStore.getState().session;
   },
 
-  async availableProviders() {
+  availableProviders(): AuthProvider[] {
     return ["apple", "google"];
   },
 

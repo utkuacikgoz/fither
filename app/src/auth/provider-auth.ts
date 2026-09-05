@@ -22,12 +22,11 @@ export const providerAuth: AuthPort = {
     return null;
   },
 
-  async availableProviders(): Promise<AuthProvider[]> {
-    try {
-      return (await AppleAuthentication.isAvailableAsync()) ? ["apple"] : [];
-    } catch {
-      return [];
-    }
+  availableProviders(): AuthProvider[] {
+    // Sign in with Apple exists on every iOS this app can install on
+    // (platforms: ios, SDK floor iOS 15.1); isAvailableAsync() only says
+    // no on other platforms. Google has no adapter yet.
+    return ["apple"];
   },
 
   async checkRevoked(identity: IdentityRecord): Promise<boolean> {

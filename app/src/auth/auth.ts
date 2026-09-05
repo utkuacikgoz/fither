@@ -52,8 +52,11 @@ export interface AuthPort {
    * Which provider buttons may render. A provider without a real
    * adapter is not offered: a button that fakes success is a review
    * rejection and a lie. Guest is always available and not listed.
+   * Synchronous on purpose: the answer is a property of the build (iOS
+   * only, iOS 15.1+ floor), so the screen renders right on its first
+   * frame instead of a lone guest button that grows a provider later.
    */
-  availableProviders(): Promise<AuthProvider[]>;
+  availableProviders(): AuthProvider[];
   /**
    * Whether the provider has revoked this identity's credential (Apple
    * requires the app to notice). Unknown — offline, or a provider with

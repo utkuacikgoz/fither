@@ -6,15 +6,12 @@ import { providerAuth } from "../provider-auth";
 // no name and no email ever requested (ADR-0011 §6).
 
 const mocked = AppleAuthentication as unknown as {
-  isAvailableAsync: jest.Mock;
   signInAsync: jest.Mock;
   getCredentialStateAsync: jest.Mock;
 };
 
-it("offers Apple where the platform has it, and never Google without an adapter", async () => {
-  expect(await providerAuth.availableProviders()).toEqual(["apple"]);
-  mocked.isAvailableAsync.mockResolvedValueOnce(false);
-  expect(await providerAuth.availableProviders()).toEqual([]);
+it("offers Apple, and never Google without an adapter", async () => {
+  expect(providerAuth.availableProviders()).toEqual(["apple"]);
   expect(await providerAuth.signInWithGoogle()).toEqual({ ok: false, reason: "failed" });
 });
 
