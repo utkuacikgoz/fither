@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { router } from "expo-router";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -12,17 +11,8 @@ import { spacing } from "../../design/tokens";
 import { appVersion } from "../../lib/app-version";
 import { BODY_AREAS } from "../../lib/body-areas";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
-import {
-  seedFinishPreviewForDev,
-  seedFreshEntitlementForDev,
-  seedTrialActiveForDev,
-  seedTrialExpiredForDev,
-  seedUnlockPreviewForDev,
-} from "../../state/dev-preview";
-import { useDevReceiptStore } from "../../monetization/dev-billing";
 import { manageSubscription } from "../../monetization/manage-subscription";
 import { REMINDER_SLOTS } from "../../notifications/notifications";
-import { useLifetimeOfferStore } from "../../state/lifetime-offer-store";
 import { hasVoiceAudio } from "../../session/voice-manifest";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useReminderStore } from "../../state/reminder-store";
@@ -31,10 +21,8 @@ import {
   useSettingsStore,
   WITH_CHAIR_EQUIPMENT,
 } from "../../state/settings-store";
-import {
-  DEV_TIMING_TITLE,
-  FirstMovementReadout,
-} from "../dev-timing/first-movement-readout";
+import { FirstMovementReadout } from "../dev-timing/first-movement-readout";
+import { DevToolsCard } from "./settings-dev-tools";
 import { CareJournal } from "./care-journal";
 
 // The settings screen (ADR-0009 left restore + dev controls "until a
@@ -56,27 +44,10 @@ import { CareJournal } from "./care-journal";
 /** After a restore attempt: nothing to say, no purchase found, or failed. */
 type RestoreNotice = "none" | "empty" | "failed";
 
-// Developer-facing only, shown solely in __DEV__ builds — deliberately
-// not user-facing copy, so it does not live in strings.ts (same allowlist
-// pattern as the paywall's DEV_RESET_LABEL). Exported for the copy-audit
-// test's allowlist.
-export const DEV_ENTITLEMENT_RESET_LABEL = "[dev] Reset entitlement";
-
-// The dev flow-previewer's labels (same allowlist pattern). Each action
-// seeds REAL store state (state/dev-preview.ts) and then navigates to
-// the real route — the guards and gating decide what renders, never a
-// faked screen.
-export const DEV_PREVIEW_LABELS = {
-  paywallExpired: "[dev] Preview paywall (expired)",
-  paywallTrialActive: "[dev] Preview paywall (trial active)",
-  entitlementFresh: "[dev] Reset entitlement (fresh)",
-  unlock: "[dev] Preview unlock",
-  finishCompleted: "[dev] Preview finish (complete)",
-  finishEndedEarly: "[dev] Preview finish (ended early)",
-  finishOutOfTime: "[dev] Preview finish (out of time)",
-  finishNothingDone: "[dev] Preview finish (nothing done)",
-  lifetimeOffer: "[dev] Preview lifetime offer (day-3 canceller)",
-} as const;
+// The dev tools live in settings-dev-tools.tsx (brief rule: a screen
+// over 400 lines is split); their labels are re-exported here because
+// the tests import them from the screen.
+export { DEV_ENTITLEMENT_RESET_LABEL, DEV_PREVIEW_LABELS } from "./settings-dev-tools";
 
 interface SettingsScreenProps {
   /**
@@ -95,7 +66,6 @@ export function SettingsScreen({
   const equipment = useSettingsStore((s) => s.equipment);
   const setEquipment = useSettingsStore((s) => s.setEquipment);
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
-  const resetEntitlementForDev = useEntitlementStore((s) => s.resetForDev);
   const reminderSlot = useReminderStore((s) => s.slot);
   const chooseSlotWithPermission = useReminderStore(
     (s) => s.chooseSlotWithPermission,
@@ -318,104 +288,11 @@ export function SettingsScreen({
         </Card>
 
         {devToolsEnabled && (
-          // Dev-only tools. The long-press entries elsewhere keep working;
-          // these are the findable front doors (ADR-0009's interim homes
-          // retire to here).
-          <Card order={voiceCard ? 6 : 5} reduceMotion={reduceMotion} testID="settings-dev">
-            <AppText variant="caption" style={styles.sectionHeading}>
-              {strings.settings.dev.title}
-            </AppText>
-            <QuietButton
-              testID="settings-dev-timing"
-              label={DEV_TIMING_TITLE}
-              onPress={() => setDevTimingVisible(true)}
-            />
-            <QuietButton
-              testID="settings-dev-reset"
-              label={DEV_ENTITLEMENT_RESET_LABEL}
-              onPress={resetEntitlementForDev}
-            />
-            {/* The flow previewer: seed real state, go to the real route.
-                "/" re-renders the launch surface's honest gating over the
-                seeded entitlement; /unlock and /finish pass their guards
-                because the seeded finish summary is valid state. */}
-            <QuietButton
-              testID="settings-dev-paywall-expired"
-              label={DEV_PREVIEW_LABELS.paywallExpired}
-              onPress={() => {
-                seedTrialExpiredForDev();
-                router.replace("/");
-              }}
-            />
-            <QuietButton
-              testID="settings-dev-paywall-trial-active"
-              label={DEV_PREVIEW_LABELS.paywallTrialActive}
-              onPress={() => {
-                seedTrialActiveForDev();
-                router.replace("/");
-              }}
-            />
-            <QuietButton
-              testID="settings-dev-entitlement-fresh"
-              label={DEV_PREVIEW_LABELS.entitlementFresh}
-              onPress={() => {
-                seedFreshEntitlementForDev();
-                router.replace("/");
-              }}
-            />
-            <QuietButton
-              testID="settings-dev-preview-unlock"
-              label={DEV_PREVIEW_LABELS.unlock}
-              onPress={() => {
-                seedUnlockPreviewForDev();
-                router.push("/unlock");
-              }}
-            />
-            <QuietButton
-              testID="settings-dev-finish-completed"
-              label={DEV_PREVIEW_LABELS.finishCompleted}
-              onPress={() => {
-                seedFinishPreviewForDev("completed");
-                router.push("/finish");
-              }}
-            />
-            <QuietButton
-              testID="settings-dev-finish-ended-early"
-              label={DEV_PREVIEW_LABELS.finishEndedEarly}
-              onPress={() => {
-                seedFinishPreviewForDev("endedEarly");
-                router.push("/finish");
-              }}
-            />
-            <QuietButton
-              testID="settings-dev-finish-out-of-time"
-              label={DEV_PREVIEW_LABELS.finishOutOfTime}
-              onPress={() => {
-                seedFinishPreviewForDev("outOfTime");
-                router.push("/finish");
-              }}
-            />
-            {/* ADR-0014: simulate the store fact (trial cancelled, day 3)
-                in the dev adapter, forget the one ask, and open the offer
-                through the hub's own trigger. */}
-            <QuietButton
-              testID="settings-dev-lifetime-offer"
-              label={DEV_PREVIEW_LABELS.lifetimeOffer}
-              onPress={() => {
-                useDevReceiptStore.getState().setTrialCancelled(true);
-                useLifetimeOfferStore.getState().resetForDev();
-                router.replace("/home");
-              }}
-            />
-            <QuietButton
-              testID="settings-dev-finish-nothing-done"
-              label={DEV_PREVIEW_LABELS.finishNothingDone}
-              onPress={() => {
-                seedFinishPreviewForDev("nothingDone");
-                router.push("/finish");
-              }}
-            />
-          </Card>
+          <DevToolsCard
+            order={voiceCard ? 6 : 5}
+            reduceMotion={reduceMotion}
+            onOpenTiming={() => setDevTimingVisible(true)}
+          />
         )}
 
         {version !== null && (

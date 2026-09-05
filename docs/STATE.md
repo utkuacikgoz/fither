@@ -1,7 +1,7 @@
-# Where the build stands — 2026-09-04 (phase 3 shipped: the visual language)
+# Where the build stands — 2026-09-05 (phase 3 reviewed and fixed; the store is wired)
 
-Read `CLAUDE.md` first, then this. Everything below is on `main` at
-`01b9711` with green GitHub CI verified per wave commit (runs #90 onward).
+Read `CLAUDE.md` first, then this. Everything below is on `main` with
+green GitHub CI verified per wave commit (runs #90 onward).
 
 ## Verified green
 
@@ -11,11 +11,8 @@ node scripts/validate-movements.mjs  OK — 60 movements, ladders complete,
 pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
 engine + app typecheck               pass
-engine tests                         75/75
-app tests                            467/467 (47 suites, 0 act() warnings)
-                                     (01b9711's message says 469 — the
-                                     real count is 467; recorded here
-                                     rather than rewriting pushed history)
+engine tests                         77/77
+app tests                            515/515 (54 suites, 0 act() warnings)
 pnpm bundle:ios                      pass — full production Hermes bundle
                                      exports (2.7MB), zero resolution errors
 expo prebuild --platform ios         pass — native project generates with
@@ -187,7 +184,9 @@ ones.
 | Review fixes 1–3 | `f06ecb0` `038e74e` `c4fbb24` | Two blockers; motion/a11y; the finish. Waves 4–7 of the reviewer's should-fixes are still open (recorded in AUDIT.md) |
 | Audit | `a7f7df4` | AUDIT.md — phase 1 of the audit-and-ship brief |
 | Pricing + store | `6a3a11c` `db810ff` | ADR-0014: $59.99/$12.99/$99 lifetime; RevenueCat adapter behind the port, Customer Center, the day-3 lifetime offer; the store trial is the trial; owner's key via env (three native deps: owner rebuild) |
-| Sign in with Apple | — | Real adapter behind the auth port; Google hidden until it has one; revocation checked at launch |
+| Sign in with Apple | `b8c74a6` `2a5fad5` | Real adapter behind the auth port; Google hidden until it has one; revocation checked at launch |
+| Review fixes 4–7 | `4ed45e3` `7df0139` `fac5a9e` `5302b37` | Hub/nav; voice + share hardening, 640px figures; the rail token + contrast test; the weaker tests |
+| Splits | — | The three over-400-line screens split (dev tools card, prompt outcomes, player phases); the prompt reuses the shared hydration set |
 
 **Reviews**
 
@@ -196,10 +195,10 @@ ones.
   (docs/review/2026-09-02-exercise-experience-audit.md tracks the
   earlier Codex audit; the Norman audit's 3 blockers and 10 should-fixes
   are all closed, its polish list shipped).
-- **Not yet reviewed:** the ten phase-3 waves shipped on the machine
-  gates alone (typecheck, tests, release-check, bundle export, CI). No
-  adversarial reviewer pass has read them. That pass is owed before
-  Gate 3 testers see the build — listed under Next.
+- The phase-3 reviewer pass (three fresh-context reviewers, 2026-09-05)
+  found two blockers and nineteen should-fixes; all are closed in
+  review-fix waves 1–7. Its notes that were product decisions are in
+  AUDIT.md and the DECIDE list below.
 
 ## Next, in order
 
@@ -223,9 +222,9 @@ ones.
    ops SDKs (Sentry/PostHog/Resend/Canny), store preparation.
 4. **Owner: commission Brief 6** (movement animations; 6 reference
    clips first) and the **human coach review** of the 60 movements.
-5. **Reviewer pass on phase 3** — a fresh-context adversarial read of
-   the ten waves above (the machine gates ran green; no human or
-   reviewer-agent has read the diffs). Should-fixes close before new UI.
+5. **Analytics (PostHog), four events** — deep_link_open,
+   workout_start, workout_complete, trial_start. A new dependency:
+   waits on the owner's yes.
 6. **Owner: pick the voice and generate the audio.** Everything else is
    built — the pipeline, the offline playback, the Settings card, the
    quiet-day rule. One command, once, with the ElevenLabs key and the

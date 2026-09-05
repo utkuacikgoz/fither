@@ -10,12 +10,10 @@ import { useKeepAwake } from "expo-keep-awake";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
-import { AnswerRow } from "../../design/primitives/answer-row";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { ProgressLine } from "../../design/primitives/progress-line";
 import { QuietButton } from "../../design/primitives/quiet-button";
-import { RowButton } from "../../design/primitives/row-button";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { Screen } from "../../design/primitives/screen";
 import { minTouchTarget, motion, spacing } from "../../design/tokens";
@@ -29,6 +27,7 @@ import {
 } from "../../session/player-machine";
 import { useSessionStore } from "../../state/session-store";
 import { speakCue, stopVoice } from "../../session/voice";
+import { FeedbackPhase, RestPhase, SideSwitchPhase, SkipConfirmPhase } from "./player-phases";
 import { useSettingsStore } from "../../state/settings-store";
 import { announcementKey, phaseAnnouncement, workCue } from "./announcements";
 
@@ -171,35 +170,18 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       />
 
       {confirmingSkip && (
-        <>
-          <View style={styles.center}>
-            <AppText variant="title" accessibilityRole="header">
-              {strings.player.skipConfirm.title(block.name)}
-            </AppText>
-            <AppText variant="bodySoft" style={styles.subline}>
-              {strings.player.skipConfirm.body}
-            </AppText>
-          </View>
-          <View style={styles.bottom}>
-            <PrimaryButton
-              testID="player-skip-keep"
-              label={strings.player.skipConfirm.keepGoing}
-              onPress={() => {
-                // The confirm paused the visible count; re-anchor the
-                // wall-clock deadline so the seconds she saw are the
-                // seconds she gets (audit polish — the stale deadline
-                // would eat the pause on the next reconcile).
-                rebaseCountdown();
-                setConfirmingSkip(false);
-              }}
-            />
-            <QuietButton
-              testID="player-skip-confirm"
-              label={strings.player.skipConfirm.skipIt}
-              onPress={confirmSkip}
-            />
-          </View>
-        </>
+        <SkipConfirmPhase
+          blockName={block.name}
+          onKeepGoing={() => {
+            // The confirm paused the visible count; re-anchor the
+            // wall-clock deadline so the seconds she saw are the seconds
+            // she gets (audit polish — the stale deadline would eat the
+            // pause on the next reconcile).
+            rebaseCountdown();
+            setConfirmingSkip(false);
+          }}
+          onSkip={confirmSkip}
+        />
       )}
 
       {phase.kind === "blockIntro" && !confirmingSkip && (
@@ -323,128 +305,29 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       )}
 
       {phase.kind === "sideSwitch" && !confirmingSkip && (
-        <>
-          {/* The same movement, other side: its figure stays with her
-              across the switch (every movement has a face — ADR-0013),
-              and the phase enters as one quiet breath. */}
-          <FadeIn
-            reduceMotion={reduceMotion}
-            rise={motion.riseDistance}
-            style={styles.center}
-          >
-            <MovementFigure
-              movementId={block.movementId}
-              testID="player-figure-side"
-            />
-            <AppText variant="title" accessibilityRole="header">
-              {strings.player.sides.switchTitle}
-            </AppText>
-            <AppText variant="bodySoft" style={styles.subline}>
-              {strings.player.sides.switchBody}
-            </AppText>
-          </FadeIn>
-          <View style={styles.bottom}>
-            <PrimaryButton
-              testID="player-start-right"
-              label={strings.player.sides.startRight}
-              onPress={() => dispatchPlayer({ type: "advance" })}
-            />
-            <QuietButton
-              testID="player-skip"
-              label={strings.player.skipBlock}
-              onPress={() => setConfirmingSkip(true)}
-            />
-          </View>
-        </>
+        <SideSwitchPhase
+          block={block}
+          reduceMotion={reduceMotion}
+          onAdvance={() => dispatchPlayer({ type: "advance" })}
+          onSkip={() => setConfirmingSkip(true)}
+        />
       )}
 
       {phase.kind === "rest" && !confirmingSkip && (
-        <>
-          {/* The calmest screen in the app — a deliberate exhale. It
-              enters as one slow breath; the figure of the movement she
-              is resting from sits small above the count, so the rest
-              never reads as a blank between two screens. The number
-              itself does not animate per tick: sixty tiny movements a
-              minute is the opposite of calm. */}
-          <FadeIn
-            reduceMotion={reduceMotion}
-            rise={motion.riseDistance}
-            style={styles.center}
-          >
-            <MovementFigure
-              movementId={block.movementId}
-              testID="player-figure-rest"
-            />
-            <AppText variant="title" accessibilityRole="header">
-              {strings.player.rest}
-            </AppText>
-            <AppText
-              variant="numeral"
-              testID="player-numeral"
-              style={styles.restNumeral}
-              accessibilityLabel={`${phase.remainingSeconds} ${strings.player.holdLabel}`}
-            >
-              {phase.remainingSeconds}
-            </AppText>
-            <AppText variant="caption">{strings.player.holdLabel}</AppText>
-            <AppText variant="caption">{strings.player.restNote}</AppText>
-          </FadeIn>
-          <View style={styles.bottom}>
-            <PrimaryButton
-              testID="player-end-rest"
-              label={strings.player.restDone}
-              onPress={() => dispatchPlayer({ type: "advance" })}
-            />
-            <QuietButton
-              testID="player-skip"
-              label={strings.player.skipBlock}
-              onPress={() => setConfirmingSkip(true)}
-            />
-          </View>
-        </>
+        <RestPhase
+          block={block}
+          remainingSeconds={phase.remainingSeconds}
+          reduceMotion={reduceMotion}
+          onAdvance={() => dispatchPlayer({ type: "advance" })}
+          onSkip={() => setConfirmingSkip(true)}
+        />
       )}
 
       {phase.kind === "feedback" && !confirmingSkip && (
-        <>
-          <View style={styles.top}>
-            <AppText variant="title" accessibilityRole="header">
-              {strings.player.feedback.question}
-            </AppText>
-          </View>
-          <View style={styles.bottom}>
-            {/*
-              Affective-to-outcome mapping — deliberate, NOT lost data.
-              The engine contract stays exactly completed | struggled |
-              skipped. Three answers exist so every answer feels fine to
-              give: "Strong" and "About right" BOTH record "completed";
-              "Hard today" records "struggled". The engine has no use
-              for the strong/good distinction (its progression rules key
-              off completed/struggled), so nothing is dropped here — do
-              not add outcome kinds to preserve it.
-            */}
-            <AnswerRow index={0} reduceMotion={reduceMotion}>
-              <RowButton
-                testID="feedback-felt-strong"
-                label={strings.player.feedback.options.feltStrong}
-                onPress={() => dispatchPlayer({ type: "feedback", outcome: "completed" })}
-              />
-            </AnswerRow>
-            <AnswerRow index={1} reduceMotion={reduceMotion}>
-              <RowButton
-                testID="feedback-good"
-                label={strings.player.feedback.options.good}
-                onPress={() => dispatchPlayer({ type: "feedback", outcome: "completed" })}
-              />
-            </AnswerRow>
-            <AnswerRow index={2} reduceMotion={reduceMotion}>
-              <RowButton
-                testID="feedback-hard"
-                label={strings.player.feedback.options.hard}
-                onPress={() => dispatchPlayer({ type: "feedback", outcome: "struggled" })}
-              />
-            </AnswerRow>
-          </View>
-        </>
+        <FeedbackPhase
+          reduceMotion={reduceMotion}
+          onOutcome={(outcome) => dispatchPlayer({ type: "feedback", outcome })}
+        />
       )}
     </Screen>
   );
@@ -496,9 +379,6 @@ const styles = StyleSheet.create({
   },
   setCounter: {
     marginTop: spacing.md,
-  },
-  restNumeral: {
-    marginVertical: spacing.md,
   },
   skipPlaceholder: {
     minHeight: minTouchTarget,
