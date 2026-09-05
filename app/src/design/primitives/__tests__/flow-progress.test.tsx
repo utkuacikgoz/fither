@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { strings } from "../../../copy/strings";
 import { FlowProgress } from "../flow-progress";
 
 // The one question a time-poor user has on entering a flow is "how long
@@ -38,8 +39,11 @@ it("carries the platform's own progress semantics, not invented copy", () => {
     <FlowProgress total={4} current={2} reduceMotion testID="flow" />,
   );
   const bar = screen.getByTestId("flow");
+  // Without `accessible` a View is not an element and VoiceOver skips it.
+  expect(bar.props.accessible).toBe(true);
   expect(bar.props.accessibilityRole).toBe("progressbar");
-  expect(bar.props.accessibilityValue).toEqual({ min: 1, max: 4, now: 2 });
+  expect(bar.props.accessibilityLabel).toBe(strings.prompt.progressLabel);
+  expect(bar.props.accessibilityValue).toEqual({ min: 0, max: 4, now: 2 });
   // No text of its own — nothing here needs the copy-writer.
   expect(screen.queryByText(/./)).toBeNull();
 });
@@ -48,7 +52,9 @@ it("draws exactly as many segments as the flow has steps", () => {
   const screen = render(
     <FlowProgress total={3} current={3} reduceMotion testID="flow" />,
   );
-  expect(screen.getByTestId("flow").children).toHaveLength(1);
+  // The Track inside holds exactly `total` rails — five rails with three
+  // filled would have passed the old wrapper-only count.
+  expect(screen.getByTestId("flow-track", hidden).children).toHaveLength(3);
   expect(filledCount(screen, 3)).toBe(3);
   expect(screen.queryByTestId("flow-filled-4", hidden)).toBeNull();
 });

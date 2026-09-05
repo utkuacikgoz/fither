@@ -9,15 +9,15 @@ import { QuietButton } from "../../design/primitives/quiet-button";
 import { Card } from "../../design/primitives/card";
 import { Screen } from "../../design/primitives/screen";
 import { useTheme } from "../../design/theme";
-import { glyph, spacing } from "../../design/tokens";
+import { spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useTodayIso } from "../../lib/use-today";
-import { isFinished } from "../../session/player-machine";
 import { loadLibrary } from "../../session/load-library";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { skillLabel } from "../../session/skill-name";
 import { useProfileStore } from "../../state/profile-store";
 import { useSessionStore } from "../../state/session-store";
+import { todaySessionState } from "../../state/today-session";
 import { todayTraining } from "../../state/today-training";
 import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
 
@@ -46,10 +46,11 @@ export function HomeScreen() {
   const player = useSessionStore((s) => s.player);
 
   const training = todayTraining(historyEntries, today);
-  // A session is in flight when one exists and its player has not
-  // finished — read from the player machine's own predicate, never
-  // re-derived from phases here.
-  const inFlight = session !== null && player !== null && !isFinished(player);
+  // Begun / built / nothing — one definition (state/today-session.ts),
+  // shared with the launch surface's resume boundary. A built-but-
+  // unstarted session goes to the preview, never straight to the player.
+  const todaySession = todaySessionState(session, player, today);
+  const inFlight = todaySession === "inFlight";
 
   const library = loadLibrary();
   // What she is working toward — the engine decides which milestone is
@@ -130,7 +131,12 @@ export function HomeScreen() {
               <PrimaryButton
                 testID="home-start"
                 label={strings.home.today.start}
-                onPress={() => router.push("/prompt")}
+                // Built today but never started: the session exists, so
+                // the door is the preview (its plan and adaptation line),
+                // not the four questions again and not the player.
+                onPress={() =>
+                  router.push(todaySession === "built" ? "/preview" : "/prompt")
+                }
               />
             </>
           )}

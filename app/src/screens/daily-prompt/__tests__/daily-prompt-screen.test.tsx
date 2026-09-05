@@ -155,7 +155,7 @@ describe("DailyPromptScreen", () => {
     // ADR-0003 fixes the flow at four questions and the domain rule
     // forbids a fifth; the indicator counts from that structure, so a
     // question added without reading the rule would fail here.
-    expect(bar().props.accessibilityValue).toEqual({ min: 1, max: 4, now: 1 });
+    expect(bar().props.accessibilityValue).toEqual({ min: 0, max: 4, now: 1 });
 
     fireEvent.press(screen.getByTestId("time-10"));
     expect(bar().props.accessibilityValue.now).toBe(2);

@@ -131,7 +131,7 @@ describe("OnboardingScreen", () => {
     fireEvent.press(screen.getByTestId("onboarding-begin"));
     expect(
       screen.getByTestId("onboarding-flow").props.accessibilityValue,
-    ).toEqual({ min: 1, max: 2, now: 1 });
+    ).toEqual({ min: 0, max: 2, now: 1 });
     fireEvent.press(screen.getByTestId("onboarding-chair"));
     expect(
       screen.getByTestId("onboarding-flow").props.accessibilityValue.now,
