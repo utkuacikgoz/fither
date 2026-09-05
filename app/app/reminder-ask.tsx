@@ -17,7 +17,7 @@ export default function ReminderAskRoute() {
       <ReminderAskScreen
         onDone={() => {
           resetSession();
-          router.replace("/");
+          router.replace("/home");
         }}
       />
     </RouteGuard>

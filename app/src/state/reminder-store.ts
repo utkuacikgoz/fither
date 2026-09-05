@@ -95,7 +95,15 @@ export const useReminderStore = create<ReminderState>()(
           if (permission !== "granted") {
             permission = await getNotifications().requestPermission();
           }
-          set({ permissionDenied: permission === "denied" });
+          if (permission === "denied") {
+            // The OS will deliver nothing now, whatever was scheduled
+            // before: an earlier slot still shown as selected under the
+            // "turn it on in Settings" line would be a lie (reviewer
+            // note). "No invitation" is the honest selection.
+            set({ permissionDenied: true, slot: null });
+            return false;
+          }
+          set({ permissionDenied: false });
           if (permission !== "granted") return false;
         } catch {
           return false;

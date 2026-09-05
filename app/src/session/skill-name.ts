@@ -23,3 +23,18 @@ export function skillLabel(
   if (!library) return pattern;
   return milestoneMovement(library, pattern, tier)?.name ?? pattern;
 }
+
+/**
+ * The movement id behind a milestone, for its figure — the same
+ * resolution as skillLabel, so a skill is never named by one movement
+ * and drawn as another. "" when the library is absent (the figure
+ * primitive renders nothing for an unknown id).
+ */
+export function skillFigureId(
+  library: MovementLibrary | null,
+  pattern: Pattern,
+  tier: Tier,
+): string {
+  if (!library) return "";
+  return milestoneMovement(library, pattern, tier)?.id ?? "";
+}

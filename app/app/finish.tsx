@@ -52,7 +52,12 @@ export default function FinishRoute() {
             maybeRequestReview();
           }
           resetSession();
-          router.replace("/");
+          // Straight to the hub (reviewer should-fix): "/" is the launch
+          // surface, which paints its holding line for a frame on every
+          // warm pass. Every gate the launch surface applies — sign-in,
+          // onboarding, resume — is impossible right after a session, and
+          // the hub route holds the entitlement gate itself.
+          router.replace("/home");
         }}
       />
     </RouteGuard>

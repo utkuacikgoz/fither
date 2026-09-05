@@ -3,13 +3,16 @@ import { MAX_TIER, PATTERNS, type Profile } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
-import { useTheme } from "../../design/theme";
-import { radius, spacing } from "../../design/tokens";
+import { Track } from "../../design/primitives/track";
+import { motion, spacing } from "../../design/tokens";
 
-// The five ladders at a glance — the same tier-track idea the progress
-// screen renders, shrunk to one row. Every value is read from the
-// profile the engine wrote (tier per pattern) and the engine's MAX_TIER;
-// nothing about progression is decided here.
+// The five ladders at a glance — the same Track the progress screen
+// draws (one 4pt pill everywhere, and it fills as a movement here too;
+// the glance used to hand-draw a static copy — reviewer should-fix).
+// Five rows, name beside track: the columns it used to draw ellipsised
+// "Hip hinge" at default type on a small phone. Every value is read from
+// the profile the engine wrote (tier per pattern) and the engine's
+// MAX_TIER; nothing about progression is decided here.
 
 /**
  * One screen-reader label for the whole row, assembled from strings.ts
@@ -27,41 +30,33 @@ export function patternGlanceLabel(profile: Profile): string {
   return [strings.profile.patterns.title, ...ladders].join(". ");
 }
 
-export function PatternGlance({ profile }: { profile: Profile }) {
-  const colors = useTheme();
-  const steps = Array.from({ length: MAX_TIER }, (_, i) => i + 1);
+interface PatternGlanceProps {
+  profile: Profile;
+  reduceMotion: boolean;
+  /** When the card holding the glance has finished entering. */
+  baseDelayMs?: number;
+}
+
+export function PatternGlance({ profile, reduceMotion, baseDelayMs = 0 }: PatternGlanceProps) {
   return (
-    <View style={styles.row}>
+    <View style={styles.rows}>
       {PATTERNS.map((pattern) => {
         const { tier } = profile.patterns[pattern];
         return (
-          <View
-            key={pattern}
-            style={styles.column}
-            testID={`home-pattern-${pattern}`}
-          >
-            <View style={styles.track}>
-              {steps.map((step) => (
-                <View
-                  key={step}
-                  testID={
-                    step <= tier
-                      ? `home-pattern-${pattern}-filled-${step}`
-                      : undefined
-                  }
-                  style={[
-                    styles.trackStep,
-                    {
-                      backgroundColor:
-                        step <= tier ? colors.accent : colors.accentSoft,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-            <AppText variant="caption" numberOfLines={1} style={styles.name}>
+          <View key={pattern} style={styles.row} testID={`home-pattern-${pattern}`}>
+            <AppText variant="caption" style={styles.name}>
               {strings.profile.patterns.names[pattern]}
             </AppText>
+            <View style={styles.track}>
+              <Track
+                steps={MAX_TIER}
+                reached={tier}
+                reduceMotion={reduceMotion}
+                staggerMs={motion.fillStaggerMs}
+                baseDelayMs={baseDelayMs}
+                filledTestID={`home-pattern-${pattern}-filled`}
+              />
+            </View>
           </View>
         );
       })}
@@ -70,26 +65,20 @@ export function PatternGlance({ profile }: { profile: Profile }) {
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
+  rows: {
     gap: spacing.sm,
   },
-  column: {
-    flex: 1,
-  },
-  track: {
+  row: {
     flexDirection: "row",
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  trackStep: {
-    flex: 1,
-    height: spacing.xs,
-    borderRadius: radius.pill,
+    alignItems: "center",
+    gap: spacing.md,
   },
   name: {
-    // The glance names the ladder; the tier itself is spoken in the row's
-    // accessibility label and set in full on the progress screen.
-    textAlign: "left",
+    // Wide enough for the longest ladder name ("Hip hinge") at 2× type
+    // without wrapping; the track takes the rest.
+    width: spacing.xxxl + spacing.xl,
+  },
+  track: {
+    flex: 1,
   },
 });

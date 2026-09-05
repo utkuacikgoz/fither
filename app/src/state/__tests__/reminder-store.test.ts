@@ -168,10 +168,13 @@ describe("a hard OS denial in Settings", () => {
     port.getPermission.mockResolvedValue("denied");
     port.requestPermission.mockResolvedValue("denied");
 
+    // An earlier slot was scheduled while permission was granted.
+    useReminderStore.setState({ slot: "evening" });
     const store = useReminderStore.getState();
     expect(store.permissionDenied).toBe(false);
     await store.chooseSlotWithPermission("morning");
     expect(useReminderStore.getState().permissionDenied).toBe(true);
+    // The OS will deliver nothing now: the old slot is not "selected".
     expect(useReminderStore.getState().slot).toBeNull();
 
     // "No invitation" answers the section: the line has nothing to explain.

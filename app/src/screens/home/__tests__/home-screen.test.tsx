@@ -221,14 +221,17 @@ describe("the glances", () => {
 
     // Four filled steps for push (its stored tier), one for a pattern
     // still at tier 1 — the track length itself is the engine's MAX_TIER.
+    // The glance draws the shared Track, which is decorative and hidden
+    // from accessibility (the card's label speaks), so queries opt in.
+    const hidden = { includeHiddenElements: true } as const;
     for (let step = 1; step <= 4; step += 1) {
-      expect(screen.getByTestId(`home-pattern-push-filled-${step}`)).toBeTruthy();
+      expect(screen.getByTestId(`home-pattern-push-filled-${step}`, hidden)).toBeTruthy();
     }
-    expect(screen.queryByTestId("home-pattern-push-filled-5")).toBeNull();
-    expect(screen.getByTestId("home-pattern-pull-filled-1")).toBeTruthy();
-    expect(screen.queryByTestId("home-pattern-pull-filled-2")).toBeNull();
+    expect(screen.queryByTestId("home-pattern-push-filled-5", hidden)).toBeNull();
+    expect(screen.getByTestId("home-pattern-pull-filled-1", hidden)).toBeTruthy();
+    expect(screen.queryByTestId("home-pattern-pull-filled-2", hidden)).toBeNull();
     expect(
-      screen.queryByTestId(`home-pattern-push-filled-${MAX_TIER + 1}`),
+      screen.queryByTestId(`home-pattern-push-filled-${MAX_TIER + 1}`, hidden),
     ).toBeNull();
 
     fireEvent.press(screen.getByTestId("home-patterns"));

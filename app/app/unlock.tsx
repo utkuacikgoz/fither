@@ -34,7 +34,7 @@ export default function UnlockRoute() {
             maybeRequestReview();
           }
           resetSession();
-          router.replace("/");
+          router.replace("/home");
         }}
       />
     </RouteGuard>
