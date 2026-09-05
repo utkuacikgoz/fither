@@ -59,7 +59,7 @@ export function ProgressLine({
           ? { min: 0, max: total, now: completed }
           : { min: 0, max: 100, now: Math.round(clamped * 100) }
       }
-      style={[styles.track, { backgroundColor: colors.accentSoft }]}
+      style={[styles.track, { backgroundColor: colors.rail }]}
     >
       <Animated.View
         testID={testID ? `${testID}-fill` : undefined}

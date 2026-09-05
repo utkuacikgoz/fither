@@ -13,6 +13,16 @@ export interface ColorTheme {
   danger: string;
   line: string;
   /**
+   * The empty segment of a progress form (a ladder rail, the session
+   * line's track). Chosen by arithmetic, not by eye: a fill this dark on
+   * a white card leaves no colour that is 3:1 from BOTH the page and the
+   * fill, so the rail is set for the state that carries meaning — filled
+   * vs empty ≥ 3:1 in both themes — and merely visible against the page
+   * (≥ 1.5:1). The old accentSoft rail was 1.2:1 against the card: "Tier
+   * 2 of 6" read as two pills with no ladder (reviewer should-fix).
+   */
+  rail: string;
+  /**
    * Text on an accent fill. Theme-aware because the accents invert in
    * brightness: bone on deep sage passes AA in light (5.05:1), but bone
    * on the LIGHT dark-mode sage is 2.49:1 — dark mode pairs the light
@@ -32,6 +42,7 @@ export const lightColors: ColorTheme = {
   gold: "#B98A2F", // skill unlocks ONLY
   danger: "#A65746", // muted terracotta, errors only
   line: "#E8E2D8", // hairline borders
+  rail: "#BCC6BC", // empty progress segment — 3.07:1 vs accent, 1.76:1 vs surface
   onAccent: "#FAF7F2", // bone on deep sage — 5.05:1
 };
 
@@ -45,6 +56,7 @@ export const darkColors: ColorTheme = {
   gold: "#B98A2F",
   danger: "#A65746",
   line: "#33302B",
+  rail: "#3B443C", // empty progress segment — 3.8:1 vs accent, 1.63:1 vs surface
   onAccent: "#171614", // dark ink on light sage — 6.79:1 (bone would be 2.49:1)
 };
 
