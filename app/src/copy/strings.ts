@@ -78,6 +78,14 @@ export const strings = {
   },
   prompt: {
     dayLabel: "Today",
+    // COPY-WRITER (2026-09-04): VoiceOver label for the segmented
+    // indicator above the daily prompt's four questions and onboarding's
+    // two. Same shape as player.sessionProgress ("Session progress"):
+    // names the thing, nothing more. iOS appends the value itself
+    // ("2 of 4"), so no number and no "of" here — they'd be read twice.
+    // "Question", because that is what each segment is on both surfaces;
+    // she never sees the word "prompt".
+    progressLabel: "Question progress",
     time: {
       question: "How much time do you have?",
       minutes: {

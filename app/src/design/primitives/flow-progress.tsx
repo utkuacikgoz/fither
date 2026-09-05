@@ -1,5 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
+import { strings } from "../../copy/strings";
 import { Track } from "./track";
 
 // Where she is in a short flow. The daily prompt is four questions in
@@ -31,14 +32,22 @@ export function FlowProgress({
     <View
       style={styles.wrapper}
       testID={testID}
+      // A View is an accessibility element only when told so; without
+      // `accessible` VoiceOver skipped this entirely (reviewer blocker).
+      // The value starts at 0 so question one reads as the start, not
+      // as a quarter already done.
+      accessible
       accessibilityRole="progressbar"
-      accessibilityValue={{ min: 1, max: total, now: current }}
+      accessibilityLabel={strings.prompt.progressLabel}
+      accessibilityValue={{ min: 0, max: total, now: current }}
     >
       <Track
         steps={total}
         reached={current}
         reduceMotion={reduceMotion}
-        {...(testID ? { filledTestID: `${testID}-filled` } : {})}
+        {...(testID
+          ? { testID: `${testID}-track`, filledTestID: `${testID}-filled` }
+          : {})}
       />
     </View>
   );

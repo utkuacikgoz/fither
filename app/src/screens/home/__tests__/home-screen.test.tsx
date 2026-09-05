@@ -106,7 +106,8 @@ describe("the day's card", () => {
     useSessionStore.setState({
       prompt: fixturePrompt,
       sessionId: "test:session",
-      session: fixtureSession,
+      // Dated today: a session dated another day is, by rule, not today's.
+      session: { ...fixtureSession, date: todayIso() },
       player: reduce(createPlayer(fixturePlayerBlocks), { type: "begin" }),
     });
     const screen = render(<HomeScreen />);
@@ -116,6 +117,33 @@ describe("the day's card", () => {
 
     fireEvent.press(screen.getByTestId("home-keep-going"));
     expect(router.push).toHaveBeenCalledWith("/session");
+  });
+
+  it("built but never begun is NOT in flight: the card goes to the preview, not the player", () => {
+    // Reviewer blocker: back-chevron out of the prompt after "Change
+    // today's answers" left a fresh player in memory, and Home offered
+    // "Keep going" (false) straight into the player, skipping the
+    // preview's adaptation line.
+    useSessionStore.setState({
+      session: { ...fixtureSession, date: todayIso() },
+      player: createPlayer(fixturePlayerBlocks),
+    });
+    const screen = render(<HomeScreen />);
+    expect(screen.queryByTestId("home-keep-going")).toBeNull();
+    expect(screen.queryByText(strings.resume.headline)).toBeNull();
+    fireEvent.press(screen.getByTestId("home-start"));
+    expect(router.push).toHaveBeenCalledWith("/preview");
+  });
+
+  it("a session dated another day, left in memory overnight, does not claim today", () => {
+    useSessionStore.setState({
+      session: { ...fixtureSession, date: "2026-08-30" },
+      player: reduce(createPlayer(fixturePlayerBlocks), { type: "begin" }),
+    });
+    const screen = render(<HomeScreen />);
+    expect(screen.queryByTestId("home-keep-going")).toBeNull();
+    fireEvent.press(screen.getByTestId("home-start"));
+    expect(router.push).toHaveBeenCalledWith("/prompt");
   });
 
   it("a finished session is not 'in flight' — the day's card moves on", () => {

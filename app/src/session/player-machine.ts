@@ -333,6 +333,23 @@ export function isFinished(state: PlayerState): boolean {
 }
 
 /**
+ * True once the machine has moved at all: any phase past the first
+ * block's intro, or any outcome captured. A freshly created player is
+ * NOT begun — it is a built session she has not started, which is the
+ * preview's state, never the player's. The session store persists its
+ * crash snapshot on exactly this boundary (the first real transition),
+ * so "begun" and "resumable" name the same fact.
+ */
+export function hasBegun(state: PlayerState): boolean {
+  const { phase } = state;
+  return !(
+    phase.kind === "blockIntro" &&
+    phase.blockIndex === 0 &&
+    state.outcomes.length === 0
+  );
+}
+
+/**
  * True when two states sit at the same machine position — same phase kind,
  * block, set and outcome count — ignoring countdown seconds. Countdown
  * ticks keep the position; transitions and captured outcomes change it.

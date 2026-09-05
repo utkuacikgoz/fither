@@ -39,6 +39,7 @@ it("clamps the fraction and keeps the honest sets-based reading", () => {
   );
   expect(fillScale(screen)).toBe(1);
   const bar = screen.getByTestId("line");
+  expect(bar.props.accessible).toBe(true);
   expect(bar.props.accessibilityRole).toBe("progressbar");
   expect(bar.props.accessibilityLabel).toBe(strings.player.sessionProgress);
   expect(bar.props.accessibilityValue).toEqual({ min: 0, max: 4, now: 3 });

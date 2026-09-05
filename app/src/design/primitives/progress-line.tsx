@@ -51,6 +51,7 @@ export function ProgressLine({
   return (
     <View
       testID={testID}
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel={strings.player.sessionProgress}
       accessibilityValue={
