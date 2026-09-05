@@ -94,9 +94,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     gap: spacing.sm,
-    // The captured image keeps the card's own corners.
-    borderTopLeftRadius: radius.card,
-    borderTopRightRadius: radius.card,
+    // The captured image IS the card she saw: all four corners rounded,
+    // clipped, on the card's own surface — not a "tab" with square
+    // bottom corners (reviewer should-fix). The share row beneath sits
+    // outside the capture and keeps the outer card's rounding.
+    borderRadius: radius.card,
+    overflow: "hidden",
   },
   goldRule: {
     width: spacing.xl,

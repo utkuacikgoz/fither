@@ -38,6 +38,7 @@ interface UnlockScreenProps {
 // share-skill.ts. The card's ref is the artifact.
 export function UnlockScreen({ onContinue }: UnlockScreenProps) {
   const cardRef = useRef<View>(null);
+  const sharing = useRef(false);
   const finish = useSessionStore((s) => s.finish);
   const skills = finish?.unlockedSkills ?? [];
   const [index, setIndex] = useState(0);
@@ -148,7 +149,13 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
             ref={cardRef}
             skillName={skill.movementName}
             onShare={() => {
-              void shareSkill({ skillName: skill.movementName, card: cardRef });
+              // One sheet at a time: a double tap must not start a second
+              // capture whose sheet UIKit silently refuses to present.
+              if (sharing.current) return;
+              sharing.current = true;
+              void shareSkill({ skillName: skill.movementName, card: cardRef }).finally(() => {
+                sharing.current = false;
+              });
             }}
             testID={`unlock-share-${skill.pattern}-${skill.tier}`}
           />

@@ -101,24 +101,47 @@ if (!apiKey || !voiceId) {
   process.exit(1);
 }
 
-let done = 0;
-for (const cue of todo) {
-  const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=${OUTPUT_FORMAT}`,
-    {
-      method: "POST",
-      headers: { "xi-api-key": apiKey, "content-type": "application/json", accept: "audio/mpeg" },
-      body: JSON.stringify({ text: cue, model_id: MODEL }),
-    },
-  );
-  if (!res.ok) {
-    console.error(`failed (${res.status}) on: ${cue}\n${await res.text()}`);
-    process.exit(1);
+/** One cue through the API, retrying 429 and 5xx with backoff (Retry-After honoured). */
+async function speak(cue) {
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=${OUTPUT_FORMAT}`;
+  const init = {
+    method: "POST",
+    headers: { "xi-api-key": apiKey, "content-type": "application/json", accept: "audio/mpeg" },
+    body: JSON.stringify({ text: cue, model_id: MODEL }),
+  };
+  for (let attempt = 1; ; attempt += 1) {
+    const res = await fetch(url, init);
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt >= 3) {
+      throw new Error(`failed (${res.status}) on: ${cue}\n${await res.text()}`);
+    }
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt;
+    process.stdout.write(`\r${res.status} on a cue; retrying in ${Math.round(waitMs / 1000)}s`);
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
-  writeFileSync(path.join(OUT_DIR, `${keyOf(cue)}.mp3`), Buffer.from(await res.arrayBuffer()));
-  done += 1;
-  process.stdout.write(`\r${done}/${todo.length}`);
 }
-console.log();
-const { present, orphans } = writeManifest();
-console.log(`generated ${done}; manifest: ${present}/${cues.length}; ${orphans} orphan file(s) removed`);
+
+let done = 0;
+let failure = null;
+try {
+  for (const cue of todo) {
+    writeFileSync(path.join(OUT_DIR, `${keyOf(cue)}.mp3`), await speak(cue));
+    done += 1;
+    process.stdout.write(`\r${done}/${todo.length}`);
+  }
+} catch (error) {
+  failure = error;
+} finally {
+  // Whatever happened, the manifest matches the disk: a run that dies
+  // at 90/180 leaves 90 playable cues referenced, not orphaned, and a
+  // rerun picks up where it stopped.
+  console.log();
+  const { present, orphans } = writeManifest();
+  console.log(`generated ${done}; manifest: ${present}/${cues.length}; ${orphans} orphan file(s) removed`);
+}
+if (failure) {
+  console.error(String(failure.message ?? failure));
+  process.exit(1);
+}

@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { Share } from "react-native";
+import { Share, type View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 
@@ -19,7 +19,7 @@ import { strings } from "../../copy/strings";
 export interface ShareSkillOptions {
   skillName: string;
   /** The rendered card to capture; null when it has not mounted. */
-  card: RefObject<unknown> | null;
+  card: RefObject<View | null> | null;
 }
 
 /** The v1 share: the sentence, through the system sheet. */
@@ -30,7 +30,7 @@ async function shareText(skillName: string): Promise<void> {
 export async function shareSkill({ skillName, card }: ShareSkillOptions): Promise<void> {
   try {
     if (card?.current && (await Sharing.isAvailableAsync())) {
-      const uri = await captureRef(card as RefObject<number>, {
+      const uri = await captureRef(card, {
         format: "png",
         quality: 1,
         result: "tmpfile",

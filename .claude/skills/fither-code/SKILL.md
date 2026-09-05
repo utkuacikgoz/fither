@@ -130,7 +130,8 @@ validates `data/movements.json` on every edit — keep it working, and keep
   `scripts/generate-movement-figures.py`, the mark from
   `scripts/generate-brand-assets.py`, spoken cues from
   `scripts/generate-voice-audio.mjs` (needs the owner's ElevenLabs key
-  and voice; `--manifest-only` rebuilds the manifest from what exists).
+  and voice; `--manifest-only` rebuilds the manifest from what exists
+  AND deletes mp3s no cue references any more).
   Regenerate; do not retouch. Nothing is fetched at runtime.
 - Tests: `app/jest-setup.ts` mocks `useReducedMotion` to the settled
   default so screen tests carry no `act()` noise; the hook has its own
