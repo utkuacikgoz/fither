@@ -97,9 +97,11 @@ Play Store addendum at the bottom applies if/when Android ships.
   only prompt — ask in context (after the first completed session, when
   the value is obvious), never at first open. Every permission string
   says why, in the product voice.
-- [ ] **Account/data deletion** path exists if any account exists at all —
-  Apple requires in-app deletion, and our transactional email must cover
-  the confirmation.
+- [x] **Account/data deletion** path exists if any account exists at all —
+  Apple requires in-app deletion. Built: Settings → Account → "Erase
+  everything on this phone" signs out at the provider and wipes every
+  local store; there is no server copy to delete. No confirmation email
+  is needed while nothing is stored off the phone.
 
 ## Launch strategy
 

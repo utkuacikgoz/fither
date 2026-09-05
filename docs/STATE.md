@@ -12,7 +12,7 @@ pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
 engine + app typecheck               pass
 engine tests                         77/77
-app tests                            541/541 (58 suites, 0 act() warnings)
+app tests                            548/548 (60 suites, 0 act() warnings)
 pnpm bundle:ios                      pass — full production Hermes bundle
                                      exports (5.0MB Hermes; +0.6MB for PostHog), zero resolution errors
 expo prebuild --platform ios         pass — native project generates with
@@ -187,7 +187,8 @@ ones.
 | Sign in with Apple | `b8c74a6` `2a5fad5` | Real adapter behind the auth port; Google hidden until it has one; revocation checked at launch |
 | Review fixes 4–7 | `4ed45e3` `7df0139` `fac5a9e` `5302b37` | Hub/nav; voice + share hardening, 640px figures; the rail token + contrast test; the weaker tests |
 | Splits | `c8e6bd3` | The three over-400-line screens split (dev tools card, prompt outcomes, player phases); the prompt reuses the shared hydration set |
-| Analytics | — | ADR-0015: the analytics port; PostHog behind it when its key is set; the four events (deep_link_open, workout_start, workout_complete, trial_start), anonymous, forbidden-list-scanned (adds posthog-react-native, pure JS: no rebuild) |
+| Analytics | `4f8807e` | ADR-0015: the analytics port; PostHog behind it when its key is set; the four events (deep_link_open, workout_start, workout_complete, trial_start), anonymous, forbidden-list-scanned (adds posthog-react-native, pure JS: no rebuild) |
+| Account | — | Settings account card: how she is continuing, sign out, erase everything on this phone (App Review 5.1.1(v)). One shared persisted-store list; the dev reset now also clears reminders, the lifetime ask and the rating bookkeeping it had missed |
 
 **Reviews**
 

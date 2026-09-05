@@ -19,48 +19,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { getAnalytics } from "../analytics/analytics";
-import { useDevAuthSessionStore } from "../auth/dev-auth";
-import { useDevReceiptStore } from "../monetization/dev-billing";
-import { useActiveSessionStore } from "./active-session-store";
-import { useCareNoteStore } from "./care-note-store";
-import { useEntitlementStore } from "./entitlement-store";
-import { useFirstMovementStore } from "./first-movement-store";
-import { useIdentityStore } from "./identity-store";
-import { useLedgerStore } from "./ledger-store";
-import { useProfileStore } from "./profile-store";
-import { useSettingsStore } from "./settings-store";
+import { persistedKeys } from "./persisted-stores";
 
-// Every persisted store in the app. KEEP IN SYNC: when a new persisted
-// store lands, add it here (the dev-reset test pins the resulting key
-// list, so a stale entry or a missed key fails loudly). Today that is:
-//   fither/profile-v1         profile-store.ts        profile + history
-//   fither/ledger-v1          ledger-store.ts         points events
-//   fither/settings-v1        settings-store.ts       onboarding flag, equipment, avoid list, salt
-//   fither/entitlement-v1     entitlement-store.ts    trial start + purchase
-//   fither/dev-billing-v1     dev-billing.ts          the dev fake receipt
-//   fither/active-session-v1  active-session-store.ts crash-safe session snapshot
-//   fither/first-movement-v1  first-movement-store.ts Gate 3 timing recordings
-//   fither/care-notes-v1      care-note-store.ts      local-only heavy-day notes
-//   fither/identity-v1        identity-store.ts       how she continues (ADR-0011)
-//   fither/dev-auth-v1        auth/dev-auth.ts        the dev fake provider session
-const persistedStores = [
-  useProfileStore,
-  useLedgerStore,
-  useSettingsStore,
-  useEntitlementStore,
-  useDevReceiptStore,
-  useActiveSessionStore,
-  useFirstMovementStore,
-  useCareNoteStore,
-  useIdentityStore,
-  useDevAuthSessionStore,
-] as const;
+// The store list lives in persisted-stores.ts, shared with her own
+// "erase everything" (state/erase-all.ts) so the two can never disagree.
 
 /** The persisted keys, read from the stores' own persist configs. */
 export function devPersistedKeys(): string[] {
-  return persistedStores
-    .map((store) => store.persist.getOptions().name)
-    .filter((name): name is string => typeof name === "string");
+  return persistedKeys();
 }
 
 /**

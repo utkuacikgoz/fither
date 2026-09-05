@@ -595,6 +595,26 @@ export const strings = {
       deleteConfirmBody: "This removes the only copy.",
       keepIt: "Keep it",
     },
+    // COPY-WRITER: account (2026-09-05, App Review 5.1.1(v)). No server, so
+    // status says how she is continuing (guest with equal dignity), and
+    // "Erase" is the honest name, not "delete account": the confirm lists
+    // what goes from this phone, once, and that no copy exists elsewhere.
+    account: {
+      title: "Account",
+      status: {
+        apple: "Signed in with Apple",
+        google: "Signed in with Google",
+        guest: "Continuing without an account",
+      },
+      signOut: "Sign out",
+      signOutNote: "Your training stays on this phone.",
+      erase: "Erase everything on this phone",
+      eraseConfirmTitle: "Erase everything on this phone?",
+      eraseConfirmBody:
+        "This removes your training history, points and skills, notes and settings from this phone. There is no copy anywhere else.",
+      keepIt: "Keep it",
+      eraseAction: "Erase everything",
+    },
     // Dev builds only, but still in-voice: plain, no jargon-wink.
     dev: {
       title: "Developer tools",

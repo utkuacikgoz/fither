@@ -22,14 +22,16 @@ import {
   WITH_CHAIR_EQUIPMENT,
 } from "../../state/settings-store";
 import { FirstMovementReadout } from "../dev-timing/first-movement-readout";
+import { AccountCard } from "./account-card";
 import { DevToolsCard } from "./settings-dev-tools";
 import { CareJournal } from "./care-journal";
 
 // The settings screen (ADR-0009 left restore + dev controls "until a
 // settings screen exists" — this is it). Quiet sections in a fixed
 // order — persistent avoid areas, where she trains, subscription
-// restore, the daily invitation, the care journal (ADR-0012 §4), dev
-// tools — and a version footer.
+// restore, the daily invitation, the care journal (ADR-0012 §4), the
+// account (sign out / erase everything), dev tools — and a version
+// footer.
 //
 // Each section is a Card (ADR-0013), the same card the hub and progress
 // use, and its choices are OptionRows grouped inside it. The old shape
@@ -287,9 +289,11 @@ export function SettingsScreen({
           <CareJournal />
         </Card>
 
+        <AccountCard order={voiceCard ? 6 : 5} reduceMotion={reduceMotion} />
+
         {devToolsEnabled && (
           <DevToolsCard
-            order={voiceCard ? 6 : 5}
+            order={voiceCard ? 7 : 6}
             reduceMotion={reduceMotion}
             onOpenTiming={() => setDevTimingVisible(true)}
           />
