@@ -104,9 +104,9 @@ it("every rendered string comes from strings.ts", () => {
 
 it("offers only the providers the port has adapters for — never a button that would fake success", async () => {
   const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
-  const spy = jest.spyOn(getAuth(), "availableProviders").mockResolvedValue(["apple"]);
+  const spy = jest.spyOn(getAuth(), "availableProviders").mockReturnValue(["apple"]);
   const screen = render(<SignInScreen onDone={jest.fn()} />);
-  await waitFor(() => expect(screen.queryByTestId("sign-in-google")).toBeNull());
+  expect(screen.queryByTestId("sign-in-google")).toBeNull();
   expect(screen.getByTestId("sign-in-apple")).toBeTruthy();
   expect(screen.getByTestId("sign-in-guest")).toBeTruthy();
   spy.mockRestore();

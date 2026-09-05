@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { getAuth, type AuthProvider } from "../../auth/auth";
@@ -43,21 +43,9 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
 
   // Which provider buttons exist on this build: a provider without a
   // real adapter is not offered (a button that fakes success would be a
-  // review rejection and a lie). Guest is always there. Until the port
-  // answers, Apple and guest render — Apple is the one the platform
-  // guarantees — so the screen is never a lone guest button for a frame.
-  const [providers, setProviders] = useState<AuthProvider[]>(["apple"]);
-  useEffect(() => {
-    let live = true;
-    void getAuth()
-      .availableProviders()
-      .then((available) => {
-        if (live) setProviders(available);
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
+  // review rejection and a lie). Guest is always there. The port answers
+  // synchronously, so the first frame is the right frame.
+  const [providers] = useState<AuthProvider[]>(() => getAuth().availableProviders());
 
   const run = async (
     tone: "apple" | "google" | "guest",
