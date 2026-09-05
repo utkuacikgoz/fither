@@ -1,9 +1,9 @@
 > STATUS (2026-09-01): the app-facing sections (onboarding, resume,
 > paywall incl. expired variants, notifications, adaptation lines) are
 > WIRED into app/src/copy/strings.ts — that file is now the source of
-> truth for them; edit there, not here. The store-facing sections
-> (App Store listing, review responses) remain staged here until
-> docs/store/ opens in Phase 4.
+> truth for them; edit there, not here. The App Store listing (§5) was
+> promoted to docs/store/listing.md on 2026-09-05 — edit there. Review
+> responses (§6) remain staged here until that phase opens.
 
 # FITHER — draft strings for wiring
 
@@ -188,7 +188,7 @@ anything undone. All lines work on a lock screen read at a glance.
 
 ---
 
-## 5. App Store listing → `docs/store/listing.md` when that phase opens
+## 5. App Store listing — PROMOTED to `docs/store/listing.md` (2026-09-05); that file is now the source of truth, this body stays for the record
 
 ### Name (30 char limit)
 
