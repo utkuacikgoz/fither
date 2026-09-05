@@ -134,6 +134,9 @@ describe("dev first-run reset (persistence-layer wipe)", () => {
         "fither/care-notes-v1",
         "fither/identity-v1",
         "fither/dev-auth-v1",
+        "fither/reminders-v1",
+        "fither/lifetime-offer-v1",
+        "fither/rating-v1",
       ].sort(),
     );
   });

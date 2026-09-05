@@ -286,6 +286,7 @@ describe("SettingsScreen", () => {
       "settings-subscription",
       "settings-reminders",
       "settings-journal",
+      "settings-account",
     ]) {
       expect(screen.getByTestId(section)).toBeTruthy();
     }
