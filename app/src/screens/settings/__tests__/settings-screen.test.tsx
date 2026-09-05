@@ -740,6 +740,22 @@ describe("SettingsScreen dev flow previewer", () => {
     expect(router.push).toHaveBeenCalledWith("/finish");
   });
 
+  it("the crash-reporting test buttons go through the monitoring port", () => {
+    const monitoring = jest.requireActual<typeof import("../../../monitoring/monitoring")>(
+      "../../../monitoring/monitoring",
+    );
+    const port = monitoring.getMonitoring();
+    const jsError = jest.spyOn(port, "testJsError").mockImplementation(() => undefined);
+    const native = jest.spyOn(port, "testNativeCrash").mockImplementation(() => undefined);
+    const screen = render(<SettingsScreen />);
+    fireEvent.press(screen.getByText(DEV_PREVIEW_LABELS.testJsError));
+    fireEvent.press(screen.getByText(DEV_PREVIEW_LABELS.testNativeCrash));
+    expect(jsError).toHaveBeenCalledTimes(1);
+    expect(native).toHaveBeenCalledTimes(1);
+    jsError.mockRestore();
+    native.mockRestore();
+  });
+
   it("preview finish (nothing done): seeds the zero-completion close and pushes /finish", () => {
     const screen = render(<SettingsScreen />);
     fireEvent.press(screen.getByTestId("settings-dev-finish-nothing-done"));

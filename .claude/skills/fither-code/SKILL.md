@@ -73,9 +73,13 @@ possible; one sneaky dependency breaks the whole validation story.
 
 ## Ops stack (decided, ADR-0002)
 
-- **Error monitoring: Sentry** (`sentry-expo`). Wired and verified with a
-  deliberate test crash BEFORE the first TestFlight build. Source maps
-  uploaded in the build profile; alerts reach the owner's phone.
+- **Error monitoring: Sentry, behind a port (ADR-0016).**
+  `@sentry/react-native` sits behind `app/src/monitoring/monitoring.ts`;
+  call sites use `captureError(error, context)` with a fixed context
+  label and never import the SDK. Selected by `EXPO_PUBLIC_SENTRY_DSN`;
+  crash/error data only, no `setUser`, `beforeSend` scrubs. Verified
+  with the deliberate test crash (Settings → Developer tools) BEFORE the
+  first TestFlight build; source maps via the `SENTRY_*` build variables.
 - **Analytics: PostHog, behind a port (ADR-0015).** Four events —
   `deep_link_open`, `workout_start`, `workout_complete`, `trial_start` —
   defined ONLY in `app/src/analytics/events.ts`; call sites use `track()`

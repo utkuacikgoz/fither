@@ -50,10 +50,12 @@ Play Store addendum at the bottom applies if/when Android ships.
   OLDEST supported device, or users leave before the first session.
   Test on cellular, not just WiFi — and in airplane mode, which for this
   product is a hard rule, not an edge case.
-- [ ] **Crash reporting live BEFORE TestFlight.** You want to know about
-  errors before users tell you — or worse, before they silently never
-  come back. Error monitoring wired, symbolication (source maps/dSYMs)
-  verified with a deliberate test crash, alerts reaching your phone.
+- [ ] **Crash reporting live BEFORE TestFlight.** Built (ADR-0016): the
+  monitoring port with Sentry behind it, Metro wrapped for debug ids,
+  and the two test buttons under Settings → Developer tools. Owner:
+  create the project, set the DSN and the three build variables
+  (docs/sentry-setup.md), run both test crashes from a real build and
+  see them symbolicated, and point one alert rule at your phone.
 - [ ] **Analytics live and clean.** The four events (ADR-0015) are
   built and tested; the owner creates the PostHog project and sets the
   key (docs/posthog-setup.md), then verifies one real session arrives.

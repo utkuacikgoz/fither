@@ -53,10 +53,12 @@ eas build --platform ios --profile production
 
 Before the first production upload, replace the default Expo icon/splash with
 the approved Brief 6 identity assets. Do not ship placeholder identity. The
-production build also remains blocked on Sentry verification, real RevenueCat
-entitlements, swapping dev-auth for the real Apple/Google sign-in adapters
-(`getAuth()` in app/src/auth/auth.ts returns the dev port unconditionally —
-ADR-0011), the coach review, and Reality Gates 2 and 3.
+production build also remains blocked on Sentry verification (the SDK is
+wired behind the monitoring port, ADR-0016; the owner sets the DSN and the
+`SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` build variables per
+docs/sentry-setup.md), real RevenueCat entitlements (ADR-0014; owner's
+products and key), a Google sign-in adapter or the button staying hidden
+(Apple is wired, ADR-0011), the coach review, and Reality Gates 2 and 3.
 
 The app version is `1.0.0`. EAS owns the store build number remotely and the
 production profile increments it for every build, preventing duplicate App

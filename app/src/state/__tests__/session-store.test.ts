@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { clearRecordedEvents, recordedEvents } from "../../analytics/dev-analytics";
+import { capturedErrors, clearCapturedErrors } from "../../monitoring/quiet-monitoring";
 import { firstMovementTracker } from "../../lib/first-movement-timer";
 import { applyResult } from "../../session/apply-result";
 import { createSession } from "../../session/create-session";
@@ -65,6 +66,7 @@ beforeEach(async () => {
   });
   useSessionStore.getState().resetSession();
   clearRecordedEvents();
+  clearCapturedErrors();
   // Gate 3 instrumentation baseline: tracker disarmed (no t0), no runs.
   // Suites that don't mark a launch exercise the un-instrumented path.
   firstMovementTracker.reset();
@@ -252,6 +254,11 @@ describe("session store", () => {
       await useSessionStore.getState().completeSession();
       expect(useSessionStore.getState().saveFailed).toBe(true);
       expect(recordedEvents()).toEqual([]);
+      // The owner hears about a failed save (ADR-0016), with the fixed
+      // context label and nothing of hers.
+      expect(capturedErrors()).toEqual([
+        { error: expect.any(Error), context: "completeSession" },
+      ]);
       await useSessionStore.getState().completeSession();
       expect(useSessionStore.getState().finish).not.toBeNull();
       expect(recordedEvents()).toHaveLength(1);

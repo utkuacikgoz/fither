@@ -16,6 +16,7 @@ import {
   type CreateSessionResult,
 } from "../session/create-session";
 import { loadLibrary } from "../session/load-library";
+import { captureError } from "../monitoring/monitoring";
 import {
   createPlayer,
   advanceCountdownBy,
@@ -617,9 +618,12 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           first: completedAnything && entitlementBefore.trialStartDate === null,
         });
       }
-    } catch {
+    } catch (error) {
       // The active snapshot and journal are deliberately retained. A retry
       // replays the exact result instead of asking the engine to award it again.
+      // A failed save is the one error the owner must hear about before
+      // she does (ADR-0016): her session is safe, but only if the retry works.
+      captureError(error, "completeSession");
       set({ saveFailed: true, saving: false });
     }
   },
