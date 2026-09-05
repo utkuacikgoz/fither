@@ -123,11 +123,14 @@ describe("FinishScreen", () => {
     expect(sources).toEqual([movementFigure("knee-plank")]);
   });
 
-  it("draws nothing until the close is known — figures under 'Saving' were a guess", () => {
+  it("draws nothing until the close is known — figures under 'Saving' were a guess", async () => {
     useSessionStore.setState({ player: figureBackedPlayer(["completed", "completed"]) });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(screen.getByText(strings.finish.savingHeadline)).toBeTruthy();
     expect(screen.queryByTestId("finish-figures", { includeHiddenElements: true })).toBeNull();
+    // Let the apply settle inside the test, so the update lands in act().
+    await screen.findByTestId("finish-continue");
+    expect(screen.getByTestId("finish-figures", { includeHiddenElements: true })).toBeTruthy();
   });
 
   it("the honest nothing-done close shows nothing to show, and Continue waits for nothing", async () => {
