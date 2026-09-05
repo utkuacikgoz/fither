@@ -180,3 +180,22 @@ jest.mock("expo-apple-authentication", () => ({
   AppleAuthenticationCredentialState: { REVOKED: 0, AUTHORIZED: 1, NOT_FOUND: 2, TRANSFERRED: 3 },
   AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
 }));
+
+// PostHog (ADR-0015): never selected in tests (no key), but the adapter
+// module is imported by the port, so the SDK is shimmed. The adapter's
+// own unit test drives this mock directly.
+jest.mock("posthog-react-native", () => {
+  const instances: unknown[] = [];
+  const PostHog = jest.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.capture = jest.fn();
+    this.reset = jest.fn();
+    instances.push(this);
+  });
+  return { __esModule: true, default: PostHog, __instances: instances };
+});
+
+// expo-linking's URL hook: tests drive the value through this mock.
+jest.mock("expo-linking", () => ({
+  useLinkingURL: jest.fn(() => null),
+  useURL: jest.fn(() => null),
+}));

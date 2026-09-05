@@ -54,9 +54,11 @@ Play Store addendum at the bottom applies if/when Android ships.
   errors before users tell you — or worse, before they silently never
   come back. Error monitoring wired, symbolication (source maps/dSYMs)
   verified with a deliberate test crash, alerts reaching your phone.
-- [ ] **Analytics live and clean.** The handful of events that test the
-  retention thesis (see fither-code → Ops stack). Events queue offline
-  and flush later; the forbidden list applies to event payloads.
+- [ ] **Analytics live and clean.** The four events (ADR-0015) are
+  built and tested; the owner creates the PostHog project and sets the
+  key (docs/posthog-setup.md), then verifies one real session arrives.
+  App Privacy: Product Interaction + anonymous Device ID, not linked,
+  not used for tracking.
 - [ ] **Ops accounts done**: transactional email provider with your own
   sending domain (SPF/DKIM verified — receipts and trial-ending mails
   that land in spam are support tickets), feedback board created and

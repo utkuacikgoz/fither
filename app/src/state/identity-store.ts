@@ -9,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { getAnalytics } from "../analytics/analytics";
 import { getAuth, type IdentityRecord } from "../auth/auth";
 
 /** What a sign-in attempt meant: landed, she dismissed the sheet, or it failed. */
@@ -72,6 +73,9 @@ export const useIdentityStore = create<IdentityStoreState>()(
       signOut: async () => {
         await getAuth().signOut();
         set({ identity: null });
+        // A new anonymous analytics id from here: whoever signs in next
+        // on this phone is not stitched to her.
+        getAnalytics().reset();
       },
     }),
     {

@@ -1,4 +1,4 @@
-# Where the build stands — 2026-09-05 (phase 3 reviewed and fixed; the store is wired)
+# Where the build stands — 2026-09-05 (phase 3 reviewed and fixed; store and analytics wired)
 
 Read `CLAUDE.md` first, then this. Everything below is on `main` with
 green GitHub CI verified per wave commit (runs #90 onward).
@@ -12,9 +12,9 @@ pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
 engine + app typecheck               pass
 engine tests                         77/77
-app tests                            515/515 (54 suites, 0 act() warnings)
+app tests                            541/541 (58 suites, 0 act() warnings)
 pnpm bundle:ios                      pass — full production Hermes bundle
-                                     exports (2.7MB), zero resolution errors
+                                     exports (5.0MB Hermes; +0.6MB for PostHog), zero resolution errors
 expo prebuild --platform ios         pass — native project generates with
                                      splash storyboard, icon assets, and
                                      the notification/store-review pods
@@ -186,7 +186,8 @@ ones.
 | Pricing + store | `6a3a11c` `db810ff` | ADR-0014: $59.99/$12.99/$99 lifetime; RevenueCat adapter behind the port, Customer Center, the day-3 lifetime offer; the store trial is the trial; owner's key via env (three native deps: owner rebuild) |
 | Sign in with Apple | `b8c74a6` `2a5fad5` | Real adapter behind the auth port; Google hidden until it has one; revocation checked at launch |
 | Review fixes 4–7 | `4ed45e3` `7df0139` `fac5a9e` `5302b37` | Hub/nav; voice + share hardening, 640px figures; the rail token + contrast test; the weaker tests |
-| Splits | — | The three over-400-line screens split (dev tools card, prompt outcomes, player phases); the prompt reuses the shared hydration set |
+| Splits | `c8e6bd3` | The three over-400-line screens split (dev tools card, prompt outcomes, player phases); the prompt reuses the shared hydration set |
+| Analytics | — | ADR-0015: the analytics port; PostHog behind it when its key is set; the four events (deep_link_open, workout_start, workout_complete, trial_start), anonymous, forbidden-list-scanned (adds posthog-react-native, pure JS: no rebuild) |
 
 **Reviews**
 
@@ -219,12 +220,12 @@ ones.
    (docs/release-builds.md). Unblocks: real Apple/Google sign-in
    adapters, App Store Connect subscription products → RevenueCat
    adapter + sandbox testing + offline-lockout re-review, TestFlight,
-   ops SDKs (Sentry/PostHog/Resend/Canny), store preparation.
+   ops SDKs (Sentry/Resend/Canny; PostHog is built), store preparation.
 4. **Owner: commission Brief 6** (movement animations; 6 reference
    clips first) and the **human coach review** of the 60 movements.
-5. **Analytics (PostHog), four events** — deep_link_open,
-   workout_start, workout_complete, trial_start. A new dependency:
-   waits on the owner's yes.
+5. **Owner: create the PostHog project and set the key** per
+   docs/posthog-setup.md. Built and tested (ADR-0015); until the key is
+   present every build runs the in-memory dev adapter and sends nothing.
 6. **Owner: pick the voice and generate the audio.** Everything else is
    built — the pipeline, the offline playback, the Settings card, the
    quiet-day rule. One command, once, with the ElevenLabs key and the

@@ -268,8 +268,10 @@ ship"): **0 of 60 moves ship today**, entirely on the audio column.
    configured; playback needs no mic. Confirm no mic string is emitted
    (prebuild output) or Review will ask why.
 6. **Privacy manifest / data collection:** the app collects nothing and
-   sends nothing today. Once PostHog is added, App Privacy answers change
-   and the SDK's privacy manifest must be present.
+   sends nothing today. *(Update 2026-09-05: PostHog is built behind a
+   port, ADR-0015; it sends four anonymous events only once the owner
+   sets the key. App Privacy answers then change — docs/posthog-setup.md
+   lists them. The SDK is pure JS with no privacy manifest of its own.)*
 7. **Dev surfaces gated by `__DEV__`** — the previewer, timing readout,
    entitlement reset, dev receipts, dev auth. Release builds exclude
    them (tests cover the release shape of Settings). A release build

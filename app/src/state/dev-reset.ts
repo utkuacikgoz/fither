@@ -18,6 +18,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { getAnalytics } from "../analytics/analytics";
 import { useDevAuthSessionStore } from "../auth/dev-auth";
 import { useDevReceiptStore } from "../monetization/dev-billing";
 import { useActiveSessionStore } from "./active-session-store";
@@ -69,4 +70,6 @@ export function devPersistedKeys(): string[] {
  */
 export async function wipeAllPersistedStateForDev(): Promise<void> {
   await AsyncStorage.multiRemove(devPersistedKeys());
+  // The next tester is a new anonymous id in analytics too.
+  getAnalytics().reset();
 }
