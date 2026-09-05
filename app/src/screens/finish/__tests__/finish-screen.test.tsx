@@ -5,11 +5,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { strings } from "../../../copy/strings";
 import { applyResult } from "../../../session/apply-result";
-import { createPlayer, reduce } from "../../../session/player-machine";
+import { createPlayer, reduce, type PlayerBlock } from "../../../session/player-machine";
 import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useLedgerStore } from "../../../state/ledger-store";
-import { createInitialProfile } from "@fither/engine";
+import { createInitialProfile, type BlockOutcome } from "@fither/engine";
 import { useProfileStore } from "../../../state/profile-store";
 import { movementFigure } from "../../../session/movement-figures";
 import { useSessionStore } from "../../../state/session-store";
@@ -71,6 +71,16 @@ beforeEach(async () => {
   mockedApply.mockReturnValue({ ok: true, value: fixtureApplyResult() });
 });
 
+/** Two library movements that BOTH have figures — so a lost figure fails. */
+function figureBackedPlayer(outcomes: BlockOutcome[]) {
+  const done = useSessionStore.getState().player!;
+  const blocks: PlayerBlock[] = [
+    { ...fixturePlayerBlocks[0]!, movementId: "wall-push-up" },
+    { ...fixturePlayerBlocks[1]!, movementId: "knee-plank", name: "Knee Plank" },
+  ];
+  return { ...done, blocks, outcomes };
+}
+
 describe("FinishScreen", () => {
   it("one point reads '+1 point' — a unit that agrees with its number", async () => {
     // pointsEarned is the sum of the result's ledger events, so a
@@ -88,42 +98,36 @@ describe("FinishScreen", () => {
     expect(strings.finish.pointsUnit(1)).not.toBe(strings.finish.pointsUnit(2));
   });
 
-  it("shows the faces of what she did — completed blocks only, in order", async () => {
-    // Both fixture blocks done: two figures. The default seed skips both
-    // (the nothing-done close, which draws none — asserted below); this
-    // keeps its finished player and only records the outcomes as done.
-    const done = useSessionStore.getState().player!;
-    useSessionStore.setState({
-      player: { ...done, outcomes: ["completed", "completed"] },
-    });
+  it("shows the faces of what she did — both completed blocks, in block order", async () => {
+    useSessionStore.setState({ player: figureBackedPlayer(["completed", "completed"]) });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText("+35");
     const hidden = { includeHiddenElements: true } as const;
-    // A figure per completed block, in block order — where the library
-    // has one. The fixture's second block ("plank") is test data with no
-    // library movement behind it, so its figure honestly renders nothing
-    // (a degraded build shows the name, never a broken-image hole); the
-    // expectation is computed from the same map the screen reads.
-    const expected = fixturePlayerBlocks.filter(
-      (block) => movementFigure(block.movementId) !== null,
-    );
-    expect(screen.getAllByTestId(/^finish-figure-\d+$/, hidden)).toHaveLength(
-      expected.length,
-    );
-    expect(
-      screen.getByTestId("finish-figure-0", hidden).findByType(Image).props.source,
-    ).toEqual(movementFigure(fixturePlayerBlocks[0]!.movementId));
+    const sources = screen
+      .getAllByTestId(/^finish-figure-\d+$/, hidden)
+      .map((node) => node.findByType(Image).props.source);
+    // Expected from the ids, not from the map the screen reads: a
+    // missing asset fails here instead of passing with zero figures.
+    expect(sources).toEqual([movementFigure("wall-push-up"), movementFigure("knee-plank")]);
+    expect(sources.every((source) => source !== null)).toBe(true);
   });
 
-  it("draws only the completed ones: a skipped block has no face here", async () => {
-    const done = useSessionStore.getState().player!;
-    useSessionStore.setState({
-      player: { ...done, outcomes: ["skipped", "completed"] },
-    });
+  it("draws only the completed ones: skipped and struggled blocks have no face here", async () => {
+    useSessionStore.setState({ player: figureBackedPlayer(["struggled", "completed"]) });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText("+35");
     const hidden = { includeHiddenElements: true } as const;
-    expect(screen.getByTestId("finish-figures", hidden).children).toHaveLength(1);
+    const sources = screen
+      .getAllByTestId(/^finish-figure-\d+$/, hidden)
+      .map((node) => node.findByType(Image).props.source);
+    expect(sources).toEqual([movementFigure("knee-plank")]);
+  });
+
+  it("draws nothing until the close is known — figures under 'Saving' were a guess", () => {
+    useSessionStore.setState({ player: figureBackedPlayer(["completed", "completed"]) });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    expect(screen.getByText(strings.finish.savingHeadline)).toBeTruthy();
+    expect(screen.queryByTestId("finish-figures", { includeHiddenElements: true })).toBeNull();
   });
 
   it("the honest nothing-done close shows nothing to show, and Continue waits for nothing", async () => {
@@ -143,7 +147,7 @@ describe("FinishScreen", () => {
     await waitFor(() => expect(mockedApply).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
     expect(screen.getByText("+35")).toBeTruthy();
-    expect(screen.getByText(strings.finish.pointsLabel)).toBeTruthy();
+    expect(screen.getByText(strings.finish.pointsUnit(35))).toBeTruthy();
   });
 
   it("a zero-completion session gets the honest close — no 'complete', no points row", async () => {
@@ -216,9 +220,7 @@ describe("FinishScreen", () => {
     expect(screen.queryByTestId("finish-points")).toBeNull();
   });
 
-  it("exactly one point renders without the plural unit label", async () => {
-    // strings.finish.pointsLabel is static ("points"); until a singular
-    // exists in strings.ts the unit line is dropped for 1, never false.
+  it("exactly one point reads '+1 point' — never unitless, never the false plural", async () => {
     const base = fixtureApplyResult();
     mockedApply.mockReturnValue({
       ok: true,
@@ -231,7 +233,8 @@ describe("FinishScreen", () => {
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
 
     expect(await screen.findByText("+1")).toBeTruthy();
-    expect(screen.queryByText(strings.finish.pointsLabel)).toBeNull();
+    expect(screen.getByText(strings.finish.pointsUnit(1))).toBeTruthy();
+    expect(screen.queryByText(strings.finish.pointsUnit(2))).toBeNull();
   });
 
   it("every close state renders no user-facing text outside strings.ts", async () => {

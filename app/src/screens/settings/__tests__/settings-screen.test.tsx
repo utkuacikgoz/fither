@@ -676,10 +676,20 @@ describe("SettingsScreen dev flow previewer", () => {
     });
     // /unlock's guard requires exactly this: a finish with a skill.
     expect(state.finish?.unlockedSkills.length).toBeGreaterThan(0);
-    // No stale session left for the finish path to re-apply.
+    // No stale session left for the finish path to re-apply: the seeded
+    // player is finished and session-less, so completeSession is a no-op
+    // and the finish draws the figures users would see.
     expect(state.session).toBeNull();
-    expect(state.player).toBeNull();
+    expect(state.player?.phase.kind).toBe("done");
     expect(router.push).toHaveBeenCalledWith("/unlock");
+  });
+
+  it("the finish previews carry a finished player, so the owner previews the real screen", () => {
+    fireEvent.press(render(<SettingsScreen />).getByTestId("settings-dev-finish-completed"));
+    const { player, session } = useSessionStore.getState();
+    expect(session).toBeNull(); // completeSession on arrival stays a no-op
+    expect(player?.outcomes).toEqual(["completed", "completed"]);
+    expect(player?.blocks.map((b) => b.movementId)).toEqual(["wall-push-up", "knee-plank"]);
   });
 
   it("preview finish (complete): seeds a completed close and pushes /finish", () => {
