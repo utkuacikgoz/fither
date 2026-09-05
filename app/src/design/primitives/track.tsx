@@ -20,7 +20,8 @@ interface TrackStepProps {
 }
 
 /**
- * One segment. The empty rail is always there; a reached segment is an
+ * One segment. The empty rail (the `rail` token — chosen so filled and
+ * empty read ≥ 3:1 apart) is always there; a reached segment is an
  * accent pill fading in on top of it, so the fill runs on the native
  * driver (a colour cannot) and an unreached segment never animates.
  *
@@ -50,7 +51,7 @@ function TrackStep({ filled, delayMs, reduceMotion, testID }: TrackStepProps) {
   }, [draw, filled, delayMs, reduceMotion]);
 
   return (
-    <View style={[styles.step, { backgroundColor: colors.accentSoft }]}>
+    <View style={[styles.step, { backgroundColor: colors.rail }]}>
       {filled && (
         <Animated.View
           testID={testID}

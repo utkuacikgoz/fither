@@ -87,6 +87,7 @@ accentSoft:"#E7ECE7"  // sage wash — selected chips, progress track fill
 gold:      "#B98A2F"  // skill unlocks ONLY; scarcity is what makes it feel earned
 danger:    "#A65746"  // muted terracotta, errors only
 line:      "#E8E2D8"  // hairline borders
+rail:      "#BCC6BC"  // empty progress segment — 3:1 vs the accent fill (the state that matters), visible on the page
 
 // dark theme
 bgDark:      "#171614"
@@ -95,8 +96,15 @@ inkDark:     "#F2EEE8"
 inkSoftDark: "#A29A8E"
 accentDark:  "#8FA491"
 lineDark:    "#33302B"
+railDark:    "#3B443C"
 ```
 
+- **Contrast is arithmetic, and a test pins it** (`tokens-contrast.test.ts`):
+  text on the accent fill and secondary text on the page ≥ 4.5:1; a
+  progress form's filled vs empty ≥ 3:1 (a fill this dark on a white card
+  leaves no rail that is 3:1 from both the page and the fill, so the rail
+  serves the state, and is ≥ 1.5:1 on the page); the outlined quiet
+  button's hairline is the accent, ≥ 3:1 on bone, surface and wash.
 - **No pink, no neon, no gradients on chrome.** The sage/gold pairing is
   the identity; if it starts looking like a generic fitness app, stop.
 - Spacing: 4pt grid; screens breathe with 24pt side margins, 32pt+

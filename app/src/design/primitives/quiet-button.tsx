@@ -32,7 +32,11 @@ export function QuietButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        outlined && [styles.outlined, { borderColor: colors.line }],
+        // A sage hairline, not `line`: on the hero card's wash `line` was
+        // 1.08:1 — the pill that is this button's whole affordance
+        // vanished exactly where it is used (reviewer should-fix). The
+        // accent hairline is 3:1+ on wash, surface and bone alike.
+        outlined && [styles.outlined, { borderColor: colors.accent }],
         { opacity: pressed ? 0.6 : 1 },
       ]}
     >
