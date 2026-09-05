@@ -34,18 +34,22 @@ function isoDaysAgo(days: number, now: Date = new Date()): string {
  * nothing.
  */
 export function seedTrialExpiredForDev(now: Date = new Date()): void {
+  // ADR-0014 §6: "expired" is a store trial that was held and lapsed —
+  // a completed session behind her, nothing active, the week used.
   useEntitlementStore.setState({
     trialStartDate: isoDaysAgo(8, now),
     purchase: null,
+    trialUsed: true,
   });
   useDevReceiptStore.setState({ receipt: null });
 }
 
-/** A trial that started today: day 0 of 7, nothing gates. */
+/** A store trial in progress: the yearly plan's free week, started today. */
 export function seedTrialActiveForDev(now: Date = new Date()): void {
   useEntitlementStore.setState({
-    trialStartDate: todayIso(now),
-    purchase: null,
+    trialStartDate: isoDaysAgo(1, now),
+    purchase: { plan: "annual", date: todayIso(now), trial: true },
+    trialUsed: true,
   });
 }
 

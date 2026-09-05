@@ -84,6 +84,15 @@ export function LaunchScreen({
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const hasHistory = useProfileStore((s) => s.history.entries.length > 0);
   const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
+  const trialUsed = useEntitlementStore((s) => s.trialUsed);
+  const refreshFromStore = useEntitlementStore((s) => s.refreshFromStore);
+  // The store's current word, fetched once per launch and adopted if it
+  // has one (ADR-0014 §6) — fire-and-forget, so the launch decision below
+  // stays synchronous on the persisted record and never waits on a
+  // network. A lapsed trial learned here re-renders into the gated day.
+  useEffect(() => {
+    void refreshFromStore();
+  }, [refreshFromStore]);
   const purchase = useEntitlementStore((s) => s.purchase);
 
   // What the crash snapshot meant for THIS launch. "pending" until the
@@ -138,7 +147,7 @@ export function LaunchScreen({
     if (!onboardingCompleted && !hasHistory) return "onboarding";
     if (
       !isEntitled(
-        entitlementStatus({ trialStartDate, purchase, today: todayIso() }),
+        entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
       )
     ) {
       return "gated";

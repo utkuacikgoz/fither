@@ -11,7 +11,6 @@ import { Screen } from "../../design/primitives/screen";
 import { WORDMARK } from "../../design/primitives/wordmark";
 import { useTheme } from "../../design/theme";
 import { hairline, spacing, trackingWide } from "../../design/tokens";
-import { todayIso } from "../../lib/dates";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { getBilling, type PlanId } from "../../monetization/billing";
 import { entitlementStatus } from "../../monetization/entitlement";
@@ -69,6 +68,7 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
   const resetForDev = useEntitlementStore((s) => s.resetForDev);
   const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
+  const trialUsed = useEntitlementStore((s) => s.trialUsed);
   const purchase = useEntitlementStore((s) => s.purchase);
 
   const colors = useTheme();
@@ -80,7 +80,7 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
 
   // The expired gate state, from the same policy the launch gate uses.
   const expired =
-    entitlementStatus({ trialStartDate, purchase, today: todayIso() }) ===
+    entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }) ===
     "trialExpired";
   const copy = expired
     ? strings.paywall.expired

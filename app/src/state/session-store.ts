@@ -533,7 +533,9 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           return;
         }
         const entitlement = useEntitlementStore.getState();
-        // ADR-0009 §2: the trial starts at the first COMPLETED session.
+        // ADR-0009 §2 (as amended by ADR-0014 §6): the first COMPLETED
+        // session is stamped once; the paywall never blocks it, and the
+        // day after it is gated until the store entitles her.
         // The evidence is the engine's own "session" ledger event — it
         // fires only when a block actually completed (the same fact
         // completedAnything reads below) — taken from the result being

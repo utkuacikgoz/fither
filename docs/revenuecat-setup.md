@@ -12,7 +12,7 @@ test uses the dev adapter. Nothing else in the app changes.
 | App Store Connect → App | Bundle ID | `com.fither.app` |
 | App Store Connect → Subscriptions | Subscription group | one group, e.g. `FITHER Pro` |
 | ↳ product | **yearly** | $59.99 / 1 year, **introductory offer: 7 days free** |
-| ↳ product | **monthly** | $12.99 / 1 month |
+| ↳ product | **monthly** | $12.99 / 1 month, **introductory offer: 7 days free** (so "Start my free week" is true for either plan) |
 | App Store Connect → In-App Purchases | **lifetime** | non-consumable, $99 |
 | RevenueCat → Project → Apps | iOS app | bundle id above; paste the App Store Connect API key (or shared secret) so RC can validate receipts |
 | RevenueCat → Products | import | the three products above appear with ids `yearly`, `monthly`, `lifetime` |
@@ -52,19 +52,14 @@ broken store.
 - Not used on purpose: RevenueCat's remote paywall templates. The paywall
   is decided copy on the single copy surface and renders offline.
 
-## What is not yet decided (ADR-0014, consequences)
+## The trial model (decided, ADR-0014 §6)
 
-The app-side free week (trial starts at the first completed session,
-paywall on day 7) and the store's introductory week (starts when she
-subscribes) would stack. Decide one:
-
-- **Store trial is the trial:** "Start my free week" on the paywall
-  purchases `yearly` with the 7-day intro; the app-side gate becomes
-  "paywall when `fither_pro` is not active". The lifetime trigger then
-  fires for real.
-- **App-side week stays:** remove the introductory offer from `yearly`;
-  the paywall's "Start my free week" copy changes; the lifetime offer
-  needs a different trigger (no store trial exists to cancel).
+The store trial is the trial. "Start my free week" on the paywall
+purchases the plan she picked with its 7 free days; the app gates new
+sessions after her first completed session until `fither_pro` is active;
+a lapsed trial shows the expired letter. The launch surface asks the
+store once per launch and adopts its word. The lifetime offer fires for
+real: trial, auto-renew off, day 3.
 
 ## Rebuild
 

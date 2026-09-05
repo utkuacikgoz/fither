@@ -112,8 +112,11 @@ tiers). Annual is the plan we lead with on the paywall. A **$99 lifetime**
 purchase exists but is never on the paywall: it is offered once, on day 3
 of the trial, only to someone who has switched off auto-renew. No
 countdowns, no "last chance" — we say we'll only ask once, and we don't.
-Entitlements must work offline once granted — a paying user in airplane
-mode is never locked out.
+The free week is the store's introductory offer, started from the
+paywall; the paywall never blocks the first session, and gates only new
+sessions after it until the store entitles her. Entitlements must work
+offline once granted — a paying user in airplane mode is never locked
+out.
 
 ## Movement library
 

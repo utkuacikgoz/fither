@@ -34,6 +34,8 @@ export interface Offering {
 export interface PurchaseRecord {
   plan: PlanId;
   date: string;
+  /** The store's free introductory week is running (ADR-0014 §6). */
+  trial?: boolean;
 }
 
 export type PurchaseOutcome =
@@ -59,6 +61,14 @@ export interface BillingPort {
   getEntitlement(): PurchaseRecord | null;
   purchase(plan: PlanId): Promise<PurchaseOutcome>;
   restore(): Promise<RestoreOutcome>;
+  /**
+   * The store's current word on entitlement, fetched: a record, null
+   * for "nothing active" (a lapsed trial), or undefined for "no
+   * opinion" (the dev adapter, or the store unreachable) — in which case
+   * the app-side record stands. Called opportunistically at launch,
+   * never on the training path.
+   */
+  refreshEntitlement(): Promise<PurchaseRecord | null | undefined>;
   /**
    * ADR-0014: whether she is inside the store's free trial with
    * auto-renew switched off, at least three days in — the one condition

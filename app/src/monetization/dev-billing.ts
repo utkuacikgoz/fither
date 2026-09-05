@@ -117,13 +117,24 @@ export const devBilling: BillingPort = {
     return useDevReceiptStore.getState().receipt;
   },
 
+  async refreshEntitlement(): Promise<PurchaseRecord | null | undefined> {
+    // No opinion: the dev "store" is consulted only through restore, so
+    // the dev entitlement reset keeps meaning what it says.
+    return undefined;
+  },
+
   async lifetimeOfferEligible(): Promise<boolean> {
     await receiptReady();
     return useDevReceiptStore.getState().trialCancelled;
   },
 
   async purchase(plan: PlanId): Promise<PurchaseOutcome> {
-    const purchase: PurchaseRecord = { plan, date: todayIso() };
+    // Subscriptions start with the store's free week (ADR-0014 §6);
+    // lifetime is paid at once.
+    const purchase: PurchaseRecord =
+      plan === "lifetime"
+        ? { plan, date: todayIso() }
+        : { plan, date: todayIso(), trial: true };
     await receiptReady();
     useDevReceiptStore.getState().setReceipt(purchase);
     return { ok: true, purchase };

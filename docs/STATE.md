@@ -211,10 +211,10 @@ ones.
    (docs/gate-3-protocol.md; the protocol now names sign-in as the
    post-reset first screen).
 3. **Owner: App Store Connect products + RevenueCat offering** per
-   docs/revenuecat-setup.md, then sandbox verification. **DECIDE** the
-   trial model (ADR-0014 consequences) — the two free weeks stack today.
-   Then the Sign in with Apple adapter (expo-apple-authentication is
-   installed; the port is `auth.ts`).
+   docs/revenuecat-setup.md, then sandbox verification. The trial model
+   is decided (ADR-0014 §6: the store trial is the trial). Then the Sign
+   in with Apple adapter (expo-apple-authentication is installed; the
+   port is `auth.ts`).
    *(was: Apple Developer enrollment + EAS link — done 2026-09-05)*
    (docs/release-builds.md). Unblocks: real Apple/Google sign-in
    adapters, App Store Connect subscription products → RevenueCat
