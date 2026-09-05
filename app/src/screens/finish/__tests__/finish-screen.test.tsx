@@ -169,7 +169,7 @@ describe("FinishScreen", () => {
     expect(screen.queryByText(strings.finish.headline)).toBeNull();
     expect(screen.queryByText(strings.finish.note)).toBeNull();
     expect(screen.queryByText("+0")).toBeNull();
-    expect(screen.queryByText(strings.finish.pointsLabel)).toBeNull();
+    expect(screen.queryByText(strings.finish.pointsUnit(0))).toBeNull();
     // She still leaves through the same single button.
     expect(screen.getByTestId("finish-continue")).toBeTruthy();
   });

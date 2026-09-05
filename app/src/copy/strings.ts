@@ -446,10 +446,6 @@ export const strings = {
     savingHeadline: "Saving your session",
     savingNote: "Keeping your progress safe.",
     failedHeadline: "Your session is safe",
-    // Superseded by pointsUnit below (2026-09-04, the "two copy nits" in
-    // docs/STATE.md). Kept only for readers not yet moved over; do not
-    // add new callsites. Remove once every reader uses pointsUnit.
-    pointsLabel: "points",
     // COPY-WRITER (2026-09-04): the unit word under the numeral — "+35"
     // on the finish screen, "70" on Progress. Parameterised so a single
     // point reads "point", not "1 points" (which is why one point used
@@ -650,8 +646,8 @@ export const strings = {
     points: {
       // A record of work done, never a balance: points buy nothing and
       // gate nothing (gamification.md), so no "balance"/"spend" shape.
-      // finish.pointsLabel ("points") stays the in-session unit label;
-      // this is the full ledger line.
+      // finish.pointsUnit stays the in-session unit label; this is the
+      // full ledger line.
       total: (points: number) =>
         points === 1 ? "1 point earned" : `${points} points earned`,
     },
