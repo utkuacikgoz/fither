@@ -28,20 +28,33 @@ interface DevReceiptState {
   /** The fake store-side receipt. Survives the dev entitlement reset. */
   receipt: PurchaseRecord | null;
   setReceipt: (receipt: PurchaseRecord) => void;
+  /**
+   * DEV: simulate "she switched off the trial's auto-renew, three days
+   * in" — the store fact the lifetime offer (ADR-0014) waits for. The
+   * real adapter reads it from the customer info; here Settings' dev
+   * tools flip it so the offer can be walked without a sandbox.
+   */
+  trialCancelled: boolean;
+  setTrialCancelled: (cancelled: boolean) => void;
 }
 
 export const useDevReceiptStore = create<DevReceiptState>()(
   persist(
     (set) => ({
       receipt: null,
+      trialCancelled: false,
       hydrated: false,
       hydrationFailed: false,
       setReceipt: (receipt) => set({ receipt }),
+      setTrialCancelled: (trialCancelled) => set({ trialCancelled }),
     }),
     {
       name: "fither/dev-billing-v1",
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ receipt: state.receipt }),
+      partialize: (state) => ({
+        receipt: state.receipt,
+        trialCancelled: state.trialCancelled,
+      }),
       onRehydrateStorage: () => (_state, error) => {
         Promise.resolve().then(() =>
           useDevReceiptStore.setState({
@@ -70,9 +83,15 @@ function receiptReady(): Promise<void> {
   });
 }
 
-// Offerings as data: the two ADR-0002 plans, annual first (annual led).
-// Display strings are the GBP reference fallbacks from strings.ts — a
-// real adapter substitutes the provider's localised price labels.
+// Offerings as data: the two paywall plans (ADR-0014), annual first
+// (annual led). Display strings are the USD reference fallbacks from
+// strings.ts — the store adapter substitutes localised price labels.
+const lifetimeOffering: Offering = {
+  plan: "lifetime",
+  priceLabel: strings.paywall.plans.lifetime.price,
+  noteLabel: strings.paywall.plans.lifetime.note,
+};
+
 const offerings: readonly Offering[] = [
   {
     plan: "annual",
@@ -90,8 +109,17 @@ export const devBilling: BillingPort = {
     return offerings;
   },
 
+  getLifetimeOffering(): Offering | null {
+    return lifetimeOffering;
+  },
+
   getEntitlement(): PurchaseRecord | null {
     return useDevReceiptStore.getState().receipt;
+  },
+
+  async lifetimeOfferEligible(): Promise<boolean> {
+    await receiptReady();
+    return useDevReceiptStore.getState().trialCancelled;
   },
 
   async purchase(plan: PlanId): Promise<PurchaseOutcome> {

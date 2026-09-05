@@ -32,7 +32,7 @@ describe("entitlement store", () => {
 
   it("purchasePlan grants instantly through dev billing and persists", async () => {
     const granted = await useEntitlementStore.getState().purchasePlan("annual");
-    expect(granted).toBe(true);
+    expect(granted).toBe("purchased");
     expect(useEntitlementStore.getState().purchase).toMatchObject({
       plan: "annual",
     });

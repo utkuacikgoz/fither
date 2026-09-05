@@ -89,7 +89,7 @@ works in airplane mode.
 
 | Feature | What it is | Key rules | Status |
 |---|---|---|---|
-| Subscription | £5.99/month or £39.99/year with a 7-day free trial. Annual led. Currently served by a dev-only billing implementation behind a typed port — fully clickable, zero network; RevenueCat in Phase 4 is one adapter file (ADR-0009). | ADR-0002 prices; trial starts at the first COMPLETED session; expired trial gates only new-session generation — history, points and skills stay hers. | Built (dev-mode) |
+| Subscription | $12.99/month or $59.99/year with a 7-day free trial, annual led; a $99 lifetime purchase offered once, on day 3 of the trial, only to someone who switched off auto-renew (ADR-0014). Served by the RevenueCat adapter when the key is configured (entitlement `fither_pro`, products `yearly`/`monthly`/`lifetime`), the dev adapter otherwise. | ADR-0014 prices; trial model to decide (app-side week vs store intro week — ADR-0014 consequences); expired trial gates only new-session generation — history, points and skills stay hers. Manage subscription via Customer Center. | Built (adapter wired; sandbox verification pending) |
 | Honest paywall | States what's included and the price, plainly. | No fake urgency, no countdowns (fither-voice); honest expired-state copy; restore distinguishes no-purchase from failure. | Built |
 | Offline entitlements | Entitlement state persists on device and is evaluated offline; nothing on the training path ever waits on a network. | A paying user in airplane mode is never locked out — hard rule (fither-domain; re-review required when the real billing SDK lands). | Built (dev-mode) |
 
