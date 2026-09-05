@@ -1,8 +1,10 @@
+import { StyleSheet } from "react-native";
 import { Tabs } from "expo-router";
 
 import { strings } from "../../src/copy/strings";
+import { AppText } from "../../src/design/primitives/app-text";
 import { useTheme } from "../../src/design/theme";
-import { fontFamily, hairline, typeScale } from "../../src/design/tokens";
+import { fontFamily, fontWeight, hairline, typeScale } from "../../src/design/tokens";
 
 // The hub's bottom tab bar (ADR-0013 §4): Home / Progress / Settings.
 // Only these three routes live inside the group — the whole session
@@ -35,6 +37,21 @@ export default function TabsLayout() {
           fontFamily: fontFamily.text,
           fontSize: typeScale.caption,
         },
+        // The active tab is told by weight as well as hue: sage against
+        // soft ink is a hue difference only (1.03:1 in luminance), which
+        // is no signifier at all with a colour-vision deficiency
+        // (reviewer should-fix). `tabBarLabel` with the router's own
+        // `focused` flag is the one place that knows which tab is on.
+        tabBarLabel: ({ focused, color, children }) => (
+          <AppText
+            variant="caption"
+            // The router hands a ColorValue; ours are always token strings.
+            color={String(color)}
+            style={focused ? styles.activeLabel : undefined}
+          >
+            {children}
+          </AppText>
+        ),
         tabBarIconStyle: { display: "none" },
       }}
     >
@@ -44,3 +61,9 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  activeLabel: {
+    fontWeight: fontWeight.semibold,
+  },
+});

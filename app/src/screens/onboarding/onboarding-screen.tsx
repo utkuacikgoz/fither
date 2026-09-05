@@ -82,7 +82,16 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   if (step === "welcome") {
     return (
       <Screen>
-        <View style={styles.welcomeCenter}>
+        {/* The welcome is the one unbounded text stack before the
+            session (mark + title + body): at 2× Dynamic Type on a small
+            phone it overran Begin. Same treatment as the player's intro
+            — scrolls when it must, centres exactly as before when it
+            fits (reviewer should-fix). */}
+        <ScrollView
+          style={styles.welcomeScroll}
+          contentContainerStyle={styles.welcomeCenter}
+          showsVerticalScrollIndicator
+        >
           {/* Three beats — mark, headline, body — in the unlock's own
               rhythm. The button below is outside the choreography and
               tappable throughout: the moment costs her nothing. */}
@@ -109,7 +118,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               {strings.onboarding.welcome.body}
             </AppText>
           </FadeIn>
-        </View>
+        </ScrollView>
         <View style={styles.bottom}>
           <PrimaryButton
             testID="onboarding-begin"
@@ -141,7 +150,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           rise={motion.riseDistance}
           style={styles.question}
         >
-          <AppText variant="title" style={styles.title}>
+          <AppText
+            variant="title"
+            style={styles.title}
+            accessibilityRole="header"
+          >
             {strings.onboarding.equipment.question}
           </AppText>
           <AnswerRow index={0} reduceMotion={reduceMotion}>
@@ -182,7 +195,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         showsVerticalScrollIndicator
       >
         <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
-          <AppText variant="title" style={styles.title}>
+          <AppText
+            variant="title"
+            style={styles.title}
+            accessibilityRole="header"
+          >
             {strings.onboarding.avoid.question}
           </AppText>
           {avoid.length === 0 && (
@@ -230,8 +247,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  welcomeCenter: {
+  welcomeScroll: {
     flex: 1,
+  },
+  welcomeCenter: {
+    flexGrow: 1,
     justifyContent: "center",
   },
   mark: {

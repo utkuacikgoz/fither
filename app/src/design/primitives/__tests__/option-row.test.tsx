@@ -62,3 +62,12 @@ it("a group's last row drops its hairline so the card closes cleanly", () => {
   expect(widths(withRule, "a")).toHaveLength(1);
   expect(widths(noRule, "b")).toHaveLength(0);
 });
+
+it("an action row announces no selection state — a verb is not a choice", () => {
+  const screen = render(
+    <OptionRow label="Restore" emphasis="action" onPress={jest.fn()} testID="act" />,
+  );
+  // Pressable normalises the state object; what matters is that no
+  // selected flag is announced either way.
+  expect(screen.getByTestId("act").props.accessibilityState?.selected).toBeUndefined();
+});

@@ -3,9 +3,11 @@ import { AccessibilityInfo } from "react-native";
 
 // The real hook — jest-setup mocks it for screen tests, since its async
 // OS read lands outside act(); here it is the subject.
-const { useReducedMotion } = jest.requireActual<
+const { useReducedMotion, resetReducedMotionForTests } = jest.requireActual<
   typeof import("../use-reduced-motion")
 >("../use-reduced-motion");
+
+beforeEach(() => resetReducedMotionForTests());
 
 type Listener = (enabled: boolean) => void;
 
@@ -53,4 +55,15 @@ it("keeps the default when the read fails — motion here is already gentle", as
     await Promise.resolve();
   });
   expect(result.current).toBe(false);
+});
+
+it("remembers the setting: a second mount starts on the right frame, no snap", async () => {
+  stubAccessibility(true);
+  const first = renderHook(() => useReducedMotion());
+  await waitFor(() => expect(first.result.current).toBe(true));
+  first.unmount();
+  // Every later screen in the process mounts already correct — the
+  // Reduce Motion user never sees an entrance start and then cut.
+  const second = renderHook(() => useReducedMotion());
+  expect(second.result.current).toBe(true);
 });
