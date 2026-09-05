@@ -13,11 +13,12 @@ import {
   SessionPlayerScreen,
   SKIP_REVEAL_DELAY_MS,
 } from "../session-player-screen";
-import { speakCue } from "../../../session/voice";
+import { speakCue, stopVoice } from "../../../session/voice";
 import { useSettingsStore } from "../../../state/settings-store";
 
 jest.mock("../../../session/voice", () => ({
   speakCue: jest.fn(async () => true),
+  stopVoice: jest.fn(),
 }));
 
 function seedStore() {
@@ -67,15 +68,39 @@ describe("SessionPlayerScreen", () => {
       fireEvent.press(screen.getByTestId("player-begin"));
       expect(speakCue).toHaveBeenCalledTimes(1);
       expect(speakCue).toHaveBeenCalledWith("Push through your palms.");
-      act(() => {
-        jest.advanceTimersByTime(3000);
-      });
+      // Reps-based: no ticks run here; the per-tick claim is proved on
+      // the timed block below, where ticks re-render under the same key.
       expect(speakCue).toHaveBeenCalledTimes(1);
       // The next set shows (and speaks) the next cue.
       fireEvent.press(screen.getByTestId("player-set-done"));
       fireEvent.press(screen.getByTestId("player-end-rest"));
       expect(speakCue).toHaveBeenCalledTimes(2);
       expect(speakCue).toHaveBeenLastCalledWith("Keep your body in one line.");
+    });
+
+    it("a timed set ticks every second and speaks exactly once", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      // Through the reps block to the timed one (fixture block 2).
+      fireEvent.press(screen.getByTestId("player-begin"));
+      fireEvent.press(screen.getByTestId("player-set-done"));
+      fireEvent.press(screen.getByTestId("player-end-rest"));
+      fireEvent.press(screen.getByTestId("player-set-done"));
+      fireEvent.press(screen.getByTestId("feedback-good"));
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(speakCue).toHaveBeenCalledTimes(3);
+      expect(speakCue).toHaveBeenLastCalledWith("Squeeze your glutes.");
+      act(() => {
+        jest.advanceTimersByTime(5000); // five ticks, same machine key
+      });
+      expect(speakCue).toHaveBeenCalledTimes(3);
+    });
+
+    it("skipping a block stops the voice so it cannot talk over the next intro", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      fireEvent.press(screen.getByTestId("player-skip"));
+      fireEvent.press(screen.getByTestId("player-skip-confirm"));
+      expect(stopVoice).toHaveBeenCalled();
     });
 
     it("stays silent for the whole session on a day she answered quiet", () => {

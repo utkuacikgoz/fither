@@ -28,7 +28,7 @@ import {
   totalSets,
 } from "../../session/player-machine";
 import { useSessionStore } from "../../state/session-store";
-import { speakCue } from "../../session/voice";
+import { speakCue, stopVoice } from "../../session/voice";
 import { useSettingsStore } from "../../state/settings-store";
 import { announcementKey, phaseAnnouncement, workCue } from "./announcements";
 
@@ -73,9 +73,16 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const [confirmingSkip, setConfirmingSkip] = useState(false);
 
   const confirmSkip = () => {
+    // A skipped block keeps no voice: the cue must not talk over the
+    // next block's intro.
+    stopVoice();
     dispatchPlayer({ type: "skipBlock" });
     setConfirmingSkip(false);
   };
+
+  // Leaving the session (finish, or the OS swiping it away) releases
+  // whatever is speaking.
+  useEffect(() => () => stopVoice(), []);
 
   useEffect(() => {
     setIntroSkipVisible(false);

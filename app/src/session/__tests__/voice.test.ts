@@ -1,6 +1,6 @@
 import * as Audio from "expo-audio";
 
-import { resetVoiceForTests, speakCue } from "../voice";
+import { resetVoiceForTests, speakCue, stopVoice } from "../voice";
 
 // Playback only — the manifest decides what exists; this module never
 // errors mid-set. The manifest is generated (empty until the owner runs
@@ -49,4 +49,28 @@ it("a playback failure is swallowed — mid-set is no place for a message", asyn
     throw new Error("no audio session");
   });
   expect(await speakCue("Push through your palms.")).toBe(false);
+});
+
+it("one voice at a time: a new cue releases the one still speaking", async () => {
+  await speakCue("Push through your palms.");
+  await speakCue("Push through your palms.");
+  expect(audio.__players).toHaveLength(2);
+  expect(audio.__players[0]!.remove).toHaveBeenCalledTimes(1);
+  expect(audio.__players[1]!.remove).not.toHaveBeenCalled();
+});
+
+it("stopVoice releases whatever is speaking, and is safe when nothing is", async () => {
+  stopVoice();
+  await speakCue("Push through your palms.");
+  stopVoice();
+  expect(audio.__players[0]!.remove).toHaveBeenCalledTimes(1);
+  stopVoice();
+  expect(audio.__players[0]!.remove).toHaveBeenCalledTimes(1);
+});
+
+it("a failed audio-mode setup is retried next time, not cached as done", async () => {
+  jest.mocked(Audio.setAudioModeAsync).mockRejectedValueOnce(new Error("no session"));
+  await speakCue("Push through your palms.");
+  await speakCue("Push through your palms.");
+  expect(Audio.setAudioModeAsync).toHaveBeenCalledTimes(2);
 });

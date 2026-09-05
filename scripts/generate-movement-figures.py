@@ -14,7 +14,7 @@ import json, math, os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "app", "assets", "movements")
-PX, S = 320, 3          # output px, supersample
+PX, S = 640, 3          # output px, supersample — a 200pt hero at 3x is 600px; 320 was a 1.9x upscale on every block intro
 W, H = PX * S, PX * S
 INK = (255, 255, 255, 255)   # tinted at runtime
 
