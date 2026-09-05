@@ -21,6 +21,12 @@
       "expo-notifications",
       "expo-apple-authentication",
       [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",

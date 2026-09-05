@@ -271,7 +271,9 @@ ship"): **0 of 60 moves ship today**, entirely on the audio column.
    sends nothing today. *(Update 2026-09-05: PostHog is built behind a
    port, ADR-0015; it sends four anonymous events only once the owner
    sets the key. App Privacy answers then change — docs/posthog-setup.md
-   lists them. The SDK is pure JS with no privacy manifest of its own.)*
+   lists them. The SDK is pure JS with no privacy manifest of its own.
+   Sentry followed the same day, ADR-0016: crash data only, behind a
+   port, off without its DSN.)*
 7. **Dev surfaces gated by `__DEV__`** — the previewer, timing readout,
    entitlement reset, dev receipts, dev auth. Release builds exclude
    them (tests cover the release shape of Settings). A release build

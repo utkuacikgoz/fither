@@ -199,3 +199,12 @@ jest.mock("expo-linking", () => ({
   useLinkingURL: jest.fn(() => null),
   useURL: jest.fn(() => null),
 }));
+
+// Sentry (ADR-0016): never selected in tests (no DSN), but the adapter
+// module is imported by the port, so the SDK is shimmed. The adapter's
+// own unit test drives this mock directly.
+jest.mock("@sentry/react-native", () => ({
+  init: jest.fn(),
+  captureException: jest.fn(),
+  nativeCrash: jest.fn(),
+}));

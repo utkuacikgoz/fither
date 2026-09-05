@@ -6,6 +6,7 @@ import { Card } from "../../design/primitives/card";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { spacing } from "../../design/tokens";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
+import { getMonitoring } from "../../monitoring/monitoring";
 import {
   seedFinishPreviewForDev,
   seedFreshEntitlementForDev,
@@ -42,6 +43,8 @@ export const DEV_PREVIEW_LABELS = {
   finishOutOfTime: "[dev] Preview finish (out of time)",
   finishNothingDone: "[dev] Preview finish (nothing done)",
   lifetimeOffer: "[dev] Preview lifetime offer (day-3 canceller)",
+  testJsError: "[dev] Throw a test error (crash reporting)",
+  testNativeCrash: "[dev] Crash natively (crash reporting)",
 } as const;
 
 interface DevToolsCardProps {
@@ -148,6 +151,19 @@ export function DevToolsCard({ order, reduceMotion, onOpenTiming }: DevToolsCard
             seedFinishPreviewForDev("nothingDone");
             router.push("/finish");
           }}
+        />
+        {/* ADR-0016 / launch checklist: the deliberate crash that proves
+            reports and symbolication reach the owner before TestFlight.
+            Both go through the port, so without a DSN they stay local. */}
+        <QuietButton
+          testID="settings-dev-test-js-error"
+          label={DEV_PREVIEW_LABELS.testJsError}
+          onPress={() => getMonitoring().testJsError()}
+        />
+        <QuietButton
+          testID="settings-dev-test-native-crash"
+          label={DEV_PREVIEW_LABELS.testNativeCrash}
+          onPress={() => getMonitoring().testNativeCrash()}
         />
       </Card>
   );
