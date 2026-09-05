@@ -28,11 +28,13 @@ beforeEach(() => {
   });
 });
 
-it("renders all three ways to continue, with the honest notes", () => {
+it("renders all three ways to continue, with the honest notes", async () => {
   const screen = render(<SignInScreen />);
   expect(screen.getByText(strings.auth.welcome)).toBeTruthy();
   expect(screen.getByText(strings.auth.apple)).toBeTruthy();
-  expect(screen.getByText(strings.auth.google)).toBeTruthy();
+  // Provider buttons render once the port says which adapters exist;
+  // the dev port offers both.
+  expect(await screen.findByText(strings.auth.google)).toBeTruthy();
   expect(screen.getByText(strings.auth.guest)).toBeTruthy();
   expect(screen.getByText(strings.auth.accountNote)).toBeTruthy();
   expect(screen.getByText(strings.auth.guestNote)).toBeTruthy();
@@ -47,7 +49,7 @@ it.each([
 ] as const)("%s lands the %s identity and calls onDone", async (testID, kind) => {
   const onDone = jest.fn();
   const screen = render(<SignInScreen onDone={onDone} />);
-  fireEvent.press(screen.getByTestId(testID));
+  fireEvent.press(await screen.findByTestId(testID));
   await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
   expect(useIdentityStore.getState().identity?.kind).toBe(kind);
 });
@@ -98,4 +100,31 @@ it("every rendered string comes from strings.ts", () => {
   for (const leaf of renderedTextLeaves(screen.toJSON())) {
     expect(allowed.has(leaf) ? true : leaf).toBe(true);
   }
+});
+
+it("offers only the providers the port has adapters for — never a button that would fake success", async () => {
+  const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
+  const spy = jest.spyOn(getAuth(), "availableProviders").mockResolvedValue(["apple"]);
+  const screen = render(<SignInScreen onDone={jest.fn()} />);
+  await waitFor(() => expect(screen.queryByTestId("sign-in-google")).toBeNull());
+  expect(screen.getByTestId("sign-in-apple")).toBeTruthy();
+  expect(screen.getByTestId("sign-in-guest")).toBeTruthy();
+  spy.mockRestore();
+});
+
+it("dismissing the provider's sheet is not an error — the screen simply stays", async () => {
+  const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
+  const spy = jest
+    .spyOn(getAuth(), "signInWithApple")
+    .mockResolvedValue({ ok: false, reason: "cancelled" });
+  const onDone = jest.fn();
+  const screen = render(<SignInScreen onDone={onDone} />);
+  fireEvent.press(screen.getByTestId("sign-in-apple"));
+  await waitFor(() =>
+    expect(screen.getByTestId("sign-in-apple").props.accessibilityState.busy).toBe(false),
+  );
+  expect(screen.queryByTestId("sign-in-error")).toBeNull();
+  expect(onDone).not.toHaveBeenCalled();
+  expect(useIdentityStore.getState().identity).toBeNull();
+  spy.mockRestore();
 });

@@ -186,7 +186,8 @@ ones.
 | Voice | `01b9711` | Generator + offline playback + Settings card + the quiet-day rule; audio files pending the owner's voice (adds expo-audio: owner rebuild) |
 | Review fixes 1–3 | `f06ecb0` `038e74e` `c4fbb24` | Two blockers; motion/a11y; the finish. Waves 4–7 of the reviewer's should-fixes are still open (recorded in AUDIT.md) |
 | Audit | `a7f7df4` | AUDIT.md — phase 1 of the audit-and-ship brief |
-| Pricing + store | — | ADR-0014: $59.99/$12.99/$99 lifetime; RevenueCat adapter behind the port, Customer Center, the day-3 lifetime offer; owner's key via env (three native deps: owner rebuild) |
+| Pricing + store | `6a3a11c` `db810ff` | ADR-0014: $59.99/$12.99/$99 lifetime; RevenueCat adapter behind the port, Customer Center, the day-3 lifetime offer; the store trial is the trial; owner's key via env (three native deps: owner rebuild) |
+| Sign in with Apple | — | Real adapter behind the auth port; Google hidden until it has one; revocation checked at launch |
 
 **Reviews**
 
@@ -212,9 +213,9 @@ ones.
    post-reset first screen).
 3. **Owner: App Store Connect products + RevenueCat offering** per
    docs/revenuecat-setup.md, then sandbox verification. The trial model
-   is decided (ADR-0014 §6: the store trial is the trial). Then the Sign
-   in with Apple adapter (expo-apple-authentication is installed; the
-   port is `auth.ts`).
+   is decided (ADR-0014 §6: the store trial is the trial). Sign in with
+   Apple is wired; a Google adapter needs a Google Cloud OAuth client
+   (owner) before the button returns.
    *(was: Apple Developer enrollment + EAS link — done 2026-09-05)*
    (docs/release-builds.md). Unblocks: real Apple/Google sign-in
    adapters, App Store Connect subscription products → RevenueCat

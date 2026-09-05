@@ -84,6 +84,14 @@ export const devAuth: AuthPort = {
     return useDevAuthSessionStore.getState().session;
   },
 
+  async availableProviders() {
+    return ["apple", "google"];
+  },
+
+  async checkRevoked() {
+    return false;
+  },
+
   signInWithApple(): Promise<SignInOutcome> {
     return signInAs("apple");
   },

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { getAuth, type AuthProvider } from "../../auth/auth";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
@@ -8,7 +9,7 @@ import { Screen } from "../../design/primitives/screen";
 import { Wordmark } from "../../design/primitives/wordmark";
 import { spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
-import { useIdentityStore } from "../../state/identity-store";
+import { useIdentityStore, type SignInResult } from "../../state/identity-store";
 import { AuthButton } from "./auth-button";
 
 // Sign-in (ADR-0011): the one first-run decision — how she continues.
@@ -40,16 +41,37 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
   );
   const [failed, setFailed] = useState(false);
 
+  // Which provider buttons exist on this build: a provider without a
+  // real adapter is not offered (a button that fakes success would be a
+  // review rejection and a lie). Guest is always there. Until the port
+  // answers, Apple and guest render — Apple is the one the platform
+  // guarantees — so the screen is never a lone guest button for a frame.
+  const [providers, setProviders] = useState<AuthProvider[]>(["apple"]);
+  useEffect(() => {
+    let live = true;
+    void getAuth()
+      .availableProviders()
+      .then((available) => {
+        if (live) setProviders(available);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const run = async (
     tone: "apple" | "google" | "guest",
-    action: () => Promise<boolean>,
+    action: () => Promise<SignInResult>,
   ) => {
     if (pending) return;
     setPending(tone);
     setFailed(false);
-    const ok = await action();
+    const result = await action();
     setPending(null);
-    if (!ok) {
+    // Dismissing the provider's sheet is her decision, not a failure:
+    // the screen simply stays, every option open.
+    if (result === "cancelled") return;
+    if (result === "failed") {
       setFailed(true);
       return;
     }
@@ -68,31 +90,37 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
       </View>
 
       <View style={styles.options}>
-        <AuthButton
-          testID="sign-in-apple"
-          tone="apple"
-          label={strings.auth.apple}
-          pending={pending === "apple"}
-          quieted={pending !== null && pending !== "apple"}
-          onPress={() => {
-            void run("apple", signInWithApple);
-          }}
-        />
-        <AuthButton
-          testID="sign-in-google"
-          tone="google"
-          label={strings.auth.google}
-          pending={pending === "google"}
-          quieted={pending !== null && pending !== "google"}
-          onPress={() => {
-            void run("google", signInWithGoogle);
-          }}
-        />
+        {providers.includes("apple") && (
+          <AuthButton
+            testID="sign-in-apple"
+            tone="apple"
+            label={strings.auth.apple}
+            pending={pending === "apple"}
+            quieted={pending !== null && pending !== "apple"}
+            onPress={() => {
+              void run("apple", signInWithApple);
+            }}
+          />
+        )}
+        {providers.includes("google") && (
+          <AuthButton
+            testID="sign-in-google"
+            tone="google"
+            label={strings.auth.google}
+            pending={pending === "google"}
+            quieted={pending !== null && pending !== "google"}
+            onPress={() => {
+              void run("google", signInWithGoogle);
+            }}
+          />
+        )}
         {/* What an account does today — the honest line (ADR-0011 §5),
-            mapped to the two account options above it. */}
-        <AppText variant="caption" style={styles.note}>
-          {strings.auth.accountNote}
-        </AppText>
+            mapped to the account options above it. */}
+        {providers.length > 0 && (
+          <AppText variant="caption" style={styles.note}>
+            {strings.auth.accountNote}
+          </AppText>
+        )}
         <AuthButton
           testID="sign-in-guest"
           tone="guest"
