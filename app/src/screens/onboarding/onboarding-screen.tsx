@@ -37,10 +37,9 @@ import {
 // engine must know before day one is chair availability (draft-strings
 // §1). A wall exists in every room she'd train in, so it stays available
 // on both paths — same reasoning as the settings-store default.
-// The store exports the two sets (one definition — the settings editor
-// reads the same ones), so a wall can never disappear on one path.
-const FLOOR_ONLY = FLOOR_ONLY_EQUIPMENT;
-const WITH_CHAIR = WITH_CHAIR_EQUIPMENT;
+// The store exports the two equipment sets (one definition — the
+// settings editor reads the same ones), so a wall can never disappear on
+// one path.
 
 /**
  * The figure beside each equipment option: a tier-one movement she can
@@ -69,7 +68,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const reduceMotion = useReducedMotion();
 
   const [step, setStep] = useState<Step>("welcome");
-  const [equipment, setEquipment] = useState<Equipment[]>(WITH_CHAIR);
+  const [equipment, setEquipment] = useState<Equipment[]>(WITH_CHAIR_EQUIPMENT);
   const [avoid, setAvoid] = useState<BodyArea[]>([]);
 
   const finish = (alwaysAvoid: BodyArea[]) => {
@@ -169,7 +168,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               label={strings.onboarding.equipment.options.floorOnly}
               figure={EQUIPMENT_FIGURES.floorOnly}
               onPress={() => {
-                setEquipment(FLOOR_ONLY);
+                setEquipment(FLOOR_ONLY_EQUIPMENT);
                 setStep("avoid");
               }}
             />
@@ -180,7 +179,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               label={strings.onboarding.equipment.options.chair}
               figure={EQUIPMENT_FIGURES.chair}
               onPress={() => {
-                setEquipment(WITH_CHAIR);
+                setEquipment(WITH_CHAIR_EQUIPMENT);
                 setStep("avoid");
               }}
             />
