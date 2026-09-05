@@ -76,14 +76,16 @@ possible; one sneaky dependency breaks the whole validation story.
 - **Error monitoring: Sentry** (`sentry-expo`). Wired and verified with a
   deliberate test crash BEFORE the first TestFlight build. Source maps
   uploaded in the build profile; alerts reach the owner's phone.
-- **Analytics: PostHog.** Events are few and deliberate — the ones that
-  test the retention thesis (session started/completed by length, tier
-  advanced, skill unlocked, paywall seen/converted, D1/D7 activity).
-  Event names and payloads live in one typed module
-  (`app/src/analytics/events.ts`); nothing logs outside it. Payloads obey
-  the forbidden list — no weight, calories, streaks or body data can even
-  be represented. Events queue offline and flush later; analytics must
-  never block or gate anything (airplane-mode rule).
+- **Analytics: PostHog, behind a port (ADR-0015).** Four events —
+  `deep_link_open`, `workout_start`, `workout_complete`, `trial_start` —
+  defined ONLY in `app/src/analytics/events.ts`; call sites use `track()`
+  from `analytics.ts` and never import the SDK. A fifth event is an ADR
+  edit first. Payloads are closed unions; a test scans the module for the
+  forbidden list's words, comments included. `identify()` is never
+  called. Events queue offline and flush later; `track` is synchronous,
+  swallows everything, and must never block or gate anything
+  (airplane-mode rule). The adapter is selected by
+  `EXPO_PUBLIC_POSTHOG_KEY`; tests read the dev adapter's record.
 - **Transactional email: Resend**, from our own domain (SPF/DKIM
   verified). Receipts/trial-ending/data-request mails only — no marketing
   drip. Templates are copy-writer surface and pass the fither-voice

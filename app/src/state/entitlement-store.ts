@@ -8,6 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { track } from "../analytics/analytics";
 import { getBilling, type PlanId, type PurchaseRecord } from "../monetization/billing";
 
 /**
@@ -88,6 +89,12 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
         const outcome = await getBilling().purchase(plan);
         if (!outcome.ok) return outcome.reason;
         set({ purchase: outcome.purchase, trialUsed: true });
+        // trial_start: the store granted a free period on a subscription
+        // (ADR-0014 §6). A straight purchase or the lifetime plan is not
+        // a trial and sends nothing here.
+        if (outcome.purchase.trial && outcome.purchase.plan !== "lifetime") {
+          track("trial_start", { plan: outcome.purchase.plan });
+        }
         return "purchased";
       },
 

@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { clearRecordedEvents, recordedEvents } from "../../analytics/dev-analytics";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
 import { useEntitlementStore } from "../entitlement-store";
 
@@ -9,6 +10,7 @@ async function flushPersistence() {
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  clearRecordedEvents();
   useEntitlementStore.setState({
     trialStartDate: null,
     purchase: null,
@@ -122,6 +124,21 @@ describe("entitlement store", () => {
 });
 
 describe("the store's word (ADR-0014 §6)", () => {
+  it("trial_start fires for a subscription's store trial, never for lifetime or a restore", async () => {
+    await useEntitlementStore.getState().purchasePlan("annual");
+    expect(recordedEvents()).toEqual([
+      { name: "trial_start", properties: { plan: "annual" } },
+    ]);
+    useEntitlementStore.getState().resetForDev();
+    await useEntitlementStore.getState().restorePurchases();
+    expect(recordedEvents()).toHaveLength(1);
+
+    clearRecordedEvents();
+    useEntitlementStore.getState().resetForDev();
+    await useEntitlementStore.getState().purchasePlan("lifetime");
+    expect(recordedEvents()).toEqual([]);
+  });
+
   it("a purchase marks the free week as used, and stays used after a lapse", async () => {
     await useEntitlementStore.getState().purchasePlan("annual");
     expect(useEntitlementStore.getState().trialUsed).toBe(true);

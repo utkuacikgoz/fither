@@ -7,6 +7,7 @@ import type {
 } from "@fither/engine";
 import { create } from "zustand";
 
+import { track } from "../analytics/analytics";
 import { firstMovementTracker } from "../lib/first-movement-timer";
 import { applyResult } from "../session/apply-result";
 import {
@@ -19,6 +20,7 @@ import {
   createPlayer,
   advanceCountdownBy,
   finishEarly,
+  hasBegun,
   isFinished,
   isCountingDown,
   isWrapBoundary,
@@ -416,6 +418,12 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     if (firstWorkRun) {
       useFirstMovementStore.getState().record(firstWorkRun);
     }
+    // workout_start: the machine's first real transition, the same
+    // boundary the crash snapshot is born on. A restored session has
+    // already begun, so a relaunch mid-session never counts twice.
+    if (session !== null && !hasBegun(player) && hasBegun(next)) {
+      track("workout_start", { minutes: session.minutes });
+    }
     // Persist the crash-recovery snapshot only when the machine actually
     // moved — phase transitions and captured outcomes. Countdown ticks
     // arrive once per second; writing AsyncStorage on every tick would
@@ -516,10 +524,18 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       return;
     }
     set({ saveFailed: false, saving: true });
+    // Read before the commit below moves it: "first" in workout_complete
+    // means no earlier session had stamped the trial start.
+    const entitlementBefore = useEntitlementStore.getState();
     try {
       const stableId = sessionId ?? `legacy:${session.date}:${session.seed}`;
       const previous = await readCompletionRecord();
       let record: CompletionRecord;
+      // workout_complete is sent below only after the commit lands, so a
+      // journal already marked committed has reported; a pending one
+      // (crash or failed save mid-commit) has not, and reports once now.
+      const alreadyReported =
+        previous?.sessionId === stableId && previous.status === "committed";
       if (previous?.sessionId === stableId) {
         record = previous;
       } else {
@@ -594,6 +610,13 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         saveFailed: false,
         saving: false,
       });
+      if (!alreadyReported) {
+        track("workout_complete", {
+          minutes: session.minutes,
+          close: close.reason,
+          first: completedAnything && entitlementBefore.trialStartDate === null,
+        });
+      }
     } catch {
       // The active snapshot and journal are deliberately retained. A retry
       // replays the exact result instead of asking the engine to award it again.

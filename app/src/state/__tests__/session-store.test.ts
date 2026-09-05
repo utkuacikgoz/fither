@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { clearRecordedEvents, recordedEvents } from "../../analytics/dev-analytics";
 import { firstMovementTracker } from "../../lib/first-movement-timer";
 import { applyResult } from "../../session/apply-result";
 import { createSession } from "../../session/create-session";
@@ -16,6 +17,7 @@ import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
 import { useSessionStore } from "../session-store";
+import * as journal from "../completion-journal";
 import {
   COMPLETION_STORAGE_KEY,
   readCompletionRecord,
@@ -62,6 +64,7 @@ beforeEach(async () => {
     hydrationFailed: false,
   });
   useSessionStore.getState().resetSession();
+  clearRecordedEvents();
   // Gate 3 instrumentation baseline: tracker disarmed (no t0), no runs.
   // Suites that don't mark a launch exercise the un-instrumented path.
   firstMovementTracker.reset();
@@ -160,6 +163,100 @@ describe("session store", () => {
     expect(useEntitlementStore.getState().trialStartDate).toBe(fixtureSession.date);
     expect((await readCompletionRecord())?.status).toBe("committed");
     expect(useActiveSessionStore.getState().snapshot).toBeNull();
+  });
+
+  describe("analytics (ADR-0015)", () => {
+    it("workout_start fires on the first real transition, never on a built session", () => {
+      useSessionStore.getState().startSession(fixturePrompt);
+      expect(recordedEvents()).toEqual([]);
+      useSessionStore.getState().dispatchPlayer({ type: "begin" });
+      expect(recordedEvents()).toEqual([
+        { name: "workout_start", properties: { minutes: 10 } },
+      ]);
+      // Later transitions and ticks are not a second start.
+      useSessionStore.getState().dispatchPlayer({ type: "tick" });
+      useSessionStore.getState().dispatchPlayer({ type: "skipBlock" });
+      expect(recordedEvents()).toHaveLength(1);
+    });
+
+    it("a restored mid-session player has already begun — no second workout_start", async () => {
+      useSessionStore.getState().startSession(fixturePrompt);
+      useSessionStore.getState().dispatchPlayer({ type: "begin" });
+      const snapshot = useActiveSessionStore.getState().snapshot;
+      if (!snapshot) throw new Error("missing snapshot");
+      clearRecordedEvents();
+      useSessionStore.getState().resetSession();
+      useActiveSessionStore.setState({ snapshot });
+      useSessionStore.getState().restoreActiveSession(fixtureSession.date);
+      useSessionStore.getState().dispatchPlayer({ type: "tick" });
+      expect(recordedEvents()).toEqual([]);
+    });
+
+    it("workout_complete reports the close and whether it was her first, once", async () => {
+      useSessionStore.getState().startSession(fixturePrompt);
+      playWholeSession();
+      await useSessionStore.getState().completeSession();
+      await useSessionStore.getState().completeSession();
+      expect(recordedEvents()).toEqual([
+        {
+          name: "workout_complete",
+          properties: { minutes: 10, close: "completed", first: true },
+        },
+      ]);
+    });
+
+    it("a second-ever session is not 'first'; a replayed journal reports once, a committed one never", async () => {
+      useEntitlementStore.setState({ trialStartDate: "2026-08-30" });
+      useSessionStore.getState().startSession(fixturePrompt);
+      playWholeSession();
+      await useSessionStore.getState().completeSession();
+      expect(recordedEvents()[0]?.properties).toMatchObject({ first: false });
+
+      clearRecordedEvents();
+      useSessionStore.getState().resetSession();
+      useSessionStore.getState().startSession(fixturePrompt);
+      playWholeSession();
+      const sessionId = useSessionStore.getState().sessionId;
+      if (!sessionId) throw new Error("missing session id");
+      const result = fixtureApplyResult();
+      await writeCompletionRecord({
+        version: 1,
+        status: "pending",
+        sessionId,
+        result,
+        ledgerEvents: result.ledgerEvents,
+        trialStartDate: fixtureSession.date,
+        purchase: null,
+      });
+      // The pending journal means the commit never landed, so nothing
+      // was reported yet: this replay reports it, once.
+      await useSessionStore.getState().completeSession();
+      expect(recordedEvents()).toHaveLength(1);
+      expect(recordedEvents()[0]?.name).toBe("workout_complete");
+
+      // A committed journal has already reported: re-running the
+      // completion for it (finish cleared, as after a relaunch) is silent.
+      clearRecordedEvents();
+      useSessionStore.setState({ finish: null });
+      await useSessionStore.getState().completeSession();
+      expect(recordedEvents()).toEqual([]);
+    });
+
+    it("a save that fails mid-commit reports on the retry, not twice", async () => {
+      useSessionStore.getState().startSession(fixturePrompt);
+      playWholeSession();
+      // The journal is written, then the canonical commit fails once.
+      const spy = jest
+        .spyOn(journal, "persistCanonicalCompletion")
+        .mockRejectedValueOnce(new Error("disk"));
+      await useSessionStore.getState().completeSession();
+      expect(useSessionStore.getState().saveFailed).toBe(true);
+      expect(recordedEvents()).toEqual([]);
+      await useSessionStore.getState().completeSession();
+      expect(useSessionStore.getState().finish).not.toBeNull();
+      expect(recordedEvents()).toHaveLength(1);
+      spy.mockRestore();
+    });
   });
 
   it("does nothing before the player is finished", async () => {
