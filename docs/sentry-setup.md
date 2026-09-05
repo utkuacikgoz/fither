@@ -16,7 +16,11 @@ phone. The SDK has a native module, so switching it on needs a rebuild.
    EXPO_PUBLIC_SENTRY_DSN=https://…@….ingest.sentry.io/…
    ```
 
-   Then rebuild: `git pull && rm -rf app/ios && cd app && npx expo run:ios`.
+   Then rebuild from the repo root: `git pull && pnpm install && rm -rf
+   app/ios && cd app && npx expo run:ios`. The root package.json allows
+   `@sentry/cli`'s install script (pnpm `onlyBuiltDependencies`), so the
+   CLI binary the plugin uses for source-map upload is actually
+   installed; pnpm ignores every other package's scripts as before.
 3. EAS builds, all three environments:
 
    ```
