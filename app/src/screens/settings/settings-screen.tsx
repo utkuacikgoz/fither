@@ -26,7 +26,11 @@ import { useLifetimeOfferStore } from "../../state/lifetime-offer-store";
 import { hasVoiceAudio } from "../../session/voice-manifest";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useReminderStore } from "../../state/reminder-store";
-import { useSettingsStore } from "../../state/settings-store";
+import {
+  FLOOR_ONLY_EQUIPMENT,
+  useSettingsStore,
+  WITH_CHAIR_EQUIPMENT,
+} from "../../state/settings-store";
 import {
   DEV_TIMING_TITLE,
   FirstMovementReadout,
@@ -98,6 +102,9 @@ export function SettingsScreen({
   );
   const disableReminders = useReminderStore((s) => s.disable);
   const reminderDenied = useReminderStore((s) => s.permissionDenied);
+  // The stagger counts VISIBLE cards: an absent voice card must not
+  // leave the journal waiting for a beat that nothing fills.
+  const voiceCard = hasVoiceAudio();
   const voice = useSettingsStore((s) => s.voice);
   const setVoice = useSettingsStore((s) => s.setVoice);
 
@@ -174,14 +181,14 @@ export function SettingsScreen({
             testID="equipment-floor-only"
             label={strings.onboarding.equipment.options.floorOnly}
             selected={!equipment.includes("chair")}
-            onPress={() => setEquipment(["none", "wall"])}
+            onPress={() => setEquipment(FLOOR_ONLY_EQUIPMENT)}
           />
           <OptionRow
             testID="equipment-chair"
             label={strings.onboarding.equipment.options.chair}
             selected={equipment.includes("chair")}
             divider={false}
-            onPress={() => setEquipment(["none", "chair", "wall"])}
+            onPress={() => setEquipment(WITH_CHAIR_EQUIPMENT)}
           />
         </Card>
 
@@ -282,7 +289,7 @@ export function SettingsScreen({
         {/* Constraints: what can't apply is not rendered. The card exists
             only when spoken cues are bundled (the generator has run with
             the owner's voice); a switch for silence would be a lie. */}
-        {hasVoiceAudio() && (
+        {voiceCard && (
           <Card order={4} reduceMotion={reduceMotion} testID="settings-voice">
             <AppText variant="caption" style={styles.sectionHeading}>
               {strings.settings.voice.title}
@@ -306,7 +313,7 @@ export function SettingsScreen({
           </Card>
         )}
 
-        <Card order={5} reduceMotion={reduceMotion} testID="settings-journal">
+        <Card order={voiceCard ? 5 : 4} reduceMotion={reduceMotion} testID="settings-journal">
           <CareJournal />
         </Card>
 
@@ -314,7 +321,7 @@ export function SettingsScreen({
           // Dev-only tools. The long-press entries elsewhere keep working;
           // these are the findable front doors (ADR-0009's interim homes
           // retire to here).
-          <Card order={6} reduceMotion={reduceMotion} testID="settings-dev">
+          <Card order={voiceCard ? 6 : 5} reduceMotion={reduceMotion} testID="settings-dev">
             <AppText variant="caption" style={styles.sectionHeading}>
               {strings.settings.dev.title}
             </AppText>

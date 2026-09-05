@@ -14,7 +14,11 @@ import { Screen } from "../../design/primitives/screen";
 import { motion, spacing } from "../../design/tokens";
 import { BODY_AREAS } from "../../lib/body-areas";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
-import { useSettingsStore } from "../../state/settings-store";
+import {
+  FLOOR_ONLY_EQUIPMENT,
+  useSettingsStore,
+  WITH_CHAIR_EQUIPMENT,
+} from "../../state/settings-store";
 
 // Onboarding (ADR-0009 §1): the three drafted screens — welcome,
 // equipment, persistent avoid-list — one decision per screen,
@@ -33,8 +37,10 @@ import { useSettingsStore } from "../../state/settings-store";
 // engine must know before day one is chair availability (draft-strings
 // §1). A wall exists in every room she'd train in, so it stays available
 // on both paths — same reasoning as the settings-store default.
-const FLOOR_ONLY: Equipment[] = ["none", "wall"];
-const WITH_CHAIR: Equipment[] = ["none", "chair", "wall"];
+// The store exports the two sets (one definition — the settings editor
+// reads the same ones), so a wall can never disappear on one path.
+const FLOOR_ONLY = FLOOR_ONLY_EQUIPMENT;
+const WITH_CHAIR = WITH_CHAIR_EQUIPMENT;
 
 /**
  * The figure beside each equipment option: a tier-one movement she can

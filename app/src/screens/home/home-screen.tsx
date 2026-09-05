@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { milestoneMovement, nextMilestone, tiersToMilestone } from "@fither/engine";
+import { nextMilestone, tiersToMilestone } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -9,12 +9,12 @@ import { QuietButton } from "../../design/primitives/quiet-button";
 import { Card } from "../../design/primitives/card";
 import { Screen } from "../../design/primitives/screen";
 import { useTheme } from "../../design/theme";
-import { spacing } from "../../design/tokens";
+import { motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useTodayIso } from "../../lib/use-today";
 import { loadLibrary } from "../../session/load-library";
 import { MovementFigure } from "../../design/primitives/movement-figure";
-import { skillLabel } from "../../session/skill-name";
+import { skillFigureId, skillLabel } from "../../session/skill-name";
 import { useProfileStore } from "../../state/profile-store";
 import { useSessionStore } from "../../state/session-store";
 import { todaySessionState } from "../../state/today-session";
@@ -156,7 +156,11 @@ export function HomeScreen() {
           <AppText variant="caption" style={styles.cardHeading}>
             {strings.profile.patterns.title}
           </AppText>
-          <PatternGlance profile={profile} />
+          <PatternGlance
+            profile={profile}
+            reduceMotion={reduceMotion}
+            baseDelayMs={motion.staggerMs}
+          />
         </Card>
 
         <Card
@@ -173,12 +177,7 @@ export function HomeScreen() {
               {/* The movement she is climbing toward, drawn — the same
                   figure she will meet in the session (ADR-0013). */}
               <MovementFigure
-                movementId={
-                  (library &&
-                    milestoneMovement(library, upcoming.pattern, upcoming.tier)
-                      ?.id) ||
-                  ""
-                }
+                movementId={skillFigureId(library, upcoming.pattern, upcoming.tier)}
               />
               <View style={styles.skillName}>
                 <AppText variant="body">

@@ -114,7 +114,7 @@ describe("the one-time notification ask (finish exit)", () => {
     seedFinish({ reason: "nothingDone" });
     const screen = render(<FinishRoute />);
     fireEvent.press(screen.getByTestId("finish-continue"));
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/home");
     expect(router.replace).not.toHaveBeenCalledWith("/reminder-ask");
     expect(useSessionStore.getState().finish).toBeNull();
   });
@@ -124,7 +124,7 @@ describe("the one-time notification ask (finish exit)", () => {
     seedFinish({ reason: "completed" });
     const screen = render(<FinishRoute />);
     fireEvent.press(screen.getByTestId("finish-continue"));
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/home");
     expect(router.replace).not.toHaveBeenCalledWith("/reminder-ask");
   });
 
@@ -133,7 +133,7 @@ describe("the one-time notification ask (finish exit)", () => {
     seedFinish({ reason: "completed" });
     const screen = render(<FinishRoute />);
     fireEvent.press(screen.getByTestId("finish-continue"));
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/home");
     expect(router.replace).not.toHaveBeenCalledWith("/reminder-ask");
   });
 });
@@ -149,13 +149,15 @@ describe("/reminder-ask route", () => {
     fireEvent.press(screen.getByTestId("reminder-ask-decline"));
     expect(useReminderStore.getState().asked).toBe(true);
     expect(useSessionStore.getState().finish).toBeNull();
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/home");
   });
 
   it("cold-opened after the ask already ran, it redirects home — never a second ask", async () => {
     useReminderStore.setState({ asked: true });
     seedFinish({ reason: "completed" });
     const screen = render(<ReminderAskRoute />);
+    // The route GUARD's redirect (not a post-session exit): guards still
+    // send a cold open to the launch surface, which decides everything.
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
     expect(
       screen.queryByText(strings.notifications.rationale.line),
@@ -182,7 +184,7 @@ describe("the rating moments", () => {
     await flushAsync();
     expect(useRatingStore.getState().completedCloses).toBe(2);
     expect(requestReview).toHaveBeenCalledTimes(1);
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/home");
   });
 
   it("only a plain 'completed' close counts or prompts — endedEarly does neither", async () => {
@@ -223,7 +225,7 @@ describe("the rating moments", () => {
     fireEvent.press(unlockScreen.getByTestId("unlock-continue"));
     await flushAsync();
     expect(requestReview).toHaveBeenCalledTimes(1);
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/home");
     expect(useSessionStore.getState().finish).toBeNull();
   });
 

@@ -36,6 +36,11 @@ jest.mock("expo-router", () => {
     router,
     useRouter: () => router,
     useLocalSearchParams: jest.fn(() => ({})),
+    // Focus is "mounted" in a test: the callback runs once on mount.
+    useFocusEffect: (callback: () => void) =>
+      react.useEffect(() => {
+        callback();
+      }, [callback]),
     Stack,
     Tabs,
   };

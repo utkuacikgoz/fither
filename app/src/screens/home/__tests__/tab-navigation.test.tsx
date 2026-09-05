@@ -159,11 +159,14 @@ describe("the hub and the questions are what a subscription gates", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("an expired trial is sent back to the gated day at '/'", async () => {
-    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
+  it("on a gated day the Today tab IS the gated day — inline, no bounce through '/'", () => {
+    useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8), purchase: null, trialUsed: false });
     const screen = render(<HomeRoute />);
     expect(screen.queryByTestId("home-start")).toBeNull();
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    // The letter where the questions would be, her record's doors intact.
+    expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
+    expect(screen.getByTestId("open-progress")).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it("the questions are reachable, unchanged, and equally gated", async () => {

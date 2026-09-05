@@ -1,11 +1,5 @@
 import { ScrollView, StyleSheet, View } from "react-native";
-import {
-  MAX_TIER,
-  PATTERNS,
-  milestoneMovement,
-  type Pattern,
-  type Tier,
-} from "@fither/engine";
+import { MAX_TIER, PATTERNS } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -16,7 +10,7 @@ import { useTheme } from "../../design/theme";
 import { glyph, motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { loadLibrary } from "../../session/load-library";
-import { skillLabel } from "../../session/skill-name";
+import { skillFigureId, skillLabel } from "../../session/skill-name";
 import { totalPoints, useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { TierTrack } from "./tier-track";
@@ -55,9 +49,6 @@ export function ProgressScreen() {
   const milestones = profile.unlockedMilestones ?? [];
   const points = totalPoints(events);
 
-  /** The figure for a milestone's own movement; "" when the library is absent. */
-  const milestoneFigureId = (pattern: Pattern, tier: Tier): string =>
-    (library && milestoneMovement(library, pattern, tier)?.id) || "";
 
   return (
     <Screen>
@@ -130,7 +121,7 @@ export function ProgressScreen() {
               >
                 {/* The movement she earned, drawn — the same figure she
                     meets in the session (ADR-0013). */}
-                <MovementFigure movementId={milestoneFigureId(m.pattern, m.tier)} />
+                <MovementFigure movementId={skillFigureId(library, m.pattern, m.tier)} />
                 <AppText variant="body" style={styles.skillName}>
                   {skillLabel(library, m.pattern, m.tier)}
                 </AppText>
