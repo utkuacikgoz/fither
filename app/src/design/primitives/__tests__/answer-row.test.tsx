@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { Pressable, Text } from "react-native";
+import { Animated, Pressable, Text } from "react-native";
 
 import { motion } from "../../tokens";
 import { AnswerRow } from "../answer-row";
@@ -21,6 +21,18 @@ it("staggers by its index inside the shared envelope", () => {
   expect(entrance(first.toJSON()).opacity).toBe(0);
   // Three rows finish inside one breath: the last starts at 2 × stagger.
   expect(2 * motion.staggerMs + motion.fadeMs).toBeLessThan(500);
+  // And the index actually reaches the animation as its delay.
+  const timing = jest.spyOn(Animated, "timing");
+  render(
+    <AnswerRow index={2} reduceMotion={false}>
+      <Text>c</Text>
+    </AnswerRow>,
+  );
+  expect(timing).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ delay: 2 * motion.staggerMs }),
+  );
+  timing.mockRestore();
 });
 
 it("is pressable on its first frame, before the fade lands", () => {

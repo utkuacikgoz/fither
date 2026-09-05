@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { Text } from "react-native";
+import { Animated, Text } from "react-native";
 
 import { motion } from "../../tokens";
 import { Card } from "../card";
@@ -45,6 +45,20 @@ it("otherwise enters from below, faded out, staggered by its order", () => {
   // The rise is small and the envelope stays inside 250–350ms ease-out.
   expect(motion.fadeMs).toBeGreaterThanOrEqual(250);
   expect(motion.fadeMs).toBeLessThanOrEqual(350);
+});
+
+it("its order actually reaches the animation as a delay", () => {
+  const timing = jest.spyOn(Animated, "timing");
+  render(
+    <Card reduceMotion={false} order={2}>
+      <Text>card</Text>
+    </Card>,
+  );
+  expect(timing).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ delay: 2 * motion.staggerMs, duration: motion.fadeMs, toValue: 1 }),
+  );
+  timing.mockRestore();
 });
 
 it("a card that navigates says so; a card that only informs does not", () => {
