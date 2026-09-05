@@ -256,7 +256,11 @@ it("closing the store sheet says nothing — only a process failure gets the ret
     .mockResolvedValueOnce({ ok: false, reason: "cancelled" });
   const screen = render(<PaywallScreen />);
   fireEvent.press(screen.getByTestId("paywall-purchase"));
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  // Let the attempt settle inside act(): busy clears once the port answers.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  expect(spy).toHaveBeenCalledTimes(1);
   expect(screen.queryByTestId("paywall-purchase-error")).toBeNull();
   spy.mockRestore();
 });
