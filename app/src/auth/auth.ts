@@ -7,6 +7,7 @@
 // the training path (ADR-0011 §4): signed out never means locked out.
 
 import { devAuth } from "./dev-auth";
+import { providerAuth } from "./provider-auth";
 
 /** The two providers (ADR-0011 §2): Apple and Google, nothing else. */
 export type AuthProvider = "apple" | "google";
@@ -25,10 +26,18 @@ export type IdentityKind = AuthProvider | "guest";
 export interface IdentityRecord {
   kind: IdentityKind;
   date: string;
+  /**
+   * The provider's opaque, stable user id (Apple's `user`), kept only so
+   * a revoked credential can be recognised at launch. Never shown, never
+   * sent anywhere; absent for guest and for legacy records.
+   */
+  providerUserId?: string;
 }
 
 export type SignInOutcome =
   | { ok: true; identity: IdentityRecord }
+  /** She dismissed the provider's sheet. Not an error; nothing to say. */
+  | { ok: false; reason: "cancelled" }
   | { ok: false; reason: "failed" };
 
 export interface AuthPort {
@@ -39,6 +48,19 @@ export interface AuthPort {
    * opportunistically.
    */
   currentIdentity(): IdentityRecord | null;
+  /**
+   * Which provider buttons may render. A provider without a real
+   * adapter is not offered: a button that fakes success is a review
+   * rejection and a lie. Guest is always available and not listed.
+   */
+  availableProviders(): Promise<AuthProvider[]>;
+  /**
+   * Whether the provider has revoked this identity's credential (Apple
+   * requires the app to notice). Unknown — offline, or a provider with
+   * no such concept — answers false: signed out never means locked out,
+   * and a network blip must not throw her back to sign-in.
+   */
+  checkRevoked(identity: IdentityRecord): Promise<boolean>;
   signInWithApple(): Promise<SignInOutcome>;
   signInWithGoogle(): Promise<SignInOutcome>;
   /** The guest path is local-only and always succeeds (ADR-0011 §1). */
@@ -46,7 +68,14 @@ export interface AuthPort {
   signOut(): Promise<void>;
 }
 
-/** The active auth implementation. Dev-only until real adapters land. */
+/**
+ * The active auth implementation: the real providers in release builds
+ * (and in a dev build that opts in with EXPO_PUBLIC_AUTH=apple, so the
+ * owner can walk the real Apple sheet), the dev adapter otherwise — so
+ * every test and every ordinary dev build keeps the fully clickable,
+ * no-network flow with all three buttons.
+ */
 export function getAuth(): AuthPort {
-  return devAuth;
+  const optIn = process.env.EXPO_PUBLIC_AUTH === "apple";
+  return !__DEV__ || optIn ? providerAuth : devAuth;
 }

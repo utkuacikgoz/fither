@@ -12,12 +12,14 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.fither.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "usesAppleSignIn": true
     },
     "plugins": [
       "expo-router",
       "expo-dev-client",
       "expo-notifications",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {

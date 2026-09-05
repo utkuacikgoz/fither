@@ -58,3 +58,14 @@ must work in airplane mode, and nothing may spend Gate 3's
 - The dev adapter must be excluded from release builds the same way
   dev-billing is handled, and the offline-lockout review re-runs when a
   real auth SDK lands (same trigger as the ops SDKs).
+
+## Addendum (2026-09-05)
+
+The Apple adapter landed (`app/src/auth/provider-auth.ts`, behind the
+unchanged port): no scopes requested, the opaque `user` id kept only to
+notice a revoked credential at launch, cancel distinguished from failure.
+Google has no adapter yet and is therefore not offered — the port's
+`availableProviders()` decides which buttons render, so no button ever
+fakes success. Release builds (and a dev build with
+`EXPO_PUBLIC_AUTH=apple`) use it; every other dev build and every test
+keeps the dev adapter with all three options.

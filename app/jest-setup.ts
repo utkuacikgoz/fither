@@ -164,3 +164,14 @@ jest.mock("react-native-purchases-ui", () => ({
   __esModule: true,
   default: { presentCustomerCenter: jest.fn(async () => undefined) },
 }));
+
+// Sign in with Apple (ADR-0011 adapter): the provider adapter is never
+// selected in tests (__DEV__ and no opt-in), but the port imports it, so
+// the native is shimmed; the adapter's own unit test drives it.
+jest.mock("expo-apple-authentication", () => ({
+  isAvailableAsync: jest.fn(async () => true),
+  signInAsync: jest.fn(async () => ({ user: "apple-user-1", identityToken: "t" })),
+  getCredentialStateAsync: jest.fn(async () => 1),
+  AppleAuthenticationCredentialState: { REVOKED: 0, AUTHORIZED: 1, NOT_FOUND: 2, TRANSFERRED: 3 },
+  AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
+}));

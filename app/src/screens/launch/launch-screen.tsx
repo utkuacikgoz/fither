@@ -90,9 +90,13 @@ export function LaunchScreen({
   // has one (ADR-0014 §6) — fire-and-forget, so the launch decision below
   // stays synchronous on the persisted record and never waits on a
   // network. A lapsed trial learned here re-renders into the gated day.
+  const refreshFromProvider = useIdentityStore((s) => s.refreshFromProvider);
   useEffect(() => {
     void refreshFromStore();
-  }, [refreshFromStore]);
+    // Likewise the provider's word on her credential (Apple requires the
+    // app to notice a revocation); unknown changes nothing.
+    void refreshFromProvider();
+  }, [refreshFromStore, refreshFromProvider]);
   const purchase = useEntitlementStore((s) => s.purchase);
 
   // What the crash snapshot meant for THIS launch. "pending" until the
