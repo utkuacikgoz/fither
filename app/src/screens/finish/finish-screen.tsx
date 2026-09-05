@@ -7,7 +7,7 @@ import { FadeIn } from "../../design/primitives/fade-in";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { Screen } from "../../design/primitives/screen";
-import { motion, spacing } from "../../design/tokens";
+import { minTouchTarget, motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useSessionStore, type FinishSummary } from "../../state/session-store";
 
@@ -113,7 +113,12 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   return (
     <Screen>
       <View style={styles.center}>
-        {completedMovementIds.length > 0 && (
+        {/* Nothing is drawn until the close is known: figures under a
+            "Saving…" headline were not the effort, they were a guess
+            (reviewer should-fix). The headline is keyed on `settled` so
+            it remounts and takes its beat instead of swapping text on
+            an already-settled value. */}
+        {settled && completedMovementIds.length > 0 && (
           <FadeIn {...beat(0)}>
             <View style={styles.figures} testID="finish-figures">
               {completedMovementIds.map((movementId, index) => (
@@ -126,7 +131,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
             </View>
           </FadeIn>
         )}
-        <FadeIn {...beat(1)}>
+        <FadeIn key={settled ? "settled" : "waiting"} {...beat(1)}>
           <AppText
             variant="title"
             style={styles.headline}
@@ -155,12 +160,16 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
         )}
       </View>
       <View style={styles.bottom}>
-        {(finish || saveFailed) && !saving && (
+        {(finish || saveFailed) && !saving ? (
           <PrimaryButton
             testID={saveFailed ? "finish-retry" : "finish-continue"}
             label={saveFailed ? strings.errors.tryAgain : strings.finish.continueLabel}
             onPress={saveFailed ? completeSession : onContinue}
           />
+        ) : (
+          // Reserve the button's height while saving so the centred
+          // content does not jump up the moment the points rise in.
+          <View style={styles.buttonPlaceholder} />
         )}
       </View>
     </Screen>
@@ -194,5 +203,8 @@ const styles = StyleSheet.create({
   },
   bottom: {
     paddingBottom: spacing.md,
+  },
+  buttonPlaceholder: {
+    minHeight: minTouchTarget + spacing.md,
   },
 });

@@ -7,11 +7,17 @@
 // pass over what's seeded here. Nothing in this module is reachable from
 // a release build (every call site is __DEV__-gated).
 
-import type { ApplyResult } from "@fither/engine";
+import type { ApplyResult, BlockOutcome } from "@fither/engine";
 
 import { todayIso } from "../lib/dates";
 import { useDevReceiptStore } from "../monetization/dev-billing";
 import { useEntitlementStore } from "./entitlement-store";
+import {
+  createPlayer,
+  finishEarly,
+  type PlayerBlock,
+  type PlayerState,
+} from "../session/player-machine";
 import { useSessionStore, type FinishClose } from "./session-store";
 
 /** Local calendar date `days` ago (setDate handles months and DST). */
@@ -68,17 +74,53 @@ const DEV_PREVIEW_SKILL: ApplyResult["unlockedSkills"][number] = {
  * player), so the routes render exactly this summary. Points mirror the
  * fixture ledger (10 session + 25 unlock).
  */
-function seedFinishSummary(finish: {
-  pointsEarned: number;
-  unlockedSkills: ApplyResult["unlockedSkills"];
-  completedAnything: boolean;
-  close: FinishClose;
-}): void {
+/**
+ * A finished player for the previews, so the finish screen draws what
+ * production draws — the figures of the completed blocks (reviewer
+ * should-fix: the owner was approving a screen that differed from the
+ * one users see). Two real library movements with figures; `session`
+ * stays null, so completeSession on arrival is still a no-op.
+ */
+function previewPlayer(outcomes: BlockOutcome[]): PlayerState {
+  const blocks: PlayerBlock[] = [
+    {
+      movementId: "wall-push-up",
+      name: "Wall Push-Up",
+      cues: [],
+      unilateral: false,
+      sets: 2,
+      amount: 8,
+      restSeconds: 30,
+      timingType: "reps",
+    },
+    {
+      movementId: "knee-plank",
+      name: "Knee Plank",
+      cues: [],
+      unilateral: false,
+      sets: 1,
+      amount: 20,
+      restSeconds: 30,
+      timingType: "seconds",
+    },
+  ];
+  return { ...finishEarly(createPlayer(blocks)), outcomes };
+}
+
+function seedFinishSummary(
+  finish: {
+    pointsEarned: number;
+    unlockedSkills: ApplyResult["unlockedSkills"];
+    completedAnything: boolean;
+    close: FinishClose;
+  },
+  outcomes: BlockOutcome[],
+): void {
   useSessionStore.setState({
     prompt: null,
     sessionId: null,
     session: null,
-    player: null,
+    player: previewPlayer(outcomes),
     countdownEndsAt: null,
     activeMs: 0,
     workResumedAt: null,
@@ -98,7 +140,7 @@ export function seedUnlockPreviewForDev(): void {
     unlockedSkills: [DEV_PREVIEW_SKILL],
     completedAnything: true,
     close: { reason: "completed" },
-  });
+  }, ["completed", "completed"]);
 }
 
 /**
@@ -121,13 +163,24 @@ export function seedFinishPreviewForDev(preview: DevFinishPreview): void {
       ? // A real chosen length — outOfTime's headline names her minutes.
         { reason: "outOfTime", minutes: 20 }
       : { reason: preview };
-  seedFinishSummary({
-    // ADR-0008: a completed 10/20/30-minute session earns 20/25/30. The
-    // outOfTime preview names 20 minutes, so its points read 25; the
-    // other completed closes preview the 10-minute base.
-    pointsEarned: !completedAnything ? 0 : preview === "outOfTime" ? 25 : 20,
-    unlockedSkills: [],
-    completedAnything,
-    close,
-  });
+  // What the figures show per close: everything done, one block done
+  // before an early or timed close, nothing done at all.
+  const outcomes: BlockOutcome[] =
+    preview === "completed"
+      ? ["completed", "completed"]
+      : preview === "nothingDone"
+        ? ["skipped", "skipped"]
+        : ["completed", "skipped"];
+  seedFinishSummary(
+    {
+      // ADR-0008: a completed 10/20/30-minute session earns 20/25/30. The
+      // outOfTime preview names 20 minutes, so its points read 25; the
+      // other completed closes preview the 10-minute base.
+      pointsEarned: !completedAnything ? 0 : preview === "outOfTime" ? 25 : 20,
+      unlockedSkills: [],
+      completedAnything,
+      close,
+    },
+    outcomes,
+  );
 }

@@ -235,6 +235,18 @@ ones.
 
 ## Deferred, recorded
 
+- **DECIDE (owner): does "Hard today" count as done?** The finish draws
+  the figures of *completed* blocks, and the engine records a session
+  only when a block completed — so a 10-minute session where she did
+  every block and answered "Hard today" twice closes as "Today didn't
+  fit. That happens." with 0 points and no figures, after she showed up
+  and did everything. The points rule is decided (ADR-0008) and
+  predates phase 3; the figures make the erasure visible and the copy
+  is plainly false for that user. Options: (a) leave as is; (b) figures
+  for attempted blocks (not skipped) and a nothing-done close only when
+  zero blocks were *attempted* — store and copy changes, no engine rule
+  involved. Surfaced by the phase-3 reviewer; not changed without you.
+
 - Wrist-neutral push variants; chronic sore wrists currently remove push
   work (movement-author plus coach review).
 - Brief 2 still overrides the working engine defaults when it arrives.
