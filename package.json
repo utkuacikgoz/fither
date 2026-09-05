@@ -14,6 +14,9 @@
     "overrides": {
       "react-native-worklets": "0.10.1",
       "react-native-reanimated": "4.5.1"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@sentry/cli"
+    ]
   }
 }
