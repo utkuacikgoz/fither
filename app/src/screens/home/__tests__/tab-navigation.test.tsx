@@ -8,7 +8,7 @@ import HomeRoute from "../../../../app/(tabs)/home";
 import PreviewRoute from "../../../../app/preview";
 import PromptRoute from "../../../../app/prompt";
 import { strings } from "../../../copy/strings";
-import { lightColors } from "../../../design/tokens";
+import { lightColors, fontWeight } from "../../../design/tokens";
 import { todayIso } from "../../../lib/dates";
 import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
@@ -107,6 +107,19 @@ describe("the tab bar", () => {
     const options = screen.UNSAFE_getByType(Tabs).props.screenOptions;
     expect(options.tabBarActiveTintColor).toBe(lightColors.accent);
     expect(options.tabBarInactiveTintColor).toBe(lightColors.inkSoft);
+    // Weight is the second cue: hue alone is no signifier with a
+    // colour-vision deficiency.
+    const label = options.tabBarLabel as (p: {
+      focused: boolean;
+      color: string;
+      children: string;
+    }) => React.ReactElement;
+    const focused = render(label({ focused: true, color: lightColors.accent, children: "Today" }));
+    const idle = render(label({ focused: false, color: lightColors.inkSoft, children: "Today" }));
+    const weight = (s: ReturnType<typeof render>) =>
+      Object.assign({}, ...[s.getByText("Today").props.style].flat(Infinity)).fontWeight;
+    expect(weight(focused)).toBe(fontWeight.semibold);
+    expect(weight(idle)).not.toBe(fontWeight.semibold);
     expect(options.tabBarStyle).toMatchObject({
       backgroundColor: lightColors.bg,
       borderTopColor: lightColors.line,

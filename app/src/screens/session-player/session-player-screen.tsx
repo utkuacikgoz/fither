@@ -368,7 +368,9 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
               movementId={block.movementId}
               testID="player-figure-rest"
             />
-            <AppText variant="title">{strings.player.rest}</AppText>
+            <AppText variant="title" accessibilityRole="header">
+              {strings.player.rest}
+            </AppText>
             <AppText
               variant="numeral"
               testID="player-numeral"
@@ -398,7 +400,9 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       {phase.kind === "feedback" && !confirmingSkip && (
         <>
           <View style={styles.top}>
-            <AppText variant="title">{strings.player.feedback.question}</AppText>
+            <AppText variant="title" accessibilityRole="header">
+              {strings.player.feedback.question}
+            </AppText>
           </View>
           <View style={styles.bottom}>
             {/*

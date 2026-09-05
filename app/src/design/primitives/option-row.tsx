@@ -46,7 +46,9 @@ export function OptionRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      // An action row (restore) has no state to announce; "not selected"
+      // on a verb is noise (reviewer note).
+      {...(emphasis === "action" ? {} : { accessibilityState: { selected } })}
       testID={testID}
       onPress={onPress}
       style={({ pressed }) => [

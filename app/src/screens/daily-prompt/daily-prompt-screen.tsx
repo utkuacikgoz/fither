@@ -270,7 +270,11 @@ export function DailyPromptScreen({
           rise={motion.riseDistance}
           style={styles.question}
         >
-          <AppText variant="title" style={styles.title}>
+          <AppText
+            variant="title"
+            style={styles.title}
+            accessibilityRole="header"
+          >
             {strings.prompt.time.question}
           </AppText>
           {MINUTES.map((m, index) => (
@@ -295,7 +299,11 @@ export function DailyPromptScreen({
           rise={motion.riseDistance}
           style={styles.question}
         >
-          <AppText variant="title" style={styles.title}>
+          <AppText
+            variant="title"
+            style={styles.title}
+            accessibilityRole="header"
+          >
             {strings.prompt.energy.question}
           </AppText>
           {ENERGY.map((e, index) => (
@@ -320,7 +328,11 @@ export function DailyPromptScreen({
           rise={motion.riseDistance}
           style={styles.question}
         >
-          <AppText variant="title" style={styles.title}>
+          <AppText
+            variant="title"
+            style={styles.title}
+            accessibilityRole="header"
+          >
             {strings.prompt.quiet.question}
           </AppText>
           <AnswerRow index={0} reduceMotion={reduceMotion}>
@@ -357,7 +369,11 @@ export function DailyPromptScreen({
           showsVerticalScrollIndicator
         >
           <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
-            <AppText variant="title" style={styles.title}>
+            <AppText
+            variant="title"
+            style={styles.title}
+            accessibilityRole="header"
+          >
               {strings.prompt.soreness.question}
             </AppText>
             {avoid.length === 0 && (

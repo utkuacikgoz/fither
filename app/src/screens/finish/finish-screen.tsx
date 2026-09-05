@@ -127,7 +127,11 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
           </FadeIn>
         )}
         <FadeIn {...beat(1)}>
-          <AppText variant="title" style={styles.headline}>
+          <AppText
+            variant="title"
+            style={styles.headline}
+            accessibilityRole="header"
+          >
             {headline}
           </AppText>
           <AppText variant="bodySoft" style={styles.note}>
