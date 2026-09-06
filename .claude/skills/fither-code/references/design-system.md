@@ -194,3 +194,10 @@ is what gets built.
   sits on the 4pt grid with one gap value per axis (8pt chips, 56pt rows,
   16/20pt padding); captions never share a tile with the content they
   label.
+- 2026-09-06, round 6: Progress and Settings approved as grouped lists
+  (Progress: two hero numerals, next-skill tile, a figure per pattern
+  row; Settings: a profile header, grouped rows with the current value
+  at the right and a chevron, edits on subpages). → Rule: every subpage
+  those chevrons open is a screen and goes to the owner for approval
+  before it is built. Nothing reaches main without the owner's approval
+  of every screen it contains.
