@@ -43,9 +43,10 @@ permanently.
 
 ## Forbidden mechanics (restating the domain list, mechanically)
 
-- **No streaks.** Nothing counts consecutive days. Nothing resets when the
-  user misses a day. Notifications never reference absence ("we miss
-  you", "don't lose your progress" — both forbidden).
+- **Streaks — allowed, bounded (owner decision 2026-09-06, ADR-0018).**
+  Consecutive days with a completed block; one rest day per run is
+  forgiven; best run kept. Shown, never threatened: no reset copy, no
+  "don't break the chain", no "we miss you".
 - **No weight, no calories, no measurements.** Not as optional fields, not
   in analytics events, not in the data model. If a table has a `weight`
   column, that is a bug.

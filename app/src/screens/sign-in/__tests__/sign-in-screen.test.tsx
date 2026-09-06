@@ -31,13 +31,15 @@ beforeEach(() => {
 it("renders all three ways to continue, with the honest notes", async () => {
   const screen = render(<SignInScreen />);
   expect(screen.getByText(strings.auth.welcome)).toBeTruthy();
+  expect(screen.getByText(strings.auth.welcomeSub)).toBeTruthy();
   expect(screen.getByText(strings.auth.apple)).toBeTruthy();
   // Provider buttons render once the port says which adapters exist;
   // the dev port offers both.
   expect(await screen.findByText(strings.auth.google)).toBeTruthy();
   expect(screen.getByText(strings.auth.guest)).toBeTruthy();
-  expect(screen.getByText(strings.auth.accountNote)).toBeTruthy();
-  expect(screen.getByText(strings.auth.guestNote)).toBeTruthy();
+  // Owner review 2026-09-06: no explanatory captions under the buttons.
+  expect(screen.queryByText(/keeps your place/)).toBeNull();
+  expect(screen.queryByText(/lives on this phone/)).toBeNull();
   // No error copy before anything went wrong.
   expect(screen.queryByText(strings.auth.error)).toBeNull();
 });

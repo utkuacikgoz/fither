@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Home</title><link rel="stylesheet" href="tokens.css">
+<style>
+.hero { padding-top: 28px; margin-bottom: 36px; }
+.hero .display { margin-top: 10px; max-width: 330px; }
+.hero .btn { margin-top: 26px; }
+.streak { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.streak .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--accent); }
+.streak .n { color: var(--ink); font-weight: 600; font-size: 15px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px 20px 18px; margin-bottom: 14px; }
+.tile .caption { margin-bottom: 14px; }
+.prow { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.prow .name { width: 82px; font-size: 15px; color: var(--ink-soft); font-weight: 500; }
+.prow .track { flex: 1; }
+.skill { display: flex; align-items: center; gap: 16px; }
+.skill .fig { width: 64px; height: 64px; background: var(--ink); -webkit-mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; }
+.skill .name { font-size: 19px; font-weight: 600; }
+.skill .away { color: var(--ink-soft); font-size: 15px; margin-top: 2px; }
+.tab img { filter: none; }
+</style></head><body><div class="phone">
+<div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
+<div class="screen" style="padding-bottom:0">
+  <div class="hero">
+    <div class="caption">Today</div>
+    <div class="display">A workout that fits today.</div>
+    <div class="streak"><span class="dot"></span><span class="n">3-day streak</span><span class="caption">Today's session keeps it going.</span></div>
+    <div class="btn btn-primary">Build today's session</div>
+  </div>
+  <div class="tile">
+    <div class="caption">Patterns</div>
+    <div class="prow"><span class="name">Push</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="prow"><span class="name">Pull</span><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="prow"><span class="name">Squat</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="prow"><span class="name">Hip hinge</span><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="prow" style="margin-bottom:0"><span class="name">Core</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
+  </div>
+  <div class="tile">
+    <div class="caption">Skills</div>
+    <div class="skill"><span class="fig"></span><div><div class="name">Full Push-Up</div><div class="away">2 tiers ahead</div></div></div>
+  </div>
+</div>
+<div class="tabbar">
+  <div class="tab active"><img src="../../../app/assets/icons/tab-today.png" style="filter: invert(62%) sepia(45%) saturate(600%) hue-rotate(95deg) brightness(95%)"><span class="caption">Today</span></div>
+  <div class="tab"><img src="../../../app/assets/icons/tab-progress.png" style="filter: brightness(0.68)"><span class="caption">Progress</span></div>
+  <div class="tab"><img src="../../../app/assets/icons/tab-settings.png" style="filter: brightness(0.68)"><span class="caption">Settings</span></div>
+</div>
+<div class="home-indicator" style="background: var(--ink)"></div>
+</div></body></html>

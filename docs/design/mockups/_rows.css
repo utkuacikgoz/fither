@@ -1,0 +1,12 @@
+.rail { display: flex; align-items: center; gap: 14px; padding-top: 8px; }
+.rail .track { flex: 0 0 140px; }
+.q { margin-top: 40px; margin-bottom: 28px; max-width: 330px; }
+.row { display: flex; align-items: center; gap: 16px; min-height: 84px; padding: 14px 20px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); margin-bottom: 12px; font-size: 20px; font-weight: 600; }
+.row.sel { background: var(--accent-soft); border-color: var(--accent); }
+.row .fig { width: 56px; height: 56px; background: var(--ink); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; flex: 0 0 56px; }
+.row .check { margin-left: auto; color: var(--accent); font-size: 22px; }
+.chip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.chip { min-height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); font-size: 19px; font-weight: 600; }
+.chip.sel { background: var(--accent-soft); border-color: var(--accent); }
+.chip .check { color: var(--accent); }
+.bottom { margin-top: auto; padding-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }

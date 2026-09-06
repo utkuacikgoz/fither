@@ -76,6 +76,41 @@ export const strings = {
       empty: "You've reached every named skill.",
     },
   },
+  // COPY-WRITER (2026-09-06, owner decision): FITHER has a day streak —
+  // consecutive calendar days with a completed block; one missed day per
+  // run is a rest day the streak survives, the second ends it; best run kept.
+  // Register: rule 3 stands. A missed day is a rest day, never a failure.
+  // No "don't break", no "don't lose", no "we miss you"; the streak is a
+  // plain count she can read, and today is only ever an invitation.
+  streak: {
+    // Hub and Progress, compact. Hyphenated compound, so 1 reads cleanly.
+    label: (days: number) => `${days}-day streak`,
+    best: (days: number) => (days === 1 ? "Best: 1 day" : `Best: ${days} days`),
+    // Under the label once this run's one rest day is spent. "Taken", as
+    // in hers to take — a fact, not a warning that the next one counts.
+    restDayUsed: "Rest day taken.",
+    // Hub, streak alive, nothing trained yet today. Names what today does,
+    // never what a miss would cost.
+    atRiskToday: "Today's session keeps it going.",
+    // Finish screen. Day 1 is a start, not a run of one.
+    finish: (days: number) => (days === 1 ? "Day 1." : `Day ${days} in a row.`),
+    title: "Streak",
+    // Progress card with no current run. Forward only: how one begins,
+    // nothing about one that ended.
+    none: "Any day you train starts one.",
+    // Lock-screen bodies for the daily invitation; each stands alone and
+    // stays under 90 characters at any day count. keepsGoing fires on an
+    // untrained day while a run of `days` is alive — including the day
+    // after a rest day, which is why it says "still". nextDay fires the
+    // day after she trained; `days` is what today's session would make,
+    // so it is always 2 or more.
+    notification: {
+      keepsGoing: (days: number) =>
+        `Your ${days}-day streak is still going. Ten minutes today keeps it that way.`,
+      nextDay: (days: number) =>
+        `Today's session would make it ${days} in a row. Whenever you're ready.`,
+    },
+  },
   prompt: {
     dayLabel: "Today",
     // COPY-WRITER (2026-09-04): VoiceOver label for the segmented
@@ -233,7 +268,17 @@ export const strings = {
   onboarding: {
     welcome: {
       headline: "Strength that fits your life.",
-      body: "10, 20 or 30 minutes. No equipment. Built for the day you're actually having.",
+      // COPY-WRITER (2026-09-06, owner review): body departs from the
+      // draft-strings wording. On a first run this screen follows the
+      // sign-in line directly, and `auth.welcomeSub` now owns the terms
+      // (the three lengths, no equipment, adapted daily) — so this line
+      // does the other job: what "fits" means. The daily mechanic (four
+      // quick answers build today's session) and the arc (stronger over
+      // weeks). "Four" sets up `handoff.line` ("Four answers to today's
+      // plan."). No "10, 20 or 30", "no equipment", "adapted", "actually"
+      // or "built for". 19 words; the headline stays the brand tagline
+      // (ADR-0006) and the CTA stays "Begin".
+      body: "Each day, four quick questions build your session: time, energy, quiet, anything sore. Week by week, you get stronger.",
       cta: "Begin",
     },
     equipment: {
@@ -268,20 +313,26 @@ export const strings = {
   // second-class for skipping an account. Apple/Google wordings are the
   // platform-sanctioned conventions — do not restyle them.
   auth: {
+    // COPY-WRITER (2026-09-06, owner review): the first words she reads.
+    // Black ground, the mark, FITHER, this line, two buttons — so it sells
+    // the product in one breath, not the choice below. Two lines split
+    // the promise so neither repeats a word of the other: `welcome` is
+    // the outcome (stronger, anywhere, on her clock), `welcomeSub` is
+    // the concrete terms (the three lengths, no equipment, adapted daily).
     // Not the tagline: onboarding's welcome headline owns the brand
-    // moment (ADR-0006), and on a first run these two screens are
-    // back-to-back. This line just sets up the choice below — no rival
-    // slogan, no feature promise (ADR-0011 §5: no sync claims).
-    welcome: "Choose how you'd like to continue.",
+    // moment (ADR-0006) and follows this screen directly on a first run,
+    // so the pair is written to sit beside it, not echo it — different
+    // verbs, no "actually", no "built for". Every claim is one the app
+    // keeps offline today; nothing about accounts or sync (ADR-0011 §5).
+    welcome: "Get stronger anywhere, on your own time.",
+    welcomeSub: "10, 20 or 30 minutes. No equipment. Adapted to you, every day.",
     apple: "Continue with Apple",
     google: "Continue with Google",
     guest: "Continue without an account",
-    guestNote: "Your training lives on this phone either way.",
-    // Deliberately promises nothing: sync does not exist, so the
-    // move-to-a-new-phone benefit line must WAIT until it does. This is
-    // the whole honest truth of an account today. Revisit when sync
-    // ships — flagged in the copy report.
-    accountNote: "For now, an account simply keeps your place here. Nothing more yet.",
+    // Owner review (2026-09-06): the two captions that used to sit under
+    // the buttons (what an account does today; that training lives on
+    // the phone) were cut — a choice screen carries its options and one
+    // line of framing, nothing under the buttons.
     error: "Couldn't sign you in. Try again in a minute, or continue without an account.",
   },
   // Paywall — docs/copy/draft-strings.md §3, wired verbatim. An honest
@@ -289,7 +340,7 @@ export const strings = {
   paywall: {
     headline: "The honest version",
     letter:
-      "FITHER is one subscription and it covers everything: every session, every length, adapted daily to your time, energy and surroundings. It works offline — on a plane, in a quiet house at 6am. No ads, nothing sold separately.",
+      "FITHER is one subscription and it covers everything: every session, every length, adapted daily to your time, energy and surroundings. It works offline, on a plane or in a quiet house at 6am. No ads, nothing sold separately.",
     trialLine:
       "The first 7 days are free. If it doesn't fit your life, cancel in Settings before the week ends and pay nothing.",
     plans: {
@@ -332,7 +383,7 @@ export const strings = {
     expired: {
       headline: "Your free week is complete",
       letter:
-        "You've had the full seven days — every session, every length, adapted daily. A subscription covers exactly what you've been using: works offline, no ads, nothing sold separately.",
+        "You've had the full seven days: every session, every length, adapted daily. A subscription covers exactly what you've been using: works offline, no ads, nothing sold separately.",
       trialLine:
         "Subscribing starts billing today. Cancel anytime in your App Store settings.",
       cta: "Keep training",
@@ -363,7 +414,7 @@ export const strings = {
     // rendered unless the letter alone tests too sparse.
     included: [
       "Every session, adapted daily",
-      "10, 20 and 30 minutes — all of them",
+      "10, 20 and 30 minutes, all of them",
       "Works fully offline",
       "Skill milestones as you get stronger",
       "No ads, ever",
@@ -386,7 +437,7 @@ export const strings = {
   lifetimeOffer: {
     headline: "One other option",
     body:
-      "You've switched off auto-renew, so your free week ends as a free week and nothing is charged. There is one other way to keep FITHER: one payment covers everything — every session, every length, working offline — with no subscription and no renewal, ever. We'll only ask once.",
+      "You've switched off auto-renew, so your free week ends as a free week and nothing is charged. There is one other way to keep FITHER: one payment covers everything: every session, every length, working offline — with no subscription and no renewal, ever. We'll only ask once.",
     cta: "Pay once, keep everything",
     decline: "Finish my free week as planned",
   },
@@ -408,7 +459,7 @@ export const strings = {
     // them interchangeable: any of them must stand alone on a lock screen.
     daily: {
       fourAnswers:
-        "Today's session is four answers away. Ten, twenty or thirty minutes — your call.",
+        "Today's session is four answers away. Ten, twenty or thirty minutes. Your call.",
       quietTen: "Ten quiet minutes, whenever you are.",
       fitsToday: "A workout that fits today. Ready when you are.",
       yourMinutes: "Somewhere in today there are ten minutes. They're yours.",
@@ -497,7 +548,7 @@ export const strings = {
     // tier; the skill is now what she's training, not yet what she's
     // performed.
     message: (skill: string) =>
-      `${skill} — now in my training. With FITHER.`,
+      `${skill}, now in my training. With FITHER.`,
     card: {
       // Rendered beneath the skill name. Honest tier-entry framing
       // (ADR-0012 §3), and still proud — she earned her way here.

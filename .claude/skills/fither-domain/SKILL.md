@@ -96,13 +96,18 @@ analytics, not in settings, not "optional":
 
 - **No weight.** No weigh-ins, no weight goals, no weight-loss framing.
 - **No calories.** No burn estimates, no food anything.
-- **No streaks.** No streak counters, no "don't break the chain", no loss
-  framing. Missing a day costs the user nothing and we never mention it.
 - **No body-shape language.** No "tone", "sculpt", "bikini", "problem
   areas", no before/after. Progress is what your body can DO.
 
 If a feature idea needs one of these to work, the feature is wrong for this
 product. Flag it; do not build it.
+
+**Streaks (owner decision 2026-09-06, ADR-0018).** FITHER keeps a day
+streak: consecutive calendar days with at least one completed block, one
+missed day per run forgiven as a rest day, the best run kept. It shows on
+the hub, the finish screen, Progress, and may be named in the daily
+invitation. The no-guilt rule still governs its words: a missed day is a
+rest day, never a failure; no "don't break the chain", no "we miss you".
 
 ## Pricing (decided, ADR-0014 — supersedes ADR-0002's prices)
 

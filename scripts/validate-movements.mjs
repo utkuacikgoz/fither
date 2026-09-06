@@ -79,7 +79,7 @@ for (const m of movements) {
   // Forbidden-language gate (fither-domain): applies to data models too.
   // Substring terms catch compounds ("bodyweight"); word terms avoid
   // false positives ("stone" is fine, "tone up" is not).
-  const FORBIDDEN_SUBSTRINGS = /weight|calorie|streak|sculpt|bikini|skinny/i;
+  const FORBIDDEN_SUBSTRINGS = /weight|calorie|sculpt|bikini|skinny/i;
   const FORBIDDEN_WORDS = /\b(fat|burn|burns|tone|toned|toning|slim|slimming|crush|shred|shredded)\b/i;
   const texts = [m.id ?? "", m.name ?? "", ...(Array.isArray(m.cues) ? m.cues : [])];
   for (const text of texts) {

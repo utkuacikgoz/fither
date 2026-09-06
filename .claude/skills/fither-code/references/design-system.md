@@ -147,3 +147,40 @@ unlockBg "#0B0F0C"  onUnlock "#F5F7F5"  unlockAccent "#3DBE7A"
 Dynamic Type without breakage, contrast AA minimum on all text (the muted
 palette must still pass — check inkSoft on bg), VoiceOver labels on the
 player controls, captions/text for anything audio-only.
+
+## Review protocol (owner rule, 2026-09-06)
+
+Every screen is approved by the owner from a screenshot BEFORE it ships,
+in flow order, one screen at a time: sign-in → onboarding → home →
+prompt (each question) → preview → player (each phase) → finish →
+unlock → progress → settings → paywall → lifetime offer → reminder ask.
+A screen is not done until the owner has said so. Feedback is
+implemented immediately, and the lesson is written into this file (the
+"Owner feedback ledger" below) so the same note is never given twice.
+Screens are rendered from the tokens and the bundled typeface at iPhone
+size (390×844 @2x) when the simulator is not at hand; what is approved
+is what gets built.
+
+### Owner feedback ledger
+
+- 2026-09-06, first device walk: no tab bar icons; hub hierarchy flat
+  (hero card and tiles at one weight); headlines timid; warm palette not
+  premium; no visible back on pushed screens; redundant corner pills.
+  → ADR-0017 (green/black/white, Manrope, tab icons, shared back header,
+  the day set on the page).
+- 2026-09-06, sign-in review: the two explanatory captions under the
+  buttons ("an account simply keeps your place…", "your training lives
+  on this phone either way") were unnecessary. → Rule: a choice screen
+  carries its options and one line of framing, no footnotes under
+  buttons. If a button needs a caption to be understood, fix the label.
+- 2026-09-06, sign-in review: "Choose how you'd like to continue" was a
+  form label, not a first impression. → Rule: the first line on any
+  entry screen sells the product in the coach's voice (honest, specific,
+  promotional); form labels never headline a screen.
+- 2026-09-06, welcome review: dashes in the body copy. → Rule: no em or
+  en dashes in any user-facing string (fither-voice rule 8).
+- 2026-09-06, session review: screens 11 to 16 approved. The owner likes
+  the line figures and wants them to move. → Motion for the figures is
+  on the table (see ADR-0019 when decided); until then, every figure
+  surface must be built so a static PNG can be swapped for an animated
+  asset without layout change.
