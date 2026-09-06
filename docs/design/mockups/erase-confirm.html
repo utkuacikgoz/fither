@@ -1,0 +1,27 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Erase</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
+<style>
+.hero { padding-top: 28px; }
+.hero .display { margin-top: 10px; max-width: 330px; }
+.hero .body-soft { margin-top: 12px; }
+.hero .btn { margin-top: 26px; }
+.streak { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.streak .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--accent); }
+.streak .n { font-weight: 600; font-size: 15px; }
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; }
+.center .fig { width: 160px; height: 160px; background: var(--ink); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.pline { position: absolute; top: 54px; left: 0; right: 0; height: 4px; background: var(--rail); } .pline i { display:block; height:100%; width:38%; background: var(--accent); }
+.setc { display: flex; justify-content: space-between; padding-top: 28px; }
+.confirm { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px; margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.confirm .btn { margin-top: 4px; }
+.figs { display: flex; gap: 8px; margin-bottom: 20px; } .figs span { width: 72px; height: 72px; background: var(--ink-soft); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.pts .numeral { color: var(--accent); }
+.ladder { display: flex; align-items: flex-end; justify-content: space-between; margin: 26px 0 6px; height: 72px; }
+.ladder span { width: 42px; height: 42px; background: var(--ink-soft); opacity: .85; -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.ladder span.on { background: var(--accent); opacity: 1; }
+.plan { padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); margin-top: 10px; display: flex; justify-content: space-between; font-size: 18px; font-weight: 600; }
+.plan.sel { background: var(--accent-soft); border-color: var(--accent); }
+.card { background: var(--ink); color: var(--bg); border-radius: 20px; padding: 28px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; width: 100%; }
+.card .rule { width: 40px; height: 4px; border-radius: 2px; background: var(--accent); }
+.card .fig { width: 140px; height: 140px; background: var(--bg); -webkit-mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; }
+.card .mark { width: 22px; height: 22px; background: var(--accent); -webkit-mask: url('../../../app/assets/brand/mark.png') center/contain no-repeat; mask: url('../../../app/assets/brand/mark.png') center/contain no-repeat; }
+</style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div><div class="screen"><div class="rail"><span class="chevron"></span></div><div class="title" style="margin-top:28px">Account</div><div class="body-soft" style="margin-top:8px">Signed in with Apple</div><div class="confirm" style="margin-top:32px;border-color:var(--danger)"><div class="body-large">Erase everything on this phone?</div><div class="body-soft">This removes your training history, points and skills, notes and settings from this phone. There is no copy anywhere else.</div><div class="btn btn-primary">Keep it</div><div class="btn btn-quiet" style="color:var(--danger)">Erase everything</div></div><div style="flex:1"></div></div><div class="home-indicator"></div></div></body></html>
