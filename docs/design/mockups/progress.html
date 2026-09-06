@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Progress</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
+<style>
+.h { margin-top: 12px; margin-bottom: 20px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px; margin-bottom: 14px; }
+.tile .caption { margin-bottom: 14px; }
+.prow { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.prow .name { width: 82px; font-size: 15px; color: var(--ink-soft); font-weight: 500; }
+.prow .track { flex: 1; }
+.prow .tier { width: 84px; text-align: right; font-size: 13px; color: var(--ink-soft); }
+.big { font-size: 34px; font-weight: 700; letter-spacing: -0.6px; line-height: 1.1; }
+.sub { color: var(--ink-soft); font-size: 15px; margin-top: 6px; }
+.orow { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 4px; font-size: 17px; border-top: 1px solid var(--line); }
+.orow:first-of-type { border-top: 0; }
+.orow .ck { color: var(--accent); font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips span { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); font-size: 15px; font-weight: 500; }
+.chips span.sel { background: var(--accent-soft); border-color: var(--accent); }
+.scroll { overflow: hidden; flex: 1; }
+.foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin: 8px 0 6px; }
+</style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
+<div class="screen" style="padding-bottom:83px">
+  <div class="title h">Progress</div>
+  <div class="scroll">
+  <div class="tile">
+    <div class="caption">Streak</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end">
+      <div><div class="big">3-day streak</div><div class="sub">Rest day taken.</div></div>
+      <div style="text-align:right"><div class="sub" style="margin:0">Best: 9 days</div></div>
+    </div>
+  </div>
+  <div class="tile">
+    <div class="caption">Patterns</div>
+    <div class="prow"><span class="name">Push</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 2 of 6</span></div>
+    <div class="prow"><span class="name">Pull</span><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 1 of 6</span></div>
+    <div class="prow"><span class="name">Squat</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 2 of 6</span></div>
+    <div class="prow"><span class="name">Hip hinge</span><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 1 of 6</span></div>
+    <div class="prow" style="margin-bottom:0"><span class="name">Core</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 2 of 6</span></div>
+  </div>
+  <div class="tile">
+    <div class="caption">Skills</div>
+    <div class="body-soft">Named skills land here as you reach new tiers. Every session counts toward the first.</div>
+  </div>
+  <div class="tile" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px"><div class="caption" style="margin:0">Points</div><div class="body" style="font-weight:600">85 points earned</div></div>
+  </div>
+</div>
+<div class="tabbar">
+  <div class="tab "><img src="../../../app/assets/icons/tab-today.png" style="filter:brightness(0.68)"><span class="caption">Today</span></div>
+  <div class="tab active"><img src="../../../app/assets/icons/tab-progress.png" style="filter:invert(62%) sepia(45%) saturate(600%) hue-rotate(95deg) brightness(95%)"><span class="caption">Progress</span></div>
+  <div class="tab "><img src="../../../app/assets/icons/tab-settings.png" style="filter:brightness(0.68)"><span class="caption">Settings</span></div>
+</div><div class="home-indicator"></div></div></body></html>
