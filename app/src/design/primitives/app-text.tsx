@@ -1,12 +1,7 @@
 import { StyleSheet, Text, type TextProps } from "react-native";
 
 import { useTheme } from "../theme";
-import {
-  fontFamily,
-  fontWeight,
-  numeralMaxFontScale,
-  typeScale,
-} from "../tokens";
+import { fontFamily, numeralMaxFontScale, tracking, typeScale } from "../tokens";
 
 type Variant =
   | "caption"
@@ -47,44 +42,43 @@ export function AppText({ variant = "body", color, style, ...rest }: AppTextProp
 
 const styles = StyleSheet.create({
   caption: {
-    fontFamily: fontFamily.text,
+    fontFamily: fontFamily.medium,
     fontSize: typeScale.caption,
-    fontWeight: fontWeight.regular,
+    letterSpacing: tracking.caption,
+    lineHeight: typeScale.caption * 1.4,
   },
   body: {
-    fontFamily: fontFamily.text,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.body,
-    fontWeight: fontWeight.regular,
-    lineHeight: typeScale.body * 1.4,
+    lineHeight: typeScale.body * 1.45,
   },
   bodySoft: {
-    fontFamily: fontFamily.text,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.body,
-    fontWeight: fontWeight.regular,
-    lineHeight: typeScale.body * 1.4,
+    lineHeight: typeScale.body * 1.45,
   },
   bodyLarge: {
-    fontFamily: fontFamily.text,
+    fontFamily: fontFamily.semibold,
     fontSize: typeScale.bodyLarge,
-    fontWeight: fontWeight.medium,
-    lineHeight: typeScale.bodyLarge * 1.35,
+    lineHeight: typeScale.bodyLarge * 1.3,
   },
   title: {
-    fontFamily: fontFamily.text,
+    fontFamily: fontFamily.bold,
     fontSize: typeScale.title,
-    fontWeight: fontWeight.semibold,
-    lineHeight: typeScale.title * 1.25,
+    letterSpacing: tracking.title,
+    lineHeight: typeScale.title * 1.2,
   },
   display: {
-    fontFamily: fontFamily.text,
+    fontFamily: fontFamily.bold,
     fontSize: typeScale.display,
-    fontWeight: fontWeight.semibold,
-    lineHeight: typeScale.display * 1.15,
+    letterSpacing: tracking.display,
+    lineHeight: typeScale.display * 1.1,
   },
   numeral: {
-    fontFamily: fontFamily.numeral,
+    fontFamily: fontFamily.semibold,
     fontSize: typeScale.numeral,
-    fontWeight: fontWeight.semibold,
+    letterSpacing: tracking.display,
+    lineHeight: typeScale.numeral * 1.05,
     fontVariant: ["tabular-nums"],
   },
 });

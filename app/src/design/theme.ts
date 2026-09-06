@@ -1,9 +1,10 @@
-import { useColorScheme } from "react-native";
+import { darkColors, type ColorTheme } from "./tokens";
 
-import { darkColors, lightColors, type ColorTheme } from "./tokens";
-
-/** Light-first; dark supported. Screens read colors only through this hook. */
+/**
+ * The product is dark (ADR-0017): black ground, white type, one green,
+ * whatever the system setting says. Screens read colors only through
+ * this hook, so the day a light toggle is wanted it is one line here.
+ */
 export function useTheme(): ColorTheme {
-  const scheme = useColorScheme();
-  return scheme === "dark" ? darkColors : lightColors;
+  return darkColors;
 }

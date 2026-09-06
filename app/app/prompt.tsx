@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { useTheme } from "../src/design/theme";
+import { pushedHeaderOptions } from "../src/lib/pushed-header";
 import { RouteGuard } from "../src/lib/route-guard";
 import { DailyPromptScreen } from "../src/screens/daily-prompt/daily-prompt-screen";
 
@@ -9,9 +10,9 @@ import { DailyPromptScreen } from "../src/screens/daily-prompt/daily-prompt-scre
 // Deliberately OUTSIDE the tab group: the session flow — prompt,
 // preview, player, finish — shows no tab bar.
 //
-// The way back is the platform's own: a transparent native header
-// carrying only the back chevron (system chrome, not app copy), the
-// same shape every pushed route in this app uses.
+// The way back is the platform's own: the shared pushed-screen header
+// (lib/pushed-header.ts) — a transparent bar carrying only the back
+// chevron, the same on every pushed route in this app.
 //
 // Guarded on entitlement, exactly like the hub: an expired, unpurchased
 // trial cannot generate a new session, so the questions are not
@@ -27,15 +28,7 @@ export default function PromptRoute() {
   const { handoff } = useLocalSearchParams<{ handoff?: string }>();
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: "",
-          headerBackButtonDisplayMode: "minimal",
-          headerTintColor: colors.accent,
-        }}
-      />
+      <Stack.Screen options={pushedHeaderOptions(colors)} />
       <RouteGuard requires="entitledToStart">
         <DailyPromptScreen
           showHandoff={handoff === "1"}

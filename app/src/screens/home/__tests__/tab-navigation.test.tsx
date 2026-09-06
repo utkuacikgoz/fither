@@ -8,7 +8,7 @@ import HomeRoute from "../../../../app/(tabs)/home";
 import PreviewRoute from "../../../../app/preview";
 import PromptRoute from "../../../../app/prompt";
 import { strings } from "../../../copy/strings";
-import { lightColors, fontWeight } from "../../../design/tokens";
+import { darkColors, fontFamily } from "../../../design/tokens";
 import { todayIso } from "../../../lib/dates";
 import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
@@ -102,11 +102,11 @@ describe("the tab bar", () => {
     ]);
   });
 
-  it("is styled from tokens: bone, hairline, sage active, soft ink inactive", () => {
+  it("is styled from tokens: page ground, hairline, green active, soft ink inactive, an icon per tab", () => {
     const screen = render(<TabsLayout />);
     const options = screen.UNSAFE_getByType(Tabs).props.screenOptions;
-    expect(options.tabBarActiveTintColor).toBe(lightColors.accent);
-    expect(options.tabBarInactiveTintColor).toBe(lightColors.inkSoft);
+    expect(options.tabBarActiveTintColor).toBe(darkColors.accent);
+    expect(options.tabBarInactiveTintColor).toBe(darkColors.inkSoft);
     // Weight is the second cue: hue alone is no signifier with a
     // colour-vision deficiency.
     const label = options.tabBarLabel as (p: {
@@ -114,15 +114,28 @@ describe("the tab bar", () => {
       color: string;
       children: string;
     }) => React.ReactElement;
-    const focused = render(label({ focused: true, color: lightColors.accent, children: "Today" }));
-    const idle = render(label({ focused: false, color: lightColors.inkSoft, children: "Today" }));
-    const weight = (s: ReturnType<typeof render>) =>
-      Object.assign({}, ...[s.getByText("Today").props.style].flat(Infinity)).fontWeight;
-    expect(weight(focused)).toBe(fontWeight.semibold);
-    expect(weight(idle)).not.toBe(fontWeight.semibold);
+    const focused = render(label({ focused: true, color: darkColors.accent, children: "Today" }));
+    const idle = render(label({ focused: false, color: darkColors.inkSoft, children: "Today" }));
+    const face = (s: ReturnType<typeof render>) =>
+      Object.assign({}, ...[s.getByText("Today").props.style].flat(Infinity)).fontFamily;
+    expect(face(focused)).toBe(fontFamily.bold);
+    expect(face(idle)).not.toBe(fontFamily.bold);
+    // Every tab draws its own line icon, tinted by the bar (ADR-0017).
+    const tabs = screen.UNSAFE_getAllByType(Tabs.Screen);
+    expect(tabs).toHaveLength(3);
+    for (const node of tabs) {
+      const name = node.props.name as string;
+      const tabOptions = node.props.options as {
+        tabBarIcon: (p: { color: string; focused: boolean; size: number }) => React.ReactElement;
+      };
+      const icon = render(tabOptions.tabBarIcon({ color: darkColors.accent, focused: true, size: 28 }));
+      const id = name === "home" ? "tab-icon-today" : `tab-icon-${name}`;
+      const style = Object.assign({}, ...[icon.getByTestId(id, { includeHiddenElements: true }).props.style].flat(Infinity));
+      expect(style.tintColor).toBe(darkColors.accent);
+    }
     expect(options.tabBarStyle).toMatchObject({
-      backgroundColor: lightColors.bg,
-      borderTopColor: lightColors.line,
+      backgroundColor: darkColors.bg,
+      borderTopColor: darkColors.line,
     });
     // The tabs carry no headers: each screen sets its own title in place.
     expect(options.headerShown).toBe(false);
@@ -163,9 +176,11 @@ describe("the hub and the questions are what a subscription gates", () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8), purchase: null, trialUsed: false });
     const screen = render(<HomeRoute />);
     expect(screen.queryByTestId("home-start")).toBeNull();
-    // The letter where the questions would be, her record's doors intact.
+    // The letter where the questions would be; her record stays one tab
+    // away (the bar is the door now — ADR-0017 removed the corner pills).
     expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
-    expect(screen.getByTestId("open-progress")).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
+    expect(screen.queryByTestId("open-progress")).toBeNull();
     expect(router.replace).not.toHaveBeenCalled();
   });
 

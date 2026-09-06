@@ -8,7 +8,7 @@
       "ios"
     ],
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.fither.app",
@@ -31,7 +31,7 @@
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 240,
-          "backgroundColor": "#FAF7F2"
+          "backgroundColor": "#0B0F0C"
         }
       ]
     ],

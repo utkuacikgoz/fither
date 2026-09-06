@@ -1,5 +1,7 @@
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 
+import { useTheme } from "../src/design/theme";
+import { pushedHeaderOptions } from "../src/lib/pushed-header";
 import { RouteGuard } from "../src/lib/route-guard";
 import { SessionPreviewScreen } from "../src/screens/session-preview/session-preview-screen";
 
@@ -13,12 +15,18 @@ import { SessionPreviewScreen } from "../src/screens/session-preview/session-pre
 // her place in the flow.
 export default function PreviewRoute() {
   const router = useRouter();
+  const colors = useTheme();
   return (
-    <RouteGuard requires="generatedSession">
-      <SessionPreviewScreen
-        onStart={() => router.replace("/session")}
-        onChangeAnswers={() => router.replace("/prompt")}
-      />
-    </RouteGuard>
+    <>
+      {/* The shared pushed-screen header (ADR-0017): the chevron leads
+          back to wherever she came from — the hub, most days. */}
+      <Stack.Screen options={pushedHeaderOptions(colors)} />
+      <RouteGuard requires="generatedSession">
+        <SessionPreviewScreen
+          onStart={() => router.replace("/session")}
+          onChangeAnswers={() => router.replace("/prompt")}
+        />
+      </RouteGuard>
+    </>
   );
 }

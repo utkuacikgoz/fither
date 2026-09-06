@@ -659,7 +659,9 @@ export const strings = {
     // Shown while the session engine or movement library is unavailable
     // on this build. Reviewed by copy-writer (2026-08-31).
     sessionUnavailable: "Couldn't build today's session. Try again in a minute.",
-    noSession: "Couldn't build a session around today's answers.",
+    // COPY-WRITER (2026-09-06): verified — the pool only empties at three
+    // or more areas combined across today's answer and settings.avoid.
+    noSession: "No session fits around this many areas. Drop one from today's answers, or from Always work around in Settings.",
     preparing: "Getting your progress ready…",
     storageUnavailable: "Couldn't load your progress. Please reopen the app.",
     saveUnavailable: "Couldn't save this session. Try again in a minute.",

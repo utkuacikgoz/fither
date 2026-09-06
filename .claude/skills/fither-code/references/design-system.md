@@ -74,45 +74,52 @@ like a failing test. Before shipping any screen, walk it:
    a friend? One decision per screen keeps the model small. If a flow
    needs explaining, restructure the flow instead of adding copy.
 
-## Tokens (light theme; the app is light-first, dark supported)
+## Tokens (ADR-0017 — dark is the product; light kept in the file)
 
 ```ts
-// color
-bg:        "#FAF7F2"  // warm bone — never pure white
-surface:   "#FFFFFF"  // cards, sparingly
-ink:       "#1F1D1A"  // near-black warm text
-inkSoft:   "#6E675E"  // secondary text
-accent:    "#5C6F5E"  // deep sage — buttons, active states
-accentSoft:"#E7ECE7"  // sage wash — selected chips, progress track fill
-gold:      "#B98A2F"  // skill unlocks ONLY; scarcity is what makes it feel earned
-danger:    "#A65746"  // muted terracotta, errors only
-line:      "#E8E2D8"  // hairline borders
-rail:      "#BCC6BC"  // empty progress segment — 3:1 vs the accent fill (the state that matters), visible on the page
+// dark (the face of the app)
+bg:         "#0B0F0C"  // near-black ground
+surface:    "#151B17"  // tiles and cards
+ink:        "#F5F7F5"  // white text
+inkSoft:    "#A3AFA7"  // secondary text — 8.5:1 on bg
+accent:     "#3DBE7A"  // THE green — buttons, fills, active states
+accentSoft: "#16291F"  // the green at low emphasis: selected rows, figure grounds
+danger:     "#E0674F"  // errors only
+line:       "#26302A"  // hairlines
+rail:       "#3A463E"  // empty progress segment — 4.1:1 vs accent, 1.8:1 vs surface
+onAccent:   "#0B0F0C"  // near-black on the green — 8.1:1
 
-// dark theme
-bgDark:      "#171614"
-surfaceDark: "#211F1C"
-inkDark:     "#F2EEE8"
-inkSoftDark: "#A29A8E"
-accentDark:  "#8FA491"
-lineDark:    "#33302B"
-railDark:    "#3B443C"
+// light (tokens only; useTheme() returns dark until a toggle exists)
+bg "#FFFFFF" surface "#F3F6F3" ink "#0F1511" inkSoft "#5C6862"
+accent "#1F5C3F" accentSoft "#E4F0E8" line "#E2E7E3" rail "#9DAAA1" onAccent "#FFFFFF"
+
+// the unlock moment and share card (theme-fixed)
+unlockBg "#0B0F0C"  onUnlock "#F5F7F5"  unlockAccent "#3DBE7A"
 ```
 
 - **Contrast is arithmetic, and a test pins it** (`tokens-contrast.test.ts`):
-  text on the accent fill and secondary text on the page ≥ 4.5:1; a
-  progress form's filled vs empty ≥ 3:1 (a fill this dark on a white card
-  leaves no rail that is 3:1 from both the page and the fill, so the rail
-  serves the state, and is ≥ 1.5:1 on the page); the outlined quiet
-  button's hairline is the accent, ≥ 3:1 on bone, surface and wash.
-- **No pink, no neon, no gradients on chrome.** The sage/gold pairing is
-  the identity; if it starts looking like a generic fitness app, stop.
+  secondary text ≥ 4.5:1 on page and tile; body text ≥ 7:1; a progress
+  form's filled vs empty ≥ 3:1 and the rail ≥ 1.5:1 on the page; the
+  green ≥ 3:1 on every ground the outlined button sits on; the unlock's
+  white on black ≥ 7:1 and its green rule ≥ 3:1.
+- **Green, black, white — nothing else.** No gold, no bone, no gradients,
+  no second accent. Grey is for secondary text and hairlines only. If a
+  screen wants a fourth colour, the screen is wrong.
 - Spacing: 4pt grid; screens breathe with 24pt side margins, 32pt+
   between sections. Radius: 16 for cards, 24 for sheets, buttons pill or
-  16. Shadows barely-there (opacity ≤ 0.06) or none — prefer hairlines.
-- Type: system SF Pro (Text/Display); SF Rounded for big numerals
-  (timers, counts, points) — rounded numbers feel kinder. No custom font
-  until the Brief 6 identity lands; these tokens make swapping cheap.
+  16. Shadows none — hairlines and the tile tone do the separating.
+- **Type: Manrope**, bundled (`app/assets/fonts/manrope`, SIL OFL), loaded
+  at the root before first render. Display 44 and title 30, bold and
+  tight; body 17 regular; captions 13 medium, open tracking; numerals
+  semibold, tabular. Weight is a family name (`fontFamily.bold`), never
+  `fontWeight`. `AppText` is the only Text.
+- **Chrome.** The tab bar: three generated line icons tinted by the bar
+  over a short label, hairline top, active told by green AND weight.
+  Every pushed screen wears the shared transparent header with only the
+  back chevron (`lib/pushed-header.ts`); the session, finish and unlock
+  keep one forward door.
+- **The hub is not a stack of cards.** The day is the page: eyebrow, one
+  display headline, one green action; the tiles beneath are secondary.
 
 ## Feel of the key moments
 
@@ -126,11 +133,12 @@ railDark:    "#3B443C"
   the block list, calm, and one Start button. A 10-minute session is
   presented with exactly the same visual dignity as a 30-minute one —
   same layout, same weight, no "short/quick" badges.
-- **Session player**: bone background, movement name large, one cue line,
+- **Session player**: black ground, movement name large, one cue line,
   huge rounded countdown. Progress = a thin line filling along the top.
   Rest screens are the calmest thing in the app — deliberate exhale.
-- **Unlock**: bone → deep sage full-screen moment, gold accent, the skill
-  name set huge. One button: Continue. This is the only loud screen.
+- **Unlock**: the black full-screen moment, the green drawn as one rule,
+  the skill name set huge in white. One button: Continue. This is the
+  only loud screen.
 - **Paywall**: reads like an honest letter, not a slot machine. Price
   plainly set, two options, no countdowns, no strikethrough theatrics.
 

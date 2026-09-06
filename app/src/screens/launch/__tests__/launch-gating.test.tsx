@@ -259,17 +259,18 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     expect(useProfileStore.getState().history.entries).toHaveLength(1);
   });
 
-  it("the gated day keeps the quiet corner doors — Progress and Settings stay hers (P0 #7)", () => {
+  it("the gated day keeps the day's frame and says what stays hers (P0 #7)", () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
     const screen = render(<LaunchScreen {...callbacks()} />);
-    // The day's frame survives expiry: same label, same doors, same
-    // corner as every other morning — only new-session generation gates.
+    // The day's frame survives expiry: same label as every other morning,
+    // the boundary stated plainly — only new-session generation gates.
+    // Progress and Settings are the tab bar's, so no corner pills here
+    // (ADR-0017: one way to a place, not two).
     expect(screen.getByText(strings.prompt.dayLabel)).toBeTruthy();
     expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
-    fireEvent.press(screen.getByTestId("open-progress"));
-    expect(router.push).toHaveBeenCalledWith("/progress");
-    fireEvent.press(screen.getByTestId("open-settings"));
-    expect(router.push).toHaveBeenCalledWith("/settings");
+    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
+    expect(screen.queryByTestId("open-progress")).toBeNull();
+    expect(screen.queryByTestId("open-settings")).toBeNull();
     // Restore is always available from the gated day (ADR-0009 §3).
     expect(screen.getByTestId("paywall-restore")).toBeTruthy();
   });
@@ -284,15 +285,15 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     await waitFor(() => expect(screen.cbs.onHome).toHaveBeenCalledTimes(1));
   });
 
-  it("an empty restore leaves the gated day standing — doors intact, honest message", async () => {
+  it("an empty restore leaves the gated day standing — frame intact, honest message", async () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8) });
     const screen = render(<LaunchScreen {...callbacks()} />);
     fireEvent.press(screen.getByTestId("paywall-restore"));
     await waitFor(() =>
       expect(screen.getByTestId("paywall-restore-empty")).toBeTruthy(),
     );
-    expect(screen.getByTestId("open-progress")).toBeTruthy();
-    expect(screen.getByTestId("open-settings")).toBeTruthy();
+    expect(screen.getByText(strings.prompt.dayLabel)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
   });
 
   it("a purchase entitles her even with the trial long expired", () => {

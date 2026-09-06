@@ -3,7 +3,6 @@ import { StyleSheet, TextInput, View } from "react-native";
 import { useTheme } from "../theme";
 import {
   fontFamily,
-  fontWeight,
   hairline,
   minTouchTarget,
   radius,
@@ -67,9 +66,8 @@ const styles = StyleSheet.create({
     borderWidth: hairline,
     borderRadius: radius.card,
     padding: spacing.md,
-    fontFamily: fontFamily.text,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.body,
-    fontWeight: fontWeight.regular,
     textAlignVertical: "top",
   },
 });
