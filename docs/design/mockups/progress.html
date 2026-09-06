@@ -3,23 +3,39 @@
 .h { margin-top: 12px; margin-bottom: 20px; }
 .sec { margin-bottom: 28px; }
 .sec .caption { margin-bottom: 12px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 20px; }
 .stats { display: flex; gap: 12px; }
 .stat { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 18px; }
 .stat .numeral { font-size: 44px; line-height: 1; letter-spacing: -1px; }
 .stat .numeral.g { color: var(--accent); }
 .stat .l { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
-.prow { display: flex; align-items: center; gap: 12px; height: 40px; }
-.prow .name { width: 82px; font-size: 16px; }
-.prow .track { flex: 1; }
-.prow .tier { width: 80px; text-align: right; font-size: 13px; color: var(--ink-soft); }
-.orow { display: flex; align-items: center; justify-content: space-between; height: 56px; font-size: 17px; }
-.orow + .orow { border-top: 1px solid var(--line); }
-.orow .ck { color: var(--accent); font-weight: 700; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chips span { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-size: 15px; font-weight: 500; line-height: 1.2; }
-.chips span.sel { background: var(--accent-soft); border-color: var(--accent); }
+.prow { display: flex; align-items: center; gap: 14px; height: 64px; }
+.prow + .prow { border-top: 1px solid var(--line); }
+.prow .fig { width: 44px; height: 44px; flex: 0 0 44px; background: var(--ink); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.prow .txt { flex: 1; min-width: 0; }
+.prow .name { font-size: 17px; font-weight: 600; }
+.prow .mv { font-size: 13px; color: var(--ink-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow .track { width: 72px; }
+.prow .tier { width: 34px; text-align: right; font-size: 15px; font-weight: 600; }
+.prow .tier small { color: var(--ink-soft); font-weight: 500; font-size: 13px; }
+.skill { display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 18px; }
+.skill .fig { width: 72px; height: 72px; flex: 0 0 72px; background: var(--accent); -webkit-mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; }
+.skill .name { font-size: 19px; font-weight: 600; }
+.skill .away { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
+.skill .eyebrow { font-size: 12px; color: var(--accent); font-weight: 600; letter-spacing: 0.4px; margin-bottom: 4px; }
+.row { display: flex; align-items: center; gap: 14px; height: 60px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .ic { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 8px; background: var(--accent-soft); display:flex; align-items:center; justify-content:center; }
+.row .ic i { display:block; width: 12px; height: 12px; border: 2px solid var(--accent); border-radius: 3px; }
+.row .lbl { flex: 1; font-size: 17px; }
+.row .val { color: var(--ink-soft); font-size: 15px; }
+.row .chev { width: 9px; height: 9px; border-right: 1.5px solid var(--ink-soft); border-top: 1.5px solid var(--ink-soft); transform: rotate(45deg); margin-left: 4px; }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 0 18px; }
+.profile { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+.profile .mark { width: 48px; height: 48px; background: var(--accent); -webkit-mask: url('../../../app/assets/brand/mark.png') center/contain no-repeat; mask: url('../../../app/assets/brand/mark.png') center/contain no-repeat; }
+.profile .who { font-size: 17px; font-weight: 600; }
+.profile .st { color: var(--ink-soft); font-size: 14px; margin-top: 2px; }
 .scroll { overflow: hidden; flex: 1; }
+.foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
 </style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
 <div class="screen" style="padding-bottom:83px">
   <div class="title h">Progress</div>
@@ -28,14 +44,10 @@
     <div class="stat"><div class="numeral g">3</div><div class="l">day streak · best 9</div></div>
     <div class="stat"><div class="numeral">85</div><div class="l">points earned</div></div>
   </div></div>
-  <div class="sec"><div class="caption">Patterns</div><div class="tile">
-    <div class="prow"><span class="name">Push</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 2 of 6</span></div>
-    <div class="prow"><span class="name">Pull</span><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 1 of 6</span></div>
-    <div class="prow"><span class="name">Squat</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 2 of 6</span></div>
-    <div class="prow"><span class="name">Hip hinge</span><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 1 of 6</span></div>
-    <div class="prow"><span class="name">Core</span><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><span class="tier">Tier 2 of 6</span></div>
-  </div></div>
-  <div class="sec"><div class="caption">Skills</div><div class="tile"><div class="body-soft" style="font-size:16px">Named skills land here as you reach new tiers. Every session counts toward the first.</div></div></div>
+  <div class="sec"><div class="caption">Next skill</div>
+    <div class="skill"><span class="fig"></span><div><div class="eyebrow">2 TIERS AHEAD</div><div class="name">Full Push-Up</div><div class="away">Your first named skill. Every session counts toward it.</div></div></div>
+  </div>
+  <div class="sec"><div class="caption">Patterns</div><div class="group"><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/incline-push-up.png')"></span><div class="txt"><div class="name">Push</div><div class="mv">Incline push-up</div></div><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="tier">2<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/shoulder-blade-squeeze.png')"></span><div class="txt"><div class="name">Pull</div><div class="mv">Blade squeeze</div></div><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><div class="tier">1<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/sit-to-stand.png')"></span><div class="txt"><div class="name">Squat</div><div class="mv">Sit-to-stand</div></div><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="tier">2<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/glute-bridge.png')"></span><div class="txt"><div class="name">Hip hinge</div><div class="mv">Glute bridge</div></div><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><div class="tier">1<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/incline-plank.png')"></span><div class="txt"><div class="name">Core</div><div class="mv">Incline plank</div></div><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="tier">2<small>/6</small></div></div></div></div>
   </div>
 </div>
 <div class="tabbar"><div class="tab "><img src="../../../app/assets/icons/tab-today.png" style="filter:brightness(0.68)"><span class="caption">Today</span></div><div class="tab active"><img src="../../../app/assets/icons/tab-progress.png" style="filter:invert(62%) sepia(45%) saturate(600%) hue-rotate(95deg) brightness(95%)"><span class="caption">Progress</span></div><div class="tab "><img src="../../../app/assets/icons/tab-settings.png" style="filter:brightness(0.68)"><span class="caption">Settings</span></div></div><div class="home-indicator"></div></div></body></html>

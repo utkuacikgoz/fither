@@ -436,24 +436,29 @@ export const strings = {
       "No ads, ever",
     ],
   },
-  // COPY-WRITER (2026-09-05, owner decision): the one-time offer screen.
-  // Shown ONCE, on day 3 of her free week, and only after she has
-  // switched off the trial's auto-renew in her App Store settings. One
-  // decision: take the lifetime purchase, or not. Same register as the
-  // paywall letter. The body acknowledges her choice as a plain fact —
-  // no guilt, no question, no "are you sure" — then states the offer:
-  // one payment, everything, no renewal. The price is not in the prose,
-  // exactly as the paywall letter carries none: the screen must render
-  // paywall.plans.lifetime (label, price, note) beside this body, or she
-  // never sees the amount. "We'll only ask once" is the one true fact
-  // about frequency, stated flatly; no countdown, no "last chance", no
-  // "only today". `cta` names the outcome she gets. `decline` names the
-  // plain state she is already in, with equal dignity — it is the
-  // default path, not a loss.
+  // COPY-WRITER (2026-09-06, owner decision; ADR-0014 §2): the one-time
+  // offer screen, reshaped to match the redesigned paywall rather than
+  // its letter. Shown ONCE, on day 3 of her free week, and only after
+  // she has switched off the trial's auto-renew. Order on screen:
+  // `headline` (the promise: keeping the climb she has started, the
+  // same ladder image the paywall uses), `lead` (two plain facts: her
+  // free week still ends free with nothing charged, and this is the one
+  // other way to keep FITHER), `body` (one sentence, what one payment
+  // covers), `priceLine`, `cta`, `decline`. Her auto-renew choice is
+  // acknowledged as a fact in "still ends free", never questioned. No
+  // urgency, no countdown, no "last chance", no "only today", no
+  // strikethrough, no "best value". `priceLine` is the amount in prose
+  // form; if the screen also renders the paywall.plans.lifetime row,
+  // show one or the other, not both. `cta` names the outcome she gets.
+  // `decline` names the plain state she is already in, with equal
+  // dignity: it is the default path, not a loss. The old "We'll only
+  // ask once" line is dropped with the letter; the once-only rule is
+  // enforced by the ask record, not by the copy.
   lifetimeOffer: {
-    headline: "One other option",
-    body:
-      "You've switched off auto-renew, so your free week ends as a free week and nothing is charged. There is one other way to keep FITHER: one payment covers everything: every session, every length, working offline, with no subscription and no renewal, ever. We'll only ask once.",
+    headline: "Keep the climb.",
+    lead: "Your free week still ends free, nothing charged. One other way to keep FITHER.",
+    body: "One payment covers every session, every length, adapted daily, for good.",
+    priceLine: "$99, once.",
     cta: "Pay once, keep everything",
     decline: "Finish my free week as planned",
   },
