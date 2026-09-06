@@ -1,31 +1,27 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Lifetime</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
 <style>
-.h { margin-top: 12px; margin-bottom: 20px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px; margin-bottom: 14px; }
-.tile .caption { margin-bottom: 14px; }
-.prow { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
-.prow .name { width: 82px; font-size: 15px; color: var(--ink-soft); font-weight: 500; }
-.prow .track { flex: 1; }
-.prow .tier { width: 84px; text-align: right; font-size: 13px; color: var(--ink-soft); }
-.big { font-size: 34px; font-weight: 700; letter-spacing: -0.6px; line-height: 1.1; }
-.sub { color: var(--ink-soft); font-size: 15px; margin-top: 6px; }
-.orow { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 4px; font-size: 17px; border-top: 1px solid var(--line); }
-.orow:first-of-type { border-top: 0; }
-.orow .ck { color: var(--accent); font-weight: 700; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chips span { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); font-size: 15px; font-weight: 500; }
-.chips span.sel { background: var(--accent-soft); border-color: var(--accent); }
-.scroll { overflow: hidden; flex: 1; }
-.foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin: 8px 0 6px; }
-</style>
-<style>.plan { padding: 18px 20px; border: 1px solid var(--accent); border-radius: var(--r-card); background: var(--accent-soft); display:flex; justify-content:space-between; font-size:19px; font-weight:600; }</style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
+.lh { letter-spacing: 4px; font-weight: 700; font-size: 13px; margin-top: 14px; }
+.display { font-size: 44px; margin-top: 12px; }
+.lead { margin-top: 12px; max-width: 340px; }
+.ladder { display: flex; align-items: flex-end; justify-content: space-between; margin: 30px 0 6px; height: 88px; }
+.ladder span { width: 50px; height: 50px; background: var(--ink-soft); opacity: .85; -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.ladder span.on { background: var(--accent); opacity: 1; }
+.ladder span:nth-child(2) { height: 56px; width: 56px; } .ladder span:nth-child(3) { height: 62px; width: 62px; } .ladder span:nth-child(4) { height: 68px; width: 68px; } .ladder span:nth-child(5) { height: 74px; width: 74px; } .ladder span:nth-child(6) { height: 80px; width: 80px; }
+.tiers { display: flex; justify-content: space-between; } .tiers i { width: 46px; height: 4px; border-radius: 2px; background: var(--rail); } .tiers i.on { background: var(--accent); }
+.body { margin-top: 24px; max-width: 340px; }
+.price { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border: 1px solid var(--accent); border-radius: var(--r-card); background: var(--accent-soft); font-size: 19px; font-weight: 600; margin-top: 22px; }
+.price .big { font-size: 28px; letter-spacing: -0.5px; }
+.bottom { padding-bottom: 8px; gap: 6px; }
+</style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
 <div class="screen">
   <div class="rail"><span class="chevron"></span></div>
-  <div class="caption" style="letter-spacing:4px;font-weight:700;margin-top:20px">FITHER</div>
-  <div class="title" style="margin:14px 0 12px">One other option</div>
-  <div class="body" style="max-width:340px">You've switched off auto-renew, so your free week ends as a free week and nothing is charged. There is one other way to keep FITHER: one payment covers everything, every session, every length, for good.</div>
-  <div style="height:26px"></div>
-  <div class="plan"><span>Lifetime</span><span>$99 once</span></div>
+  <div class="caption lh">FITHER</div>
+  <div class="display">Keep the climb.</div>
+  <div class="body-soft lead">Your free week still ends free, nothing charged. One other way to keep FITHER.</div>
+  <div class="ladder"><span class="on" style="--m:url('../../../app/assets/movements/supported-sit-to-stand.png')"></span><span class="on" style="--m:url('../../../app/assets/movements/sit-to-stand.png')"></span><span class="on" style="--m:url('../../../app/assets/movements/air-squat.png')"></span><span class="" style="--m:url('../../../app/assets/movements/split-squat.png')"></span><span class="" style="--m:url('../../../app/assets/movements/elevated-split-squat.png')"></span><span class="" style="--m:url('../../../app/assets/movements/single-leg-sit-to-stand.png')"></span></div>
+  <div class="tiers"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+  <div class="body">One payment covers every session, every length, adapted daily, for good.</div>
+  <div class="price"><span>Lifetime</span><span class="big">$99, once.</span></div>
   <div class="bottom">
     <div class="btn btn-primary">Pay once, keep everything</div>
     <div class="btn btn-quiet">Finish my free week as planned</div>
