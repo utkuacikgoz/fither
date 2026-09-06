@@ -2,7 +2,7 @@ import { render } from "@testing-library/react-native";
 import React from "react";
 import { Image } from "react-native";
 
-import { lightColors } from "../../tokens";
+import { darkColors } from "../../tokens";
 import { BrandMark } from "../brand-mark";
 
 // The drawn mark, as the app renders it: one white asset, tinted to the
@@ -14,7 +14,7 @@ it("tints the one asset to the accent rather than shipping a colour per theme", 
   const screen = render(<BrandMark testID="mark" />);
   const image = screen.getByTestId("mark", hidden).findByType(Image);
   const style = Object.assign({}, ...[image.props.style].flat());
-  expect(style.tintColor).toBe(lightColors.accent);
+  expect(style.tintColor).toBe(darkColors.accent);
 });
 
 it("is decorative — the headline beside it carries the brand words", () => {

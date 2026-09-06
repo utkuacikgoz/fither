@@ -9,63 +9,61 @@ export interface ColorTheme {
   inkSoft: string;
   accent: string;
   accentSoft: string;
-  gold: string;
   danger: string;
   line: string;
   /**
    * The empty segment of a progress form (a ladder rail, the session
-   * line's track). Chosen by arithmetic, not by eye: a fill this dark on
-   * a white card leaves no colour that is 3:1 from BOTH the page and the
-   * fill, so the rail is set for the state that carries meaning — filled
-   * vs empty ≥ 3:1 in both themes — and merely visible against the page
-   * (≥ 1.5:1). The old accentSoft rail was 1.2:1 against the card: "Tier
-   * 2 of 6" read as two pills with no ladder (reviewer should-fix).
+   * line's track). Chosen by arithmetic, not by eye: filled vs empty
+   * ≥ 3:1 in both themes, and the rail merely visible against the page
+   * (≥ 1.5:1). The contrast test pins it.
    */
   rail: string;
   /**
    * Text on an accent fill. Theme-aware because the accents invert in
-   * brightness: bone on deep sage passes AA in light (5.05:1), but bone
-   * on the LIGHT dark-mode sage is 2.49:1 — dark mode pairs the light
-   * sage fill with dark ink instead (6.79:1). Always read this from the
-   * theme, never from a static constant.
+   * brightness: white on the deep green of the light theme, near-black
+   * on the bright green of the dark theme — both ≥ 4.5:1. Always read
+   * this from the theme, never from a static constant.
    */
   onAccent: string;
 }
 
-export const lightColors: ColorTheme = {
-  bg: "#FAF7F2", // warm bone — never pure white
-  surface: "#FFFFFF", // cards, sparingly
-  ink: "#1F1D1A", // near-black warm text
-  inkSoft: "#6E675E", // secondary text
-  accent: "#5C6F5E", // deep sage — buttons, active states
-  accentSoft: "#E7ECE7", // sage wash — selected chips, progress track fill
-  gold: "#B98A2F", // skill unlocks ONLY
-  danger: "#A65746", // muted terracotta, errors only
-  line: "#E8E2D8", // hairline borders
-  rail: "#BCC6BC", // empty progress segment — 3.07:1 vs accent, 1.76:1 vs surface
-  onAccent: "#FAF7F2", // bone on deep sage — 5.05:1
-};
+// ADR-0017: green, black and white. One green per theme, near-black or
+// white ground, grey only for secondary text and hairlines. No gold, no
+// bone, no wash that is not the green at low emphasis. Dark is the face
+// of the product; light is kept for the day the owner wants a toggle.
 
 export const darkColors: ColorTheme = {
-  bg: "#171614",
-  surface: "#211F1C",
-  ink: "#F2EEE8",
-  inkSoft: "#A29A8E",
-  accent: "#8FA491",
-  accentSoft: "#2A2F2A", // sage wash, dark equivalent (derived: accentDark at low emphasis)
-  gold: "#B98A2F",
-  danger: "#A65746",
-  line: "#33302B",
-  rail: "#3B443C", // empty progress segment — 3.8:1 vs accent, 1.63:1 vs surface
-  onAccent: "#171614", // dark ink on light sage — 6.79:1 (bone would be 2.49:1)
+  bg: "#0B0F0C", // near-black with a breath of green
+  surface: "#151B17", // tiles and cards
+  ink: "#F5F7F5", // white text
+  inkSoft: "#A3AFA7", // secondary text — 8.5:1 on bg
+  accent: "#3DBE7A", // THE green — buttons, fills, active states
+  accentSoft: "#16291F", // the green at low emphasis: selected rows, figure grounds
+  danger: "#E0674F", // errors only
+  line: "#26302A", // hairlines
+  rail: "#3A463E", // empty progress segment — 4.1:1 vs accent, 1.8:1 vs surface
+  onAccent: "#0B0F0C", // near-black on bright green — 8.1:1
 };
 
-// The unlock moment: bone → deep sage full screen with gold accent. The
-// sage here is the LIGHT accent in both themes (the moment is the same
-// everywhere), so its pairings are static: bone text on the sage (5.05:1)
-// and, for the inverse button, sage text on a bone fill (same 5.05:1).
-export const unlockBg = "#5C6F5E";
-export const onUnlock = "#FAF7F2";
+export const lightColors: ColorTheme = {
+  bg: "#FFFFFF",
+  surface: "#F3F6F3",
+  ink: "#0F1511",
+  inkSoft: "#5C6862", // 5.8:1 on white
+  accent: "#1F5C3F", // deep green — 7.9:1 under white text
+  accentSoft: "#E4F0E8",
+  danger: "#B4432F",
+  line: "#E2E7E3",
+  rail: "#9DAAA1", // 3.3:1 vs accent, 2.4:1 vs white
+  onAccent: "#FFFFFF",
+};
+
+// The unlock moment: the one full-bleed screen. Black ground, white
+// skill name, the green as a single drawn rule. Theme-fixed, so it looks
+// the same wherever it lands (the share card too).
+export const unlockBg = "#0B0F0C";
+export const onUnlock = "#F5F7F5";
+export const unlockAccent = "#3DBE7A";
 
 // Spacing: 4pt grid. Screens breathe with 24pt side margins, 32pt+ sections.
 export const spacing = {
@@ -85,15 +83,23 @@ export const radius = {
   pill: 999,
 } as const;
 
-// Type scale. Body 17pt minimum; timers and counts huge (48–72pt). Never
-// more than two type sizes visible at once outside settings.
+// Type scale. Body 17pt minimum; timers and counts huge. Confident
+// headlines (ADR-0017): the display and title sizes are what make a
+// screen read as designed rather than typed.
 export const typeScale = {
-  caption: 13, // sparing: hairline metadata only
+  caption: 13, // eyebrows and hairline metadata
   body: 17,
   bodyLarge: 20,
-  title: 28,
-  display: 40,
+  title: 30,
+  display: 44,
   numeral: 64, // timers, counts, points
+} as const;
+
+/** Letter-spacing per role: tight at display sizes, open on eyebrows. */
+export const tracking = {
+  display: -1,
+  title: -0.4,
+  caption: 0.4,
 } as const;
 
 /**
@@ -106,17 +112,14 @@ export const typeScale = {
  */
 export const numeralMaxFontScale = 2;
 
-export const fontWeight = {
-  regular: "400",
-  medium: "500",
-  semibold: "600",
-} as const;
-
-// System font until the Brief 6 identity lands. Numerals should render in
-// a rounded design when available; tokenised so the swap is one line.
+// Manrope (SIL OFL, bundled under assets/fonts/manrope — ADR-0017), one
+// family for text and numerals. iOS registers each weight file under its
+// own name, so weight is chosen by family here, never by fontWeight.
 export const fontFamily = {
-  text: "System",
-  numeral: "System",
+  regular: "Manrope_400Regular",
+  medium: "Manrope_500Medium",
+  semibold: "Manrope_600SemiBold",
+  bold: "Manrope_700Bold",
 } as const;
 
 export const hairline = 1;

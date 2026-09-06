@@ -8,8 +8,11 @@ import os
 import math, os
 
 OUT = os.environ.get("BRAND_OUT", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "brand"))
-SAGE, BONE, GOLD = (92, 111, 94), (250, 247, 242), (185, 138, 47)
-HEX = {"sage": "#5C6F5E", "bone": "#FAF7F2", "gold": "#B98A2F", "ink": "#1F1D1A"}
+# ADR-0017: green, black and white. The names below are kept for the
+# file paths the brand set has always used; the values are the product's:
+# SAGE is the green, BONE the black ground, GOLD the white.
+SAGE, BONE, GOLD = (61, 190, 122), (11, 15, 12), (245, 247, 245)
+HEX = {"sage": "#3DBE7A", "bone": "#0B0F0C", "gold": "#F5F7F5", "ink": "#F5F7F5"}
 
 
 def cubic(p0, p1, p2, p3, n=64):
@@ -122,7 +125,7 @@ def svg_figure(size, color, scale=1.0, ox=0.0, oy=0.0):
 
 
 S = 4  # supersample
-def raster_icon(px, bg=SAGE, fg=BONE, pad_scale=0.98, ox=-0.037, oy=-0.028):
+def raster_icon(px, bg=BONE, fg=SAGE, pad_scale=0.98, ox=-0.037, oy=-0.028):
     img = Image.new("RGB", (px*S, px*S), bg)
     draw_raster(ImageDraw.Draw(img), px*S, fg, pad_scale, ox, oy)
     return img.resize((px, px), Image.LANCZOS)
@@ -142,12 +145,12 @@ with open(f"{OUT}/fither-mark.svg", "w") as f:
 </svg>
 ''')
 
-# --- SVG: app icon (sage ground, bone figure) ---
+# --- SVG: app icon (black ground, green figure — ADR-0017) ---
 with open(f"{OUT}/fither-icon.svg", "w") as f:
     f.write(f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <title>FITHER icon</title>
-  <rect width="1024" height="1024" fill="{HEX["sage"]}"/>
-{svg_figure(1024, HEX["bone"], 0.98, -0.037, -0.028)}
+  <rect width="1024" height="1024" fill="{HEX["bone"]}"/>
+{svg_figure(1024, HEX["sage"], 0.98, -0.037, -0.028)}
 </svg>
 ''')
 

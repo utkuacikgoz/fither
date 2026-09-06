@@ -130,7 +130,7 @@ export function ProgressScreen() {
                     (mapping). Decorative — the name carries the row. */}
                 <AppText
                   variant="body"
-                  color={colors.gold}
+                  color={colors.accent}
                   importantForAccessibility="no"
                   accessibilityElementsHidden
                 >

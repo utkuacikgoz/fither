@@ -7,8 +7,8 @@ import { AppText } from "../../design/primitives/app-text";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Card } from "../../design/primitives/card";
+import { FadeIn } from "../../design/primitives/fade-in";
 import { Screen } from "../../design/primitives/screen";
-import { useTheme } from "../../design/theme";
 import { motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useTodayIso } from "../../lib/use-today";
@@ -22,10 +22,12 @@ import { useLifetimeOffer } from "../../state/use-lifetime-offer";
 import { todayTraining } from "../../state/today-training";
 import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
 
-// The home hub (ADR-0013 §4): the app's face between sessions. Three
-// cards, in priority order — today, the five ladders, the skills she has
-// named — each a read of what the stores and the engine already carry.
-// The day's card is the only primary action on the screen.
+// The home hub (ADR-0013 §4, rehung in ADR-0017): the app's face between
+// sessions. One hierarchy — an eyebrow, one display headline and the
+// one green action set straight on the page, then two quieter tiles
+// (the five ladders, the skill she is climbing toward), each a read of
+// what the stores and the engine already carry. The hero is not a card:
+// the day is the page, the tiles are on it.
 //
 // Nothing here decides a rule: "done for today" comes from
 // state/today-training.ts (one definition, shared), tiers come from the
@@ -35,7 +37,6 @@ import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
 // one of them itself.
 
 export function HomeScreen() {
-  const colors = useTheme();
   const reduceMotion = useReducedMotion();
   // The one lifetime ask (ADR-0014), if it is due — decided by the offer
   // store and the billing port, never here.
@@ -71,80 +72,87 @@ export function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Card
-          tone="hero"
-          order={0}
+        <FadeIn
           reduceMotion={reduceMotion}
-          testID="home-today"
+          rise={motion.riseDistance}
+          style={styles.hero}
         >
-          <AppText variant="caption">{strings.prompt.dayLabel}</AppText>
+          <View testID="home-today">
+            <AppText variant="caption">{strings.prompt.dayLabel}</AppText>
 
-          {inFlight ? (
-            <>
-              <AppText
-                variant="title"
-                accessibilityRole="header"
-                style={styles.cardTitle}
-              >
-                {strings.resume.headline}
-              </AppText>
-              <PrimaryButton
-                testID="home-keep-going"
-                label={strings.resume.continueLabel}
-                onPress={() => router.push("/session")}
-              />
-            </>
-          ) : training.trained ? (
-            <>
-              <AppText
-                variant="title"
-                accessibilityRole="header"
-                style={styles.cardTitleTight}
-              >
-                {strings.prompt.completedToday.headline}
-              </AppText>
-              <AppText
-                variant="bodySoft"
-                style={styles.cardLine}
-                testID="home-completed-line"
-              >
-                {training.everyBlockCompleted
-                  ? strings.prompt.completedToday.line(training.minutes)
-                  : strings.prompt.completedToday.lineSome}
-              </AppText>
-              {/* Training again is HER choice — quiet, no urgency, no
+            {inFlight ? (
+              <>
+                <AppText
+                  variant="display"
+                  accessibilityRole="header"
+                  style={styles.headline}
+                >
+                  {strings.resume.headline}
+                </AppText>
+                <View style={styles.action}>
+                  <PrimaryButton
+                    testID="home-keep-going"
+                    label={strings.resume.continueLabel}
+                    onPress={() => router.push("/session")}
+                  />
+                </View>
+              </>
+            ) : training.trained ? (
+              <>
+                <AppText
+                  variant="display"
+                  accessibilityRole="header"
+                  style={styles.headline}
+                >
+                  {strings.prompt.completedToday.headline}
+                </AppText>
+                <AppText
+                  variant="bodySoft"
+                  style={styles.line}
+                  testID="home-completed-line"
+                >
+                  {training.everyBlockCompleted
+                    ? strings.prompt.completedToday.line(training.minutes)
+                    : strings.prompt.completedToday.lineSome}
+                </AppText>
+                {/* Training again is HER choice — quiet, no urgency, no
                   reward framing. Nothing pushes her. */}
-              <View style={styles.quietAction}>
-                <QuietButton
-                  testID="home-another-session"
-                  outlined
-                  label={strings.prompt.completedToday.action}
-                  onPress={() => router.push("/prompt")}
-                />
-              </View>
-            </>
-          ) : (
-            <>
-              <AppText
-                variant="title"
-                accessibilityRole="header"
-                style={styles.cardTitle}
-              >
-                {strings.home.today.line}
-              </AppText>
-              <PrimaryButton
-                testID="home-start"
-                label={strings.home.today.start}
-                // Built today but never started: the session exists, so
-                // the door is the preview (its plan and adaptation line),
-                // not the four questions again and not the player.
-                onPress={() =>
-                  router.push(todaySession === "built" ? "/preview" : "/prompt")
-                }
-              />
-            </>
-          )}
-        </Card>
+                <View style={styles.quietAction}>
+                  <QuietButton
+                    testID="home-another-session"
+                    outlined
+                    label={strings.prompt.completedToday.action}
+                    onPress={() => router.push("/prompt")}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <AppText
+                  variant="display"
+                  accessibilityRole="header"
+                  style={styles.headline}
+                >
+                  {strings.home.today.line}
+                </AppText>
+                <View style={styles.action}>
+                  <PrimaryButton
+                    testID="home-start"
+                    label={strings.home.today.start}
+                    // Built today but never started: the session exists, so
+                    // the door is the preview (its plan and adaptation line),
+                    // not the four questions again and not the player.
+                    onPress={() =>
+                      router.push(
+                        todaySession === "built" ? "/preview" : "/prompt",
+                      )
+                    }
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </FadeIn>
 
         <Card
           order={1}
@@ -177,7 +185,11 @@ export function HomeScreen() {
               {/* The movement she is climbing toward, drawn — the same
                   figure she will meet in the session (ADR-0013). */}
               <MovementFigure
-                movementId={skillFigureId(library, upcoming.pattern, upcoming.tier)}
+                movementId={skillFigureId(
+                  library,
+                  upcoming.pattern,
+                  upcoming.tier,
+                )}
               />
               <View style={styles.skillName}>
                 <AppText variant="body">
@@ -203,32 +215,40 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
+    // A tab, not a pushed route (ADR-0013 §4): no header to clear, so
+    // the eyebrow starts just below the safe area.
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
-  cardTitle: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+  hero: {
+    // The day, set on the page: room above the tiles so the headline and
+    // its one action read as the screen, not as a first card.
+    paddingTop: spacing.lg,
+    marginBottom: spacing.xl,
   },
-  cardTitleTight: {
+  headline: {
     marginTop: spacing.sm,
-    marginBottom: spacing.sm,
   },
-  cardLine: {
-    marginBottom: spacing.lg,
+  line: {
+    marginTop: spacing.md,
+  },
+  action: {
+    marginTop: spacing.lg,
+  },
+  quietAction: {
+    marginTop: spacing.lg,
+    alignItems: "flex-start",
   },
   cardHeading: {
     marginBottom: spacing.md,
   },
-  quietAction: {
-    alignItems: "flex-start",
-  },
   skillRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   skillName: {
-    flexShrink: 1,
+    flex: 1,
+    gap: spacing.xs,
   },
 });

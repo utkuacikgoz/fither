@@ -6,11 +6,11 @@ import { AppText } from "../../design/primitives/app-text";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { Screen } from "../../design/primitives/screen";
 import {
-  lightColors,
   motion,
   onUnlock,
   radius,
   spacing,
+  unlockAccent,
   unlockBg,
 } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
@@ -18,7 +18,7 @@ import { useSessionStore } from "../../state/session-store";
 import { shareSkill } from "./share-skill";
 import { SkillShareCard } from "./skill-share-card";
 
-// The only loud screen in the app: deep sage full-screen, gold accent,
+// The only loud screen in the app: black full-screen, the green as a rule,
 // the skill name set huge. One button: Continue — the share card is an
 // invitation beside it, never a rival call to action.
 //
@@ -107,8 +107,7 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
   return (
     <Screen backgroundColor={unlockBg}>
       <Animated.View style={styles.center}>
-        {/* Audit S8: gold text on sage is ~1.75:1 — far under AA. The
-            heading reads in bone; gold stays decorative as a short rule
+        {/* The heading reads in white; the green stays a short drawn rule
             beneath it (the share card's established pattern). */}
         <Animated.View style={entrance(eyebrow)}>
           <AppText variant="caption" color={onUnlock}>
@@ -119,7 +118,7 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
             the product allows itself, and only here. */}
         <Animated.View
           style={[
-            styles.goldRule,
+            styles.rule,
             { opacity: rule, transform: [{ scaleX: rule }] },
           ]}
         />
@@ -183,11 +182,11 @@ const styles = StyleSheet.create({
   skillName: {
     textAlign: "center",
   },
-  goldRule: {
+  rule: {
     width: spacing.xl,
     height: spacing.xs / 2,
     borderRadius: radius.pill,
-    backgroundColor: lightColors.gold,
+    backgroundColor: unlockAccent,
   },
   note: {
     marginTop: spacing.md,

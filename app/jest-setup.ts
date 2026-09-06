@@ -208,3 +208,15 @@ jest.mock("@sentry/react-native", () => ({
   captureException: jest.fn(),
   nativeCrash: jest.fn(),
 }));
+
+// The typeface (ADR-0017) is "loaded" instantly in tests; the splash API
+// is inert. Both are pure plumbing around assets that jest stubs anyway.
+jest.mock("expo-font", () => ({
+  useFonts: jest.fn(() => [true, null]),
+  loadAsync: jest.fn(async () => undefined),
+  isLoaded: jest.fn(() => true),
+}));
+jest.mock("expo-splash-screen", () => ({
+  preventAutoHideAsync: jest.fn(async () => true),
+  hideAsync: jest.fn(async () => true),
+}));

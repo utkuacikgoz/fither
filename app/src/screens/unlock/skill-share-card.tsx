@@ -6,12 +6,15 @@ import { AppText } from "../../design/primitives/app-text";
 import { BrandMark } from "../../design/primitives/brand-mark";
 import { WORDMARK } from "../../design/primitives/wordmark";
 import {
+  darkColors,
   hairline,
-  lightColors,
   minTouchTarget,
+  onUnlock,
   radius,
   spacing,
   trackingWide,
+  unlockAccent,
+  unlockBg,
 } from "../../design/tokens";
 
 // The card typesets the shared WORDMARK constant in its own small,
@@ -42,25 +45,25 @@ export const SkillShareCard = forwardRef<View, SkillShareCardProps>(
       <View
         ref={ref}
         collapsable={false}
-        style={[styles.body, { backgroundColor: lightColors.surface }]}
+        style={[styles.body, { backgroundColor: unlockBg }]}
         testID={testID ? `${testID}-artifact` : undefined}
       >
-        <View style={styles.goldRule} />
-        <AppText variant="title" color={lightColors.ink} style={styles.centered}>
+        <View style={styles.rule} />
+        <AppText variant="title" color={onUnlock} style={styles.centered}>
           {skillName}
         </AppText>
         <AppText
           variant="bodySoft"
-          color={lightColors.inkSoft}
+          color={darkColors.inkSoft}
           style={styles.centered}
         >
           {strings.share.card.line}
         </AppText>
         <View style={styles.brand}>
-          <BrandMark size="small" tint={lightColors.accent} />
+          <BrandMark size="small" tint={unlockAccent} />
           <AppText
             variant="caption"
-            color={lightColors.inkSoft}
+            color={darkColors.inkSoft}
             style={styles.wordmark}
           >
             {WORDMARK}
@@ -73,7 +76,7 @@ export const SkillShareCard = forwardRef<View, SkillShareCardProps>(
         onPress={onShare}
         style={({ pressed }) => [styles.shareRow, { opacity: pressed ? 0.6 : 1 }]}
       >
-        <AppText variant="body" color={lightColors.accent}>
+        <AppText variant="body" color={unlockAccent}>
           {strings.share.action}
         </AppText>
       </Pressable>
@@ -84,7 +87,7 @@ export const SkillShareCard = forwardRef<View, SkillShareCardProps>(
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: lightColors.surface,
+    backgroundColor: unlockBg,
     borderRadius: radius.card,
     alignSelf: "stretch",
   },
@@ -101,11 +104,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     overflow: "hidden",
   },
-  goldRule: {
+  rule: {
     width: spacing.xl,
     height: spacing.xs,
     borderRadius: radius.pill,
-    backgroundColor: lightColors.gold,
+    backgroundColor: unlockAccent,
   },
   centered: {
     textAlign: "center",
@@ -123,6 +126,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderTopWidth: hairline,
-    borderTopColor: lightColors.line,
+    borderTopColor: darkColors.line,
   },
 });
