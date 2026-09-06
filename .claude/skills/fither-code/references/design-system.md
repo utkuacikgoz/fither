@@ -184,3 +184,13 @@ is what gets built.
   on the table (see ADR-0019 when decided); until then, every figure
   surface must be built so a static PNG can be swapped for an animated
   asset without layout change.
+- 2026-09-06, round 5 review: paywall copy uninspiring and text-only;
+  Progress had no hierarchy (every card the same weight); Settings
+  spacing uneven. → Rules: (1) a selling screen leads with an image we
+  own (the ladder figures) and a promise headline, three short benefit
+  lines, then plans; the letter form is retired. (2) One hero per screen:
+  the key numbers as numerals first, sections beneath with eyebrow
+  captions OUTSIDE the tile, not inside. (3) Inside a tile everything
+  sits on the 4pt grid with one gap value per axis (8pt chips, 56pt rows,
+  16/20pt padding); captions never share a tile with the content they
+  label.

@@ -1,36 +1,33 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Settings</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
+<!doctype html><html><head><meta charset="utf-8"><title>Settings</title><link rel="stylesheet" href="tokens.css">
 <style>
 .h { margin-top: 12px; margin-bottom: 20px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px; margin-bottom: 14px; }
-.tile .caption { margin-bottom: 14px; }
-.prow { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
-.prow .name { width: 82px; font-size: 15px; color: var(--ink-soft); font-weight: 500; }
+.sec { margin-bottom: 28px; }
+.sec .caption { margin-bottom: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 20px; }
+.stats { display: flex; gap: 12px; }
+.stat { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 18px; }
+.stat .numeral { font-size: 44px; line-height: 1; letter-spacing: -1px; }
+.stat .numeral.g { color: var(--accent); }
+.stat .l { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
+.prow { display: flex; align-items: center; gap: 12px; height: 40px; }
+.prow .name { width: 82px; font-size: 16px; }
 .prow .track { flex: 1; }
-.prow .tier { width: 84px; text-align: right; font-size: 13px; color: var(--ink-soft); }
-.big { font-size: 34px; font-weight: 700; letter-spacing: -0.6px; line-height: 1.1; }
-.sub { color: var(--ink-soft); font-size: 15px; margin-top: 6px; }
-.orow { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 4px; font-size: 17px; border-top: 1px solid var(--line); }
-.orow:first-of-type { border-top: 0; }
+.prow .tier { width: 80px; text-align: right; font-size: 13px; color: var(--ink-soft); }
+.orow { display: flex; align-items: center; justify-content: space-between; height: 56px; font-size: 17px; }
+.orow + .orow { border-top: 1px solid var(--line); }
 .orow .ck { color: var(--accent); font-weight: 700; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chips span { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); font-size: 15px; font-weight: 500; }
+.chips span { padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); font-size: 15px; font-weight: 500; line-height: 1.2; }
 .chips span.sel { background: var(--accent-soft); border-color: var(--accent); }
 .scroll { overflow: hidden; flex: 1; }
-.foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin: 8px 0 6px; }
 </style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
 <div class="screen" style="padding-bottom:83px">
   <div class="title h">Settings</div>
   <div class="scroll">
-  <div class="tile"><div class="caption">Always work around</div><div class="chips"><span class="sel">Wrists ✓</span><span>Shoulders</span><span>Elbows</span><span>Back</span><span>Hips</span><span>Knees</span><span>Ankles</span><span>Core</span></div></div>
-  <div class="tile"><div class="caption">What's within reach?</div><div class="orow"><span>Just me and the floor</span></div><div class="orow"><span>A sturdy chair too</span><span class="ck">✓</span></div></div>
-  <div class="tile"><div class="caption">Daily invitation</div><div class="orow"><span>Morning (8:00)</span><span class="ck">✓</span></div><div class="orow"><span>Midday (12:30)</span></div><div class="orow"><span>Evening (18:30)</span></div><div class="orow"><span>No invitation</span></div></div>
-  <div class="tile"><div class="caption">Subscription</div><div class="orow"><span>Restore purchase</span></div><div class="orow"><span>Manage subscription</span></div></div>
-  <div class="tile"><div class="caption">Account</div><div class="sub" style="margin:0 0 10px">Signed in with Apple</div><div class="orow"><span>Sign out</span></div><div class="orow"><span style="color:var(--danger)">Erase everything on this phone</span></div></div>
-  <div class="foot">FITHER 1.0.0</div>
+  <div class="sec"><div class="caption">Always work around</div><div class="tile"><div class="chips"><span class="sel">Wrists ✓</span><span>Shoulders</span><span>Elbows</span><span>Back</span><span>Hips</span><span>Knees</span><span>Ankles</span><span>Core</span></div></div></div>
+  <div class="sec"><div class="caption">What's within reach?</div><div class="tile" style="padding-top:0;padding-bottom:0"><div class="orow"><span>Just me and the floor</span></div><div class="orow"><span>A sturdy chair too</span><span class="ck">✓</span></div></div></div>
+  <div class="sec"><div class="caption">Daily invitation</div><div class="tile" style="padding-top:0;padding-bottom:0"><div class="orow"><span>Morning (8:00)</span><span class="ck">✓</span></div><div class="orow"><span>Midday (12:30)</span></div><div class="orow"><span>Evening (18:30)</span></div><div class="orow"><span>No invitation</span></div></div></div>
+  <div class="sec"><div class="caption">Subscription</div><div class="tile" style="padding-top:0;padding-bottom:0"><div class="orow"><span>Restore purchase</span></div><div class="orow"><span>Manage subscription</span></div></div></div>
   </div>
 </div>
-<div class="tabbar">
-  <div class="tab "><img src="../../../app/assets/icons/tab-today.png" style="filter:brightness(0.68)"><span class="caption">Today</span></div>
-  <div class="tab "><img src="../../../app/assets/icons/tab-progress.png" style="filter:brightness(0.68)"><span class="caption">Progress</span></div>
-  <div class="tab active"><img src="../../../app/assets/icons/tab-settings.png" style="filter:invert(62%) sepia(45%) saturate(600%) hue-rotate(95deg) brightness(95%)"><span class="caption">Settings</span></div>
-</div><div class="home-indicator"></div></div></body></html>
+<div class="tabbar"><div class="tab "><img src="../../../app/assets/icons/tab-today.png" style="filter:brightness(0.68)"><span class="caption">Today</span></div><div class="tab "><img src="../../../app/assets/icons/tab-progress.png" style="filter:brightness(0.68)"><span class="caption">Progress</span></div><div class="tab active"><img src="../../../app/assets/icons/tab-settings.png" style="filter:invert(62%) sepia(45%) saturate(600%) hue-rotate(95deg) brightness(95%)"><span class="caption">Settings</span></div></div><div class="home-indicator"></div></div></body></html>
