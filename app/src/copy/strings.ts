@@ -335,14 +335,30 @@ export const strings = {
     // line of framing, nothing under the buttons.
     error: "Couldn't sign you in. Try again in a minute, or continue without an account.",
   },
-  // Paywall — docs/copy/draft-strings.md §3, wired verbatim. An honest
-  // letter: annual led, plain prices, no countdowns, no strikethroughs.
+  // COPY-WRITER (2026-09-06, owner review: "uninspiring copy, not enough
+  // images"). The screen is rebuilt around one picture: the push ladder,
+  // six line figures from wall push-up to full push-up, the tiers she
+  // has reached in green. The words now frame that picture instead of
+  // explaining everything in a letter. Order on screen: letterhead,
+  // `headline` (the promise, capability only: the first full push-up,
+  // never a body), `lead` (one line that captions the ladder: six tiers
+  // per movement, her pace), the image, three `benefits` (each a fact
+  // the app keeps offline today), `trialLine`, the plan rows, `cta`.
+  // Still annual led, plain prices, no countdowns, no strikethroughs,
+  // no user counts, no "transform". `letter` is kept in place because
+  // paywall-screen.tsx and the expired variant still read the key shape;
+  // drop it with the screen, not before.
   paywall: {
-    headline: "The honest version",
+    headline: "Your first full push-up starts here.",
+    lead: "Six tiers for every movement. You climb at your own pace.",
     letter:
       "FITHER is one subscription and it covers everything: every session, every length, adapted daily to your time, energy and surroundings. It works offline, on a plane or in a quiet house at 6am. No ads, nothing sold separately.",
-    trialLine:
-      "The first 7 days are free. If it doesn't fit your life, cancel in Settings before the week ends and pay nothing.",
+    benefits: {
+      adapts: "10, 20, 30 minutes, adapted daily.",
+      anywhere: "Works offline, wherever you are.",
+      simple: "No equipment. No ads.",
+    },
+    trialLine: "7 days free. Cancel before the week ends and pay nothing.",
     plans: {
       annual: {
         label: "Yearly",
@@ -437,7 +453,7 @@ export const strings = {
   lifetimeOffer: {
     headline: "One other option",
     body:
-      "You've switched off auto-renew, so your free week ends as a free week and nothing is charged. There is one other way to keep FITHER: one payment covers everything: every session, every length, working offline — with no subscription and no renewal, ever. We'll only ask once.",
+      "You've switched off auto-renew, so your free week ends as a free week and nothing is charged. There is one other way to keep FITHER: one payment covers everything: every session, every length, working offline, with no subscription and no renewal, ever. We'll only ask once.",
     cta: "Pay once, keep everything",
     decline: "Finish my free week as planned",
   },

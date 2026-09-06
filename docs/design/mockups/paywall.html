@@ -1,43 +1,38 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Paywall</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
+<!doctype html><html><head><meta charset="utf-8"><title>Paywall</title><link rel="stylesheet" href="tokens.css">
 <style>
-.h { margin-top: 12px; margin-bottom: 20px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 20px; margin-bottom: 14px; }
-.tile .caption { margin-bottom: 14px; }
-.prow { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
-.prow .name { width: 82px; font-size: 15px; color: var(--ink-soft); font-weight: 500; }
-.prow .track { flex: 1; }
-.prow .tier { width: 84px; text-align: right; font-size: 13px; color: var(--ink-soft); }
-.big { font-size: 34px; font-weight: 700; letter-spacing: -0.6px; line-height: 1.1; }
-.sub { color: var(--ink-soft); font-size: 15px; margin-top: 6px; }
-.orow { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 4px; font-size: 17px; border-top: 1px solid var(--line); }
-.orow:first-of-type { border-top: 0; }
-.orow .ck { color: var(--accent); font-weight: 700; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chips span { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); font-size: 15px; font-weight: 500; }
-.chips span.sel { background: var(--accent-soft); border-color: var(--accent); }
-.scroll { overflow: hidden; flex: 1; }
-.foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin: 8px 0 6px; }
-</style>
-<style>
-.letterhead { letter-spacing: 4px; font-weight: 700; font-size: 13px; margin-top: 20px; }
-.plan { display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); margin-bottom: 12px; }
+.lh { letter-spacing: 4px; font-weight: 700; font-size: 13px; margin-top: 8px; }
+.display { font-size: 40px; margin-top: 12px; max-width: 340px; }
+.lead { margin-top: 10px; }
+.ladder { display: flex; align-items: flex-end; justify-content: space-between; margin: 26px 0 6px; height: 88px; }
+.ladder span { width: 50px; height: 50px; background: var(--ink-soft); opacity: 0.85; -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.ladder span.on { background: var(--accent); opacity: 1; }
+.ladder span:nth-child(2) { height: 56px; width: 56px; } .ladder span:nth-child(3) { height: 62px; width: 62px; } .ladder span:nth-child(4) { height: 68px; width: 68px; } .ladder span:nth-child(5) { height: 74px; width: 74px; } .ladder span:nth-child(6) { height: 80px; width: 80px; }
+.tiers { display: flex; justify-content: space-between; }
+.tiers i { width: 46px; height: 4px; border-radius: 2px; background: var(--rail); } .tiers i.on { background: var(--accent); }
+.benefits { margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
+.benefits div { display: flex; gap: 12px; align-items: center; font-size: 17px; }
+.benefits b { width: 8px; height: 8px; border-radius: 4px; background: var(--accent); flex: 0 0 8px; }
+.plan { padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); margin-top: 10px; }
 .plan.sel { background: var(--accent-soft); border-color: var(--accent); }
-.plan .r { display: flex; justify-content: space-between; font-size: 19px; font-weight: 600; }
-.plan .n { color: var(--ink-soft); font-size: 15px; }
-.legal { color: var(--ink-soft); font-size: 12px; line-height: 1.4; text-align: center; margin-top: 8px; }
+.plan .r { display: flex; justify-content: space-between; font-size: 18px; font-weight: 600; }
+.plan .n { color: var(--ink-soft); font-size: 14px; margin-top: 2px; }
+.trial { text-align: center; color: var(--ink-soft); font-size: 14px; margin: 12px 0 8px; }
+.btn { font-size: 19px; }
+.legal { color: var(--ink-soft); font-size: 11px; line-height: 1.35; text-align: center; margin-top: 10px; }
+.legal u { color: var(--ink); }
 </style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
-<div class="screen" style="padding-bottom:16px">
-  <div class="scroll">
-  <div class="caption letterhead">FITHER</div>
-  <div class="title" style="margin:14px 0 12px">The honest version</div>
-  <div class="body" style="max-width:340px">FITHER is one subscription and it covers everything: every session, every length, adapted daily to your time, energy and surroundings. It works offline, on a plane or in a quiet house at 6am. No ads, nothing sold separately.</div>
-  <div class="body-soft" style="margin-top:12px;font-size:16px">The first 7 days are free. If it doesn't fit your life, cancel in Settings before the week ends and pay nothing.</div>
-  <div style="height:22px"></div>
+<div class="screen" style="padding-bottom:26px">
+  <div class="caption lh">FITHER</div>
+  <div class="display">Your first full push-up starts here.</div>
+  <div class="body-soft lead">Six tiers for every movement. You climb at your own pace.</div>
+  <div class="ladder"><span class="on" style="--m:url('../../../app/assets/movements/wall-push-up.png')"></span><span class="on" style="--m:url('../../../app/assets/movements/incline-push-up.png')"></span><span class="" style="--m:url('../../../app/assets/movements/kneeling-push-up.png')"></span><span class="" style="--m:url('../../../app/assets/movements/full-push-up.png')"></span><span class="" style="--m:url('../../../app/assets/movements/decline-push-up.png')"></span><span class="" style="--m:url('../../../app/assets/movements/archer-push-up.png')"></span></div>
+  <div class="tiers"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+  <div class="benefits"><div><b></b>10, 20, 30 minutes, adapted daily.</div><div><b></b>Works offline, wherever you are.</div><div><b></b>No equipment. No ads.</div></div>
+  <div style="flex:1"></div>
   <div class="plan sel"><div class="r"><span>Yearly</span><span>$59.99/year <span style="color:var(--accent)">✓</span></span></div><div class="n">$5.00 a month, billed once a year</div></div>
   <div class="plan"><div class="r"><span>Monthly</span><span>$12.99/month</span></div></div>
-  </div>
+  <div class="trial">7 days free. Cancel before the week ends and pay nothing.</div>
   <div class="btn btn-primary">Start my free week</div>
-  <div class="btn btn-quiet" style="min-height:40px">Restore purchase</div>
-  <div class="legal">Renews automatically unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your App Store settings. <u>Terms of Use</u> · <u>Privacy Policy</u></div>
+  <div class="legal">Restore purchase · <u>Terms of Use</u> · <u>Privacy Policy</u></div>
 </div>
 <div class="home-indicator"></div></div></body></html>
