@@ -71,8 +71,13 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
       <View style={styles.brand}>
         <FadeIn reduceMotion={reduceMotion}>
           <Wordmark />
-          <AppText variant="bodySoft" style={styles.welcome}>
+          {/* Owner review 2026-09-06: the first line she reads sells the
+              product, plainly — headline and one concrete supporting line. */}
+          <AppText variant="title" style={styles.welcome} accessibilityRole="header">
             {strings.auth.welcome}
+          </AppText>
+          <AppText variant="bodySoft" style={styles.welcomeSub}>
+            {strings.auth.welcomeSub}
           </AppText>
         </FadeIn>
       </View>
@@ -102,13 +107,6 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
             }}
           />
         )}
-        {/* What an account does today — the honest line (ADR-0011 §5),
-            mapped to the account options above it. */}
-        {providers.length > 0 && (
-          <AppText variant="caption" style={styles.note}>
-            {strings.auth.accountNote}
-          </AppText>
-        )}
         <AuthButton
           testID="sign-in-guest"
           tone="guest"
@@ -119,9 +117,6 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
             void run("guest", continueAsGuest);
           }}
         />
-        <AppText variant="caption" style={styles.note}>
-          {strings.auth.guestNote}
-        </AppText>
         {failed && (
           <AppText
             variant="bodySoft"
@@ -142,16 +137,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   welcome: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
+    textAlign: "center",
+  },
+  welcomeSub: {
+    marginTop: spacing.sm,
     textAlign: "center",
   },
   options: {
+    // Owner review 2026-09-06: no footnotes under buttons — the two
+    // choices carry themselves (design-system feedback ledger).
     paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  note: {
-    textAlign: "center",
-    marginBottom: spacing.sm,
+    gap: spacing.md,
   },
   error: {
     textAlign: "center",

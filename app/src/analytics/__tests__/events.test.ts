@@ -13,7 +13,7 @@ const { join } = jest.requireActual("node:path") as { join(...parts: string[]): 
 // must not appear anywhere in the analytics module, so no event or
 // property can carry them even by accident. Scanned as source, comments
 // included — a comment is where the next property gets planned.
-const FORBIDDEN = /weight|calorie|kcal|streak|fat\b|slim|tone[ds]?\b|bikini|body[- ]?(shape|goal)/i;
+const FORBIDDEN = /weight|calorie|kcal|fat\b|slim|tone[ds]?\b|bikini|body[- ]?(shape|goal)/i;
 
 describe("analytics events", () => {
   it("are exactly the four the retention thesis needs", () => {

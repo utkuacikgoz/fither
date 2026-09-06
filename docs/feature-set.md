@@ -120,7 +120,7 @@ works in airplane mode.
 These never appear — not in copy, not in data models, not in analytics,
 not as "optional". If a feature idea needs one of these, the idea is wrong
 for this product. The one-line rationale, from gamification.md: adherence
-comes from visible capability gains and zero guilt — streaks and body
+comes from visible capability gains and zero guilt — body
 metrics buy short-term engagement by charging interest in shame, and this
 audience has been overcharged by every other fitness app.
 
@@ -128,7 +128,7 @@ audience has been overcharged by every other fitness app.
 |---|---|
 | Weight — weigh-ins, weight goals, weight-loss framing | Not as optional fields, not in analytics, not in the data model; a `weight` column is a bug. |
 | Calories — burn estimates, food anything | Same: cannot even be represented in the product's data. |
-| Streaks — counters, "don't break the chain", any loss framing | Nothing counts consecutive days; missing a day costs the user nothing and is never mentioned. |
+| Streaks | Allowed since 2026-09-06 (ADR-0018): a day streak with one forgiven rest day per run and the best run kept, shown on the hub, finish, Progress and the daily invitation. Never threatened: no reset copy, no loss framing. |
 | Body-shape language — "tone", "sculpt", "bikini", "problem areas", before/after | Progress is what your body can DO, everywhere a word appears. |
 | Leaderboards or comparison to other users | The only comparison is to your own past capability. |
 

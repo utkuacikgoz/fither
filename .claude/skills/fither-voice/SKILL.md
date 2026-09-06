@@ -38,8 +38,10 @@ ten minutes and a sleeping toddler next door, and she thinks that counts.
    it literally becomes voice audio.
 2. **Capability language only.** Progress is what the body can do: "Your
    first full push-up." Never how the body looks or what it weighs.
-3. **No guilt, ever.** Never reference absence, missed days, or lost
-   progress. A returning user is greeted like she trained yesterday.
+3. **No guilt, ever.** Never frame absence as failure or progress as
+   lost. A returning user is greeted like she trained yesterday. The day
+   streak (ADR-0018) is a plain count: a missed day is a rest day, and
+   today is only ever an invitation.
 4. **No fitness jargon, no bro-speak.** No "crush it", "beast mode",
    "no excuses", "shredded". No unexplained acronyms (AMRAP, HIIT).
 5. **Honest, specific claims.** "Ten minutes, no equipment, measurable
@@ -49,6 +51,9 @@ ten minutes and a sleeping toddler next door, and she thinks that counts.
    first movement (Gate 3 is open-to-moving in under 60 seconds).
 7. **British-neutral English.** Plain international English; no
    region-locked slang.
+8. **No dashes in copy** (owner rule, 2026-09-06). No em or en dashes in
+   any user-facing string; use a full stop, a comma or a colon. A test
+   may grep for them.
 
 ## The forbidden list (from fither-domain, applied to words)
 
@@ -56,7 +61,8 @@ Never, in any surface, including notifications, store listing and scripts:
 
 - weight, weigh-in, weight loss, fat, slim(ming), skinny
 - calories, burn, earn your food, guilt-free
-- streak, chain, don't break, "we miss you", "don't lose your progress"
+- chain, don't break, "we miss you", "don't lose your progress" (a streak
+  may be NAMED — owner decision 2026-09-06 — but never threatened)
 - tone, sculpt, bikini body, problem areas, before/after framing
 - shame-adjacent "motivation": no excuses, what's stopping you
 
