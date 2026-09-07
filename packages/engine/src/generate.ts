@@ -40,12 +40,18 @@ export const STALE_FOCUS_MIN_TRAINING_DAYS = 3;
 /**
  * Variety cap: with all five patterns available a pattern appears at most
  * twice per session. When constraints (avoid areas) shrink the pattern set,
- * the survivors carry more blocks so the budget still gets filled.
+ * the survivors carry more blocks so the budget still gets filled — down
+ * to one surviving pattern carrying a whole 30-minute session (owner
+ * decision 2026-09-07: the minutes she asked for are the minutes she
+ * gets; the coverage audit found 30 minutes filling to 40% with one
+ * pattern left under the old cap of 4).
  */
-function maxBlocksPerPattern(availablePatterns: number): number {
+export function maxBlocksPerPattern(availablePatterns: number): number {
   if (availablePatterns >= 5) return 2;
   if (availablePatterns === 4) return 3;
-  return 4;
+  if (availablePatterns === 3) return 4;
+  if (availablePatterns === 2) return 6;
+  return 12;
 }
 
 // ---------- Constraint filter ----------
@@ -173,16 +179,26 @@ export function generateSession(
   let tasteAdded: { pattern: Pattern; movementId: string } | null = null;
 
   const pickMovement = (pattern: Pattern, tier: number): Movement | null => {
-    // Prescribe at current tier; if constraints removed every movement at
-    // that tier, fall back down the ladder rather than dropping the pattern.
+    // Prescribe at current tier. A movement not yet used today comes
+    // first, walking DOWN the ladder for one before any repeat (owner
+    // decision 2026-09-07: a fresh easier movement beats a second block
+    // of the same one). Only when every eligible movement of the pattern
+    // is already in the session does the highest tier repeat.
+    for (let t = tier; t >= 1; t--) {
+      const fresh = pool.filter(
+        (m) => m.pattern === pattern && m.tier === t && !usedIds.has(m.id),
+      );
+      if (fresh.length > 0) {
+        return fresh[Math.floor(rng() * fresh.length)] ?? null;
+      }
+    }
     for (let t = tier; t >= 1; t--) {
       const candidates = pool.filter(
         (m) => m.pattern === pattern && m.tier === t,
       );
-      if (candidates.length === 0) continue;
-      const fresh = candidates.filter((m) => !usedIds.has(m.id));
-      const list = fresh.length > 0 ? fresh : candidates;
-      return list[Math.floor(rng() * list.length)] ?? null;
+      if (candidates.length > 0) {
+        return candidates[Math.floor(rng() * candidates.length)] ?? null;
+      }
     }
     return null;
   };

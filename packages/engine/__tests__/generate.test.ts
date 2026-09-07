@@ -11,6 +11,7 @@ import {
   PATTERNS,
   TARGET_UTILIZATION,
 } from "../src/index.js";
+import { maxBlocksPerPattern } from "../src/generate.js";
 import {
   emptyHistory,
   historyWithPatterns,
@@ -217,6 +218,83 @@ describe("generateSession — energy", () => {
     );
     for (const b of session.blocks) {
       expect(movementById.get(b.movementId)?.tier).toBeLessThanOrEqual(6);
+    }
+  });
+});
+
+describe("generateSession — the minutes she asked for (owner decision 2026-09-07)", () => {
+  it("one surviving pattern still fills a 30-minute session to the target", () => {
+    // shoulders + hips leaves core alone (see docs/engine-decision-tree.md).
+    for (const seed of [1, 2, 3]) {
+      for (const energy of ["low", "okay", "strong"] as Energy[]) {
+        const p = prompt({ minutes: 30, energy, avoid: ["shoulders", "hips"] });
+        const s = generateSession(realLibrary, profileAtTier(2), emptyHistory, p, seed);
+        expect(s.blocks.length).toBeGreaterThan(0);
+        expect(s.estimatedTotalSeconds).toBeLessThanOrEqual(30 * 60);
+        expect(s.estimatedTotalSeconds).toBeGreaterThanOrEqual(30 * 60 * TARGET_UTILIZATION);
+        expect(s.blocks.every((b) => b.pattern === "core")).toBe(true);
+      }
+    }
+  });
+
+  it("two surviving patterns fill 20 and 30 minutes to the target", () => {
+    for (const minutes of [20, 30] as SessionMinutes[]) {
+      const p = prompt({ minutes, avoid: ["back", "hips"] });
+      const s = generateSession(realLibrary, profileAtTier(3), emptyHistory, p, 5);
+      expect(s.estimatedTotalSeconds).toBeGreaterThanOrEqual(minutes * 60 * TARGET_UTILIZATION);
+    }
+  });
+
+  it("the cap grows as patterns fall away", () => {
+    expect(maxBlocksPerPattern(5)).toBe(2);
+    expect(maxBlocksPerPattern(4)).toBe(3);
+    expect(maxBlocksPerPattern(3)).toBe(4);
+    expect(maxBlocksPerPattern(2)).toBe(6);
+    expect(maxBlocksPerPattern(1)).toBe(12);
+  });
+
+  it("walks down the ladder for a fresh movement before repeating one", () => {
+    // Tier 3, 30 minutes, shoulders avoided: squat, hinge and core remain,
+    // each with unused movements at tiers 1 to 3. No movement may repeat
+    // while the pattern still has an eligible one she has not done today.
+    const p = prompt({ minutes: 30, energy: "okay", avoid: ["shoulders"] });
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const s = generateSession(realLibrary, profileAtTier(3), emptyHistory, p, seed);
+      const seen = new Set<string>();
+      for (const b of s.blocks) {
+        if (seen.has(b.movementId)) {
+          const m = movementById.get(b.movementId);
+          const eligibleUnused = realLibrary.movements.filter(
+            (x) =>
+              x.pattern === m?.pattern &&
+              x.tier <= 3 &&
+              !x.loads.includes("shoulders") &&
+              (x.equipment === "none" || x.equipment === "wall" || p.equipment.includes(x.equipment)) &&
+              !seen.has(x.id),
+          );
+          expect(eligibleUnused, `${b.movementId} repeated with fresh options left`).toEqual([]);
+        }
+        seen.add(b.movementId);
+      }
+    }
+  });
+
+  it("repeats only at the top of the ladder once every eligible movement is used", () => {
+    const p = prompt({ minutes: 30, energy: "okay", avoid: ["shoulders", "hips"] });
+    const s = generateSession(realLibrary, profileAtTier(2), emptyHistory, p, 9);
+    const first = new Map<string, number>();
+    s.blocks.forEach((b, i) => {
+      if (!first.has(b.movementId)) first.set(b.movementId, i);
+    });
+    // Every eligible core movement at tiers 1 and 2 appears before any repeat.
+    const eligible = realLibrary.movements.filter(
+      (x) => x.pattern === "core" && x.tier <= 2 && !x.loads.some((a) => a === "shoulders" || a === "hips"),
+    );
+    const firstRepeatIndex = s.blocks.findIndex((b, i) => first.get(b.movementId) !== i);
+    if (firstRepeatIndex >= 0) {
+      for (const m of eligible) {
+        expect(first.get(m.id), `${m.id} unused before a repeat`).toBeLessThan(firstRepeatIndex);
+      }
     }
   });
 });
