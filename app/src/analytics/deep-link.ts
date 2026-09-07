@@ -8,6 +8,7 @@ import { useLinkingURL } from "expo-linking";
 import { useEffect, useRef } from "react";
 
 import { track } from "./analytics";
+import { SCENARIO_IDS, type ScenarioId } from "./events";
 
 const DEV_CLIENT_HOST = "expo-development-client";
 
@@ -33,6 +34,18 @@ export function deepLinkPath(url: string): string | null {
 }
 
 /**
+ * The allowlisted scenario a shared link carries (`/s/<id>`), or null.
+ * Unknown, malformed or over-long ids are dropped, never forwarded.
+ */
+export function scenarioFromPath(path: string): ScenarioId | null {
+  const match = /^\/s\/([a-z_]{1,32})$/.exec(path);
+  const id = match?.[1];
+  return id !== undefined && (SCENARIO_IDS as readonly string[]).includes(id)
+    ? (id as ScenarioId)
+    : null;
+}
+
+/**
  * Mount once at the root. Fires deep_link_open for the launch URL and for
  * every URL that arrives while the app is open — each distinct URL once.
  */
@@ -43,6 +56,10 @@ export function useDeepLinkTracking(): void {
     if (!url || url === last.current) return;
     last.current = url;
     const path = deepLinkPath(url);
-    if (path !== null) track("deep_link_open", { path });
+    if (path === null) return;
+    track("deep_link_open", { path });
+    // scenario_entry (ADR-0024 §3): the id only, and only from the list.
+    const scenario = scenarioFromPath(path);
+    if (scenario !== null) track("scenario_entry", { scenario });
   }, [url]);
 }

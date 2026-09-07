@@ -45,6 +45,7 @@ pure JavaScript — no rebuild is needed to switch it on.
 | `workout_start` | `minutes` (10/20/30) | the player's first real transition |
 | `workout_complete` | `minutes`, `close` (completed / endedEarly / outOfTime / nothingDone), `first` | after the result commits, once |
 | `paywall_view` | `surface` (gate / expired / settings) | the paywall was on screen, once per showing |
+| `scenario_entry` | `scenario` (allowlisted id) | the app opened from a shared /s/<id> link |
 | `experiment_exposure` | `experiment`, `variant` (control / three) | a variant was assigned on this phone, once per experiment (ADR-0025) |
 | `trial_start` | `plan` (annual / monthly) | the store granted a subscription trial |
 
