@@ -10,6 +10,7 @@ import type {
 import { strings } from "../../copy/strings";
 import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
+import { AreaGrid } from "../../design/primitives/area-grid";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { FlowProgress } from "../../design/primitives/flow-progress";
 import { PrimaryButton } from "../../design/primitives/primary-button";
@@ -332,40 +333,32 @@ export function DailyPromptScreen({
       )}
 
       {step === "soreness" && (
-        <ScrollView
-          style={styles.question}
-          contentContainerStyle={styles.scrollContent}
-          // Signifiers: seven areas plus the confirm run past the fold on
-          // a small phone, and a hidden bar is the only cue missing.
-          showsVerticalScrollIndicator
-        >
-          <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
-            <AppText
-            variant="title"
-            style={styles.title}
-            accessibilityRole="header"
+        <>
+          <ScrollView
+            style={styles.question}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator
           >
-              {strings.prompt.soreness.question}
-            </AppText>
-            {avoid.length === 0 && (
-              <RowButton
-                testID="soreness-all-good"
-                label={strings.prompt.soreness.allGood}
-                onPress={() => finish([])}
+            <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
+              <AppText
+                variant="title"
+                style={styles.title}
+                accessibilityRole="header"
+              >
+                {strings.prompt.soreness.question}
+              </AppText>
+              {/* The two-column grid (ADR-0017), shared with onboarding. */}
+              <AreaGrid
+                areas={BODY_AREAS}
+                selected={avoid}
+                onToggle={toggleArea}
+                testIDPrefix="soreness"
               />
-            )}
-            {BODY_AREAS.map((area) => (
-              <RowButton
-                key={area}
-                testID={`soreness-${area}`}
-                label={strings.prompt.soreness.areas[area]}
-                selected={avoid.includes(area)}
-                multiSelect
-                onPress={() => toggleArea(area)}
-              />
-            ))}
-            {avoid.length > 0 && (
-              <View style={styles.confirm}>
+            </FadeIn>
+          </ScrollView>
+          <View style={styles.bottom}>
+            {avoid.length > 0 ? (
+              <>
                 <AppText
                   variant="caption"
                   style={styles.countCue}
@@ -378,10 +371,18 @@ export function DailyPromptScreen({
                   label={strings.prompt.soreness.confirm}
                   onPress={() => finish(avoid)}
                 />
-              </View>
+              </>
+            ) : (
+              // One button, one place (audit S5): "All good" with nothing
+              // picked, the confirm once anything is.
+              <PrimaryButton
+                testID="soreness-all-good"
+                label={strings.prompt.soreness.allGood}
+                onPress={() => finish([])}
+              />
             )}
-          </FadeIn>
-        </ScrollView>
+          </View>
+        </>
       )}
 
       {step === "error" && <PromptError onRetry={() => finish(avoid)} />}
@@ -429,8 +430,8 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: spacing.xl,
   },
-  confirm: {
-    marginTop: spacing.md,
+  bottom: {
+    paddingBottom: spacing.md,
   },
   countCue: {
     marginBottom: spacing.sm,

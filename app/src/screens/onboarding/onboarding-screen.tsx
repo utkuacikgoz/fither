@@ -5,6 +5,7 @@ import type { BodyArea, Equipment } from "@fither/engine";
 import { strings } from "../../copy/strings";
 import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
+import { AreaGrid } from "../../design/primitives/area-grid";
 import { BrandMark } from "../../design/primitives/brand-mark";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { FlowProgress } from "../../design/primitives/flow-progress";
@@ -55,8 +56,12 @@ export const EQUIPMENT_FIGURES = {
 
 type Step = "welcome" | "equipment" | "avoid";
 
-/** The two questions, in order — the welcome is a landing, not a step. */
-const QUESTIONS: Step[] = ["equipment", "avoid"];
+/**
+ * The three steps, in order. The welcome counts (ADR-0017, owner-approved
+ * 2026-09-06): the rail runs from the first screen she sees, so the flow
+ * has a visible length from its first frame.
+ */
+const STEPS: Step[] = ["welcome", "equipment", "avoid"];
 
 interface OnboardingScreenProps {
   /** Onboarding is complete and persisted — hand off to the daily prompt. */
@@ -84,9 +89,21 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
     );
   };
 
+  const flow = (
+    <View style={styles.flow}>
+      <FlowProgress
+        testID="onboarding-flow"
+        total={STEPS.length}
+        current={STEPS.indexOf(step) + 1}
+        reduceMotion={reduceMotion}
+      />
+    </View>
+  );
+
   if (step === "welcome") {
     return (
       <Screen>
+        {flow}
         {/* The welcome is the one unbounded text stack before the
             session (mark + title + body): at 2× Dynamic Type on a small
             phone it overran Begin. Same treatment as the player's intro
@@ -110,7 +127,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
             rise={motion.riseDistance}
             delayMs={motion.staggerMs}
           >
-            <AppText variant="title" accessibilityRole="header">
+            <AppText variant="display" accessibilityRole="header">
               {strings.onboarding.welcome.headline}
             </AppText>
           </FadeIn>
@@ -134,17 +151,6 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
       </Screen>
     );
   }
-
-  const flow = (
-    <View style={styles.flow}>
-      <FlowProgress
-        testID="onboarding-flow"
-        total={QUESTIONS.length}
-        current={QUESTIONS.indexOf(step) + 1}
-        reduceMotion={reduceMotion}
-      />
-    </View>
-  );
 
   if (step === "equipment") {
     return (
@@ -195,8 +201,6 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
       <ScrollView
         style={styles.question}
         contentContainerStyle={styles.scrollContent}
-        // Signifiers: seven areas plus the confirm run past the fold on
-        // a small phone — the same fix the prompt's soreness list got.
         showsVerticalScrollIndicator
       >
         <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
@@ -207,46 +211,43 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           >
             {strings.onboarding.avoid.question}
           </AppText>
-          {avoid.length === 0 && (
-            <RowButton
-              testID="onboarding-avoid-nothing"
-              // One shared string with the daily prompt's soreness default —
-              // the same warm "All good" she'll tap every day from tomorrow.
-              // Hidden the moment she picks an area (audit S5), exactly like
-              // the prompt's soreness step: one constraint, one behaviour —
-              // "All good" can never silently discard her picks.
-              label={strings.prompt.soreness.allGood}
-              onPress={() => finish([])}
-            />
-          )}
-          {BODY_AREAS.map((area) => (
-            <RowButton
-              key={area}
-              testID={`onboarding-avoid-${area}`}
-              label={strings.prompt.soreness.areas[area]}
-              selected={avoid.includes(area)}
-              multiSelect
-              onPress={() => toggleArea(area)}
-            />
-          ))}
-          {avoid.length > 0 && (
-            <View style={styles.confirm}>
-              <AppText
-                variant="caption"
-                style={styles.countCue}
-                testID="onboarding-avoid-count"
-              >
-                {strings.prompt.soreness.areasNoted(avoid.length)}
-              </AppText>
-              <PrimaryButton
-                testID="onboarding-avoid-confirm"
-                label={strings.onboarding.avoid.confirm}
-                onPress={() => finish(avoid)}
-              />
-            </View>
-          )}
+          {/* The two-column grid (ADR-0017): the whole choice above the
+              fold, the same control the daily soreness step uses. */}
+          <AreaGrid
+            areas={BODY_AREAS}
+            selected={avoid}
+            onToggle={toggleArea}
+            testIDPrefix="onboarding-avoid"
+          />
         </FadeIn>
       </ScrollView>
+      <View style={styles.bottom}>
+        {avoid.length > 0 ? (
+          <>
+            <AppText
+              variant="caption"
+              style={styles.countCue}
+              testID="onboarding-avoid-count"
+            >
+              {strings.prompt.soreness.areasNoted(avoid.length)}
+            </AppText>
+            <PrimaryButton
+              testID="onboarding-avoid-confirm"
+              label={strings.onboarding.avoid.confirm}
+              onPress={() => finish(avoid)}
+            />
+          </>
+        ) : (
+          // One button, one place: with nothing picked it is the one-tap
+          // "All good"; with picks it becomes the confirm. "All good" can
+          // never silently discard a pick (audit S5).
+          <PrimaryButton
+            testID="onboarding-avoid-nothing"
+            label={strings.prompt.soreness.allGood}
+            onPress={() => finish([])}
+          />
+        )}
+      </View>
     </Screen>
   );
 }
@@ -277,9 +278,6 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: spacing.xl,
-  },
-  confirm: {
-    marginTop: spacing.md,
   },
   countCue: {
     marginBottom: spacing.sm,

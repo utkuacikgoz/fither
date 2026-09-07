@@ -124,18 +124,20 @@ describe("OnboardingScreen", () => {
     ).toBeTruthy();
   });
 
-  it("counts its two questions, and only those — the welcome is a landing", () => {
+  it("counts three steps from the first screen — the rail runs from the welcome (ADR-0017)", () => {
     const screen = render(<OnboardingScreen onDone={jest.fn()} />);
-    expect(screen.queryByTestId("onboarding-flow")).toBeNull();
+    expect(
+      screen.getByTestId("onboarding-flow").props.accessibilityValue,
+    ).toEqual({ min: 0, max: 3, now: 1 });
 
     fireEvent.press(screen.getByTestId("onboarding-begin"));
     expect(
-      screen.getByTestId("onboarding-flow").props.accessibilityValue,
-    ).toEqual({ min: 0, max: 2, now: 1 });
+      screen.getByTestId("onboarding-flow").props.accessibilityValue.now,
+    ).toBe(2);
     fireEvent.press(screen.getByTestId("onboarding-chair"));
     expect(
       screen.getByTestId("onboarding-flow").props.accessibilityValue.now,
-    ).toBe(2);
+    ).toBe(3);
   });
 
   it("shows each equipment option as a day-one movement she can do with it", () => {
