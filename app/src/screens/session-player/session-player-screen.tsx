@@ -184,6 +184,17 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
         />
       )}
 
+      {/* The one line of chrome inside a session (ADR-0017): which
+          movement, and where she is in it — never a header, never a bar. */}
+      <View style={styles.captionRow} testID="player-caption-row">
+        <AppText variant="caption">{block.name}</AppText>
+        <AppText variant="caption">
+          {phase.kind === "work" || phase.kind === "rest"
+            ? strings.player.setCounter(phase.setIndex + 1, block.sets)
+            : strings.player.blockCounter(phase.blockIndex + 1, player.blocks.length)}
+        </AppText>
+      </View>
+
       {phase.kind === "blockIntro" && !confirmingSkip && (
         <>
           {/* The setup reading scrolls at large Dynamic Type sizes: the
@@ -198,7 +209,6 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             <MovementFigure
               movementId={block.movementId}
               size="hero"
-              onWash
               testID="player-figure-intro"
             />
             <AppText variant="display" accessibilityRole="header">{block.name}</AppText>
@@ -245,30 +255,19 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
       {phase.kind === "work" && !confirmingSkip && (
         <>
-          <View style={styles.top}>
-            <View style={styles.workHeading}>
-              <MovementFigure
-                movementId={block.movementId}
-                testID="player-figure-work"
-              />
-              <AppText variant="title" accessibilityRole="header" style={styles.workName}>
-                {block.name}
-              </AppText>
-            </View>
-            {currentCue !== null && (
-              <AppText variant="bodySoft" style={styles.subline}>
-                {currentCue}
-              </AppText>
-            )}
-          </View>
           <View style={styles.center}>
+            <MovementFigure
+              movementId={block.movementId}
+              size="large"
+              testID="player-figure-work"
+            />
             {phase.side !== null && (
               <AppText variant="bodyLarge" testID="player-side">
                 {strings.player.sides[phase.side]}
               </AppText>
             )}
             <AppText
-              variant="numeral"
+              variant="count"
               testID="player-numeral"
               accessibilityLabel={
                 block.timingType === "seconds"
@@ -283,9 +282,11 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
                 ? strings.player.holdLabel
                 : strings.player.repsLabel}
             </AppText>
-            <AppText variant="caption" style={styles.setCounter}>
-              {strings.player.setCounter(phase.setIndex + 1, block.sets)}
-            </AppText>
+            {currentCue !== null && (
+              <AppText variant="body" style={styles.subline}>
+                {currentCue}
+              </AppText>
+            )}
           </View>
           <View style={styles.bottom}>
             {phase.remainingSeconds === null && (
@@ -315,7 +316,6 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
       {phase.kind === "rest" && !confirmingSkip && (
         <RestPhase
-          block={block}
           remainingSeconds={phase.remainingSeconds}
           reduceMotion={reduceMotion}
           onAdvance={() => dispatchPlayer({ type: "advance" })}
@@ -325,6 +325,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
       {phase.kind === "feedback" && !confirmingSkip && (
         <FeedbackPhase
+          block={block}
           reduceMotion={reduceMotion}
           onOutcome={(outcome) => dispatchPlayer({ type: "feedback", outcome })}
         />
@@ -334,13 +335,10 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  workHeading: {
+  captionRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  workName: {
-    flex: 1,
+    justifyContent: "space-between",
+    marginTop: spacing.md,
   },
   top: {
     marginTop: spacing.xl,

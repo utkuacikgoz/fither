@@ -36,6 +36,11 @@ interface MovementFigureProps {
   /** A named size, or an exact box in points (the ladder strip's ascent). */
   size?: FigureSize | number;
   tone?: FigureTone;
+  /**
+   * Override the theme colour, for a surface that is deliberately
+   * theme-fixed (the white share card). Everything else uses `tone`.
+   */
+  tint?: string;
   /** Sits on a tinted ground (block intro) rather than the page. */
   onWash?: boolean;
   testID?: string;
@@ -45,13 +50,16 @@ export function MovementFigure({
   movementId,
   size = "row",
   tone = "ink",
+  tint: tintOverride,
   onWash = false,
   testID,
 }: MovementFigureProps) {
   const colors = useTheme();
   const source = movementFigure(movementId);
   const box = typeof size === "number" ? size : DIMENSIONS[size];
-  const tint = tone === "accent" ? colors.accent : tone === "soft" ? colors.inkSoft : colors.ink;
+  const tint =
+    tintOverride ??
+    (tone === "accent" ? colors.accent : tone === "soft" ? colors.inkSoft : colors.ink);
   // A missing figure renders nothing at all — a degraded build shows the
   // movement name, never a broken-image hole.
   if (!source) return null;

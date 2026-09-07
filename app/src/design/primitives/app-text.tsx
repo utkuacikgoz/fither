@@ -10,7 +10,8 @@ type Variant =
   | "bodyLarge"
   | "title"
   | "display"
-  | "numeral";
+  | "numeral"
+  | "count";
 
 interface AppTextProps extends TextProps {
   variant?: Variant;
@@ -32,7 +33,7 @@ export function AppText({ variant = "body", color, style, ...rest }: AppTextProp
   return (
     <Text
       {...rest}
-      {...(variant === "numeral"
+      {...(variant === "numeral" || variant === "count"
         ? { maxFontSizeMultiplier: numeralMaxFontScale }
         : null)}
       style={[styles[variant], { color: color ?? defaultColor }, style]}
@@ -79,6 +80,13 @@ const styles = StyleSheet.create({
     fontSize: typeScale.numeral,
     letterSpacing: tracking.display,
     lineHeight: typeScale.numeral * 1.05,
+    fontVariant: ["tabular-nums"],
+  },
+  count: {
+    fontFamily: fontFamily.semibold,
+    fontSize: typeScale.count,
+    letterSpacing: tracking.display * 2,
+    lineHeight: typeScale.count * 1.05,
     fontVariant: ["tabular-nums"],
   },
 });

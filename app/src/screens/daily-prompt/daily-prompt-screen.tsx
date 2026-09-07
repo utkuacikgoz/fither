@@ -25,6 +25,8 @@ import { todayIso } from "../../lib/dates";
 import { useStoreHydration } from "../../lib/route-guard";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useCareNoteStore } from "../../state/care-note-store";
+import { useProfileStore } from "../../state/profile-store";
+import { unblockingAreasFor } from "../../session/unblocking";
 import { useSessionStore } from "../../state/session-store";
 import { useSettingsStore } from "../../state/settings-store";
 import { FirstMovementReadout } from "../dev-timing/first-movement-readout";
@@ -65,6 +67,7 @@ export function DailyPromptScreen({
   const previousPrompt = useSessionStore((s) => s.prompt);
   const equipment = useSettingsStore((s) => s.equipment);
   const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
+  const sessionSalt = useSettingsStore((s) => s.sessionSalt);
   // The same six-store hydration set the launch surface and the route
   // guards wait on — one definition (lib/route-guard.ts), so a store
   // added there is waited on here too. Identity is in it: a slow
@@ -95,6 +98,15 @@ export function DailyPromptScreen({
     previousPrompt?.avoid.filter((area) => !alwaysAvoid.includes(area)) ?? [],
   );
   const [careNoteText, setCareNoteText] = useState("");
+  // Today-only exceptions (owner decision 2026-09-07): an area she sets
+  // aside from the no-session outcome leaves today's list, whether it
+  // came from today's picks or from Always work around. Settings never
+  // change here.
+  const [setAsideToday, setSetAsideToday] = useState<BodyArea[]>([]);
+  // The engine's answer to "which single area unblocks today" — read
+  // once per failed build and rendered as the rows she can tap.
+  const [unblocking, setUnblocking] = useState<BodyArea[]>([]);
+  const [failedAreaCount, setFailedAreaCount] = useState(0);
   // Words typed on a heavy day are never dropped by navigation (audit
   // polish): whatever is still in the field when this screen unmounts is
   // saved. restart() saves-and-clears first, so no double write.
@@ -110,13 +122,16 @@ export function DailyPromptScreen({
     [appendCareNote],
   );
 
-  const finish = (avoidAreas: BodyArea[]) => {
+  const finish = (avoidAreas: BodyArea[], setAside: BodyArea[] = setAsideToday) => {
     if (minutes === null || energy === null || quiet === null) return;
     // The persistent avoid-list (onboarding) joins today's soreness picks
     // before the prompt reaches the engine — input assembly, not policy:
     // what "avoid" means to the session is decided entirely engine-side.
+    // Areas set aside for today leave the list before it goes.
     const mergedAvoid = BODY_AREAS.filter(
-      (area) => alwaysAvoid.includes(area) || avoidAreas.includes(area),
+      (area) =>
+        (alwaysAvoid.includes(area) || avoidAreas.includes(area)) &&
+        !setAside.includes(area),
     );
     const prompt: DailyPrompt = {
       minutes,
@@ -130,10 +145,19 @@ export function DailyPromptScreen({
     if (result.ok) {
       onSessionReady();
     } else if (result.reason === "noSession") {
+      const { profile, history } = useProfileStore.getState();
+      setUnblocking(unblockingAreasFor(prompt, profile, history, sessionSalt));
+      setFailedAreaCount(mergedAvoid.length);
       setStep("noSession");
     } else {
       setStep("error");
     }
+  };
+
+  const setAsideArea = (area: BodyArea) => {
+    const next = [...setAsideToday, area];
+    setSetAsideToday(next);
+    finish(avoid, next);
   };
 
   const toggleArea = (area: BodyArea) => {
@@ -155,6 +179,7 @@ export function DailyPromptScreen({
       appendCareNote({ date: todayIso(), text: note });
     }
     setCareNoteText("");
+    setSetAsideToday([]);
     setStep("time");
   };
 
@@ -401,6 +426,9 @@ export function DailyPromptScreen({
           )}
           careNoteText={careNoteText}
           onChangeCareNote={setCareNoteText}
+          areaCount={failedAreaCount}
+          unblocking={unblocking}
+          onSetAside={setAsideArea}
           onAdjust={adjustAnswers}
         />
       )}

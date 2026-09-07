@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { AccessibilityInfo, StyleSheet, View } from "react-native";
+import { computeStreak } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -7,7 +8,9 @@ import { FadeIn } from "../../design/primitives/fade-in";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { Screen } from "../../design/primitives/screen";
-import { minTouchTarget, motion, spacing } from "../../design/tokens";
+import { useTheme } from "../../design/theme";
+import { hairline, minTouchTarget, motion, radius, spacing } from "../../design/tokens";
+import { useProfileStore } from "../../state/profile-store";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useSessionStore, type FinishSummary } from "../../state/session-store";
 
@@ -51,6 +54,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   const saveFailed = useSessionStore((s) => s.saveFailed);
   const saving = useSessionStore((s) => s.saving);
   const player = useSessionStore((s) => s.player);
+  const session = useSessionStore((s) => s.session);
   const reduceMotion = useReducedMotion();
 
   // What she did, drawn: the figure of every block whose outcome the
@@ -104,6 +108,12 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   // renders. The points rise in once and do not count up: a ticking
   // total is slot-machine energy, and points buy nothing here.
   const settled = finish !== null;
+  const colors = useTheme();
+  // The streak after this session (ADR-0018): read from the history the
+  // commit just wrote, relative to the session's own date.
+  const historyEntries = useProfileStore((s) => s.history.entries);
+  const streakDays =
+    settled && session ? computeStreak(historyEntries, session.date).current : 0;
   const beat = (index: number) => ({
     reduceMotion,
     rise: settled ? motion.riseDistance : 0,
@@ -133,7 +143,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
         )}
         <FadeIn key={settled ? "settled" : "waiting"} {...beat(1)}>
           <AppText
-            variant="title"
+            variant="display"
             style={styles.headline}
             accessibilityRole="header"
           >
@@ -146,7 +156,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
         {finish && !nothingDone && (
           <FadeIn {...beat(2)}>
             <View style={styles.points}>
-              <AppText variant="numeral" testID="finish-points">
+              <AppText variant="numeral" color={colors.accent} testID="finish-points">
                 {`+${finish.pointsEarned}`}
               </AppText>
               {/* The unit agrees with the number (the long-flagged copy
@@ -154,6 +164,19 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
                   and never the false "+1 points". */}
               <AppText variant="caption">
                 {strings.finish.pointsUnit(finish.pointsEarned)}
+              </AppText>
+            </View>
+          </FadeIn>
+        )}
+        {finish && !nothingDone && streakDays > 0 && (
+          <FadeIn {...beat(3)}>
+            <View
+              style={[styles.streakPill, { borderColor: colors.line }]}
+              testID="finish-streak"
+            >
+              <View style={[styles.streakDot, { backgroundColor: colors.accent }]} />
+              <AppText variant="caption" color={colors.ink}>
+                {strings.streak.finish(streakDays)}
               </AppText>
             </View>
           </FadeIn>
@@ -195,6 +218,22 @@ const styles = StyleSheet.create({
   note: {
     marginTop: spacing.sm,
     textAlign: "center",
+  },
+  streakPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    alignSelf: "center",
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm + spacing.xs,
+    paddingHorizontal: spacing.md + spacing.xs,
+    borderWidth: hairline,
+    borderRadius: radius.pill,
+  },
+  streakDot: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.pill,
   },
   points: {
     alignItems: "center",

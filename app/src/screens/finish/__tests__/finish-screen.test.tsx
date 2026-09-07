@@ -240,6 +240,47 @@ describe("FinishScreen", () => {
     expect(screen.queryByText(strings.finish.pointsUnit(2))).toBeNull();
   });
 
+  it("names the streak the commit just made: day 1 on a first session, the run when there is one (ADR-0018)", async () => {
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
+    // The fixture history holds exactly today: a start, not a run of one.
+    expect(screen.getByTestId("finish-streak")).toBeTruthy();
+    expect(screen.getByText(strings.streak.finish(1))).toBeTruthy();
+  });
+
+  it("counts yesterday into today's streak, read from the history the engine wrote", async () => {
+    const base = fixtureApplyResult();
+    const today = base.history.entries[0]!;
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: {
+        ...base,
+        history: {
+          entries: [{ ...today, date: "2026-08-30" }, today],
+        },
+      },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
+    expect(screen.getByText(strings.streak.finish(2))).toBeTruthy();
+  });
+
+  it("the nothing-done close carries no streak line — there is no day to count", async () => {
+    let player = createPlayer(fixturePlayerBlocks);
+    player = reduce(player, { type: "skipBlock" });
+    player = reduce(player, { type: "skipBlock" });
+    useSessionStore.setState({ player });
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: { ...fixtureApplyResult(), ledgerEvents: [], unlockedSkills: [] },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    expect(
+      await screen.findByText(strings.finish.nothingDone.headline),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("finish-streak")).toBeNull();
+  });
+
   it("every close state renders no user-facing text outside strings.ts", async () => {
     useSessionStore.setState({ pendingClose: "outOfTime" });
     const allowed = collectStringValues(strings);
@@ -247,12 +288,17 @@ describe("FinishScreen", () => {
     allowed.add(strings.finish.outOfTime.headline(fixtureSession.minutes));
     allowed.add("+35");
     allowed.add(strings.finish.pointsUnit(35));
+    // The streak pill names whatever run today's history makes.
+    for (let days = 1; days <= 60; days += 1) {
+      allowed.add(strings.streak.finish(days));
+    }
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText(
       strings.finish.outOfTime.headline(fixtureSession.minutes),
     );
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
-      expect(allowed.has(leaf)).toBe(true);
+      // On failure the message shows the offending leaf, not just false.
+      expect(allowed.has(leaf) ? true : leaf).toBe(true);
     }
   });
 

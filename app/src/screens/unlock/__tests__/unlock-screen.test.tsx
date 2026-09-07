@@ -14,6 +14,13 @@ import { WORDMARK } from "../skill-share-card";
 import { UnlockScreen } from "../unlock-screen";
 
 const SKILL = { pattern: "push", tier: 4, movementName: "Full Push-Up" } as const;
+const hidden = { includeHiddenElements: true } as const;
+
+/** Into the card beat, then the share action itself. */
+function pressShare(screen: ReturnType<typeof render>, id: string) {
+  fireEvent.press(screen.getByTestId(id));
+  fireEvent.press(screen.getByTestId(`${id}-share`));
+}
 const SECOND = { pattern: "squat", tier: 4, movementName: "Deep Squat" } as const;
 
 function seedUnlock() {
@@ -48,22 +55,39 @@ beforeEach(() => {
 });
 
 describe("UnlockScreen", () => {
-  it("shows the skill huge and the shareable card: name, line, wordmark, share action", () => {
+  it("shows the skill huge, drawn in the green, with Continue and a quiet Share this", () => {
     const screen = render(<UnlockScreen onContinue={jest.fn()} />);
     expect(screen.getByText(strings.unlock.heading)).toBeTruthy();
-    // The skill name appears twice on purpose: the huge unlock moment,
-    // and again on the card — the card is a preview of what she shares.
-    expect(screen.getAllByText(SKILL.movementName)).toHaveLength(2);
+    expect(screen.getByText(SKILL.movementName)).toBeTruthy();
     expect(screen.getByText(strings.unlock.note)).toBeTruthy();
+    expect(screen.getByTestId("unlock-figure-push-4", hidden)).toBeTruthy();
     expect(screen.getByTestId("unlock-share-push-4")).toBeTruthy();
+    expect(screen.getByText(strings.share.action)).toBeTruthy();
+    // The card is its own beat (owner-approved 2026-09-07): not on the
+    // moment, so the name reads once and the moment has one focal point.
+    expect(screen.queryByText(WORDMARK)).toBeNull();
+    expect(screen.queryByText(strings.share.card.line)).toBeNull();
+  });
+
+  it("Share this opens the card beat: the card she sends, Share this, and Not now back", () => {
+    const screen = render(<UnlockScreen onContinue={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("unlock-share-push-4"));
+    expect(screen.getByTestId("unlock-share-push-4-card")).toBeTruthy();
+    expect(screen.getByTestId("unlock-share-push-4-card-figure", hidden)).toBeTruthy();
+    expect(screen.getByText(SKILL.movementName)).toBeTruthy();
     expect(screen.getByText(strings.share.card.line)).toBeTruthy();
     expect(screen.getByText(WORDMARK)).toBeTruthy();
-    expect(screen.getByText(strings.share.action)).toBeTruthy();
+    expect(screen.getByTestId("unlock-share-push-4-share")).toBeTruthy();
+    expect(screen.queryByTestId("unlock-continue")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("unlock-share-not-now"));
+    expect(screen.getByTestId("unlock-continue")).toBeTruthy();
+    expect(screen.queryByText(WORDMARK)).toBeNull();
   });
 
   it("shares the card itself: captured as rendered, handed to the sheet as a PNG", async () => {
     const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("unlock-share-push-4-share"));
+    pressShare(screen, "unlock-share-push-4");
     await flushShare();
     expect(captureRef).toHaveBeenCalledTimes(1);
     expect(Sharing.shareAsync).toHaveBeenCalledWith(
@@ -77,7 +101,7 @@ describe("UnlockScreen", () => {
   it("falls back to the v1 text share when the capture fails", async () => {
     jest.mocked(captureRef).mockRejectedValueOnce(new Error("no surface"));
     const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("unlock-share-push-4-share"));
+    pressShare(screen, "unlock-share-push-4");
     await flushShare();
     expect(Sharing.shareAsync).not.toHaveBeenCalled();
     expect(shareSpy).toHaveBeenCalledWith({
@@ -88,7 +112,7 @@ describe("UnlockScreen", () => {
   it("falls back to text when the file sheet is unavailable on this device", async () => {
     jest.mocked(Sharing.isAvailableAsync).mockResolvedValueOnce(false);
     const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("unlock-share-push-4-share"));
+    pressShare(screen, "unlock-share-push-4");
     await flushShare();
     expect(captureRef).not.toHaveBeenCalled();
     expect(shareSpy).toHaveBeenCalledTimes(1);
@@ -98,13 +122,14 @@ describe("UnlockScreen", () => {
     jest.mocked(Sharing.isAvailableAsync).mockResolvedValueOnce(false);
     shareSpy.mockResolvedValue({ action: Share.dismissedAction });
     const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("unlock-share-push-4-share"));
+    pressShare(screen, "unlock-share-push-4");
     await flushShare();
     // No error copy of any kind appears; she can share again or continue.
     for (const errorText of Object.values(strings.errors)) {
       expect(screen.queryByText(errorText)).toBeNull();
     }
     expect(screen.getByTestId("unlock-share-push-4-share")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("unlock-share-not-now"));
     expect(screen.getByTestId("unlock-continue")).toBeTruthy();
   });
 
@@ -113,12 +138,12 @@ describe("UnlockScreen", () => {
     jest.mocked(Sharing.shareAsync).mockRejectedValueOnce(new Error("sheet"));
     shareSpy.mockRejectedValue(new Error("sheet unavailable"));
     const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("unlock-share-push-4-share"));
+    pressShare(screen, "unlock-share-push-4");
     await flushShare();
     for (const errorText of Object.values(strings.errors)) {
       expect(screen.queryByText(errorText)).toBeNull();
     }
-    expect(screen.getByText(strings.unlock.note)).toBeTruthy();
+    expect(screen.getByText(strings.share.card.line)).toBeTruthy();
   });
 
   it("continues via the single primary button", () => {
@@ -135,8 +160,8 @@ describe("UnlockScreen", () => {
     it("celebrates the first skill alone — the second waits its turn", () => {
       seedTwoUnlocks();
       const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-      // The full moment for skill one: huge name plus its card preview.
-      expect(screen.getAllByText(SKILL.movementName)).toHaveLength(2);
+      // The full moment for skill one: huge name, its figure, its share.
+      expect(screen.getByText(SKILL.movementName)).toBeTruthy();
       expect(screen.getByTestId("unlock-share-push-4")).toBeTruthy();
       // Skill two is nowhere on screen yet — each gets its own moment.
       expect(screen.queryByText(SECOND.movementName)).toBeNull();
@@ -151,7 +176,7 @@ describe("UnlockScreen", () => {
       expect(onContinue).not.toHaveBeenCalled();
       // Skill two now gets the identical full moment, alone.
       expect(screen.getByText(strings.unlock.heading)).toBeTruthy();
-      expect(screen.getAllByText(SECOND.movementName)).toHaveLength(2);
+      expect(screen.getByText(SECOND.movementName)).toBeTruthy();
       expect(screen.getByText(strings.unlock.note)).toBeTruthy();
       expect(screen.getByTestId("unlock-share-squat-4")).toBeTruthy();
       expect(screen.queryByText(SKILL.movementName)).toBeNull();
@@ -170,11 +195,12 @@ describe("UnlockScreen", () => {
     it("shares stay per-skill: skill one before continuing, skill two after", async () => {
       seedTwoUnlocks();
       const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-      fireEvent.press(screen.getByTestId("unlock-share-push-4-share"));
+      pressShare(screen, "unlock-share-push-4");
       await flushShare();
       expect(Sharing.shareAsync).toHaveBeenCalledTimes(1);
+      fireEvent.press(screen.getByTestId("unlock-share-not-now"));
       fireEvent.press(screen.getByTestId("unlock-continue"));
-      fireEvent.press(screen.getByTestId("unlock-share-squat-4-share"));
+      pressShare(screen, "unlock-share-squat-4");
       await flushShare();
       // Each skill's own card is captured — two captures, two shares.
       expect(captureRef).toHaveBeenCalledTimes(2);
@@ -196,13 +222,17 @@ describe("UnlockScreen", () => {
       allowed.add(WORDMARK);
 
       const screen = render(<UnlockScreen onContinue={jest.fn()} />);
-      for (const leaf of renderedTextLeaves(screen.toJSON())) {
-        expect(allowed.has(leaf)).toBe(true);
-      }
+      const audit = () => {
+        for (const leaf of renderedTextLeaves(screen.toJSON())) {
+          expect(allowed.has(leaf) ? true : leaf).toBe(true);
+        }
+      };
+      audit();
+      fireEvent.press(screen.getByTestId("unlock-share-push-4"));
+      audit();
+      fireEvent.press(screen.getByTestId("unlock-share-not-now"));
       fireEvent.press(screen.getByTestId("unlock-continue"));
-      for (const leaf of renderedTextLeaves(screen.toJSON())) {
-        expect(allowed.has(leaf)).toBe(true);
-      }
+      audit();
     });
   });
 

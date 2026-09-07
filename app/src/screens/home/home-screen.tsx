@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { nextMilestone, tiersToMilestone } from "@fither/engine";
+import { computeStreak, nextMilestone, tiersToMilestone } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -21,6 +21,7 @@ import { todaySessionState } from "../../state/today-session";
 import { useLifetimeOffer } from "../../state/use-lifetime-offer";
 import { todayTraining } from "../../state/today-training";
 import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
+import { StreakLine } from "./streak-line";
 
 // The home hub (ADR-0013 §4, rehung in ADR-0017): the app's face between
 // sessions. One hierarchy — an eyebrow, one display headline and the
@@ -51,6 +52,10 @@ export function HomeScreen() {
   const player = useSessionStore((s) => s.player);
 
   const training = todayTraining(historyEntries, today);
+  // The run she is on (ADR-0018): the engine's own count, read from the
+  // same history the done-state reads. Rendered under every headline but
+  // the in-flight one, where the only thing on the page is the way back.
+  const streak = computeStreak(historyEntries, today);
   // Begun / built / nothing — one definition (state/today-session.ts),
   // shared with the launch surface's resume boundary. A built-but-
   // unstarted session goes to the preview, never straight to the player.
@@ -115,6 +120,7 @@ export function HomeScreen() {
                     ? strings.prompt.completedToday.line(training.minutes)
                     : strings.prompt.completedToday.lineSome}
                 </AppText>
+                <StreakLine streak={streak} trainedToday testID="home-streak" />
                 {/* Training again is HER choice — quiet, no urgency, no
                   reward framing. Nothing pushes her. */}
                 <View style={styles.quietAction}>
@@ -135,6 +141,11 @@ export function HomeScreen() {
                 >
                   {strings.home.today.line}
                 </AppText>
+                <StreakLine
+                  streak={streak}
+                  trainedToday={false}
+                  testID="home-streak"
+                />
                 <View style={styles.action}>
                   <PrimaryButton
                     testID="home-start"

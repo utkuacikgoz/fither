@@ -4,12 +4,13 @@ import { ScrollView, StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { BrandMark } from "../../design/primitives/brand-mark";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
-import { hairline, spacing } from "../../design/tokens";
+import { hairline, radius, spacing } from "../../design/tokens";
 import { useTheme } from "../../design/theme";
 import { needsCareMoment } from "../../lib/care-moment";
 import { useCareNoteStore } from "../../state/care-note-store";
@@ -52,6 +53,10 @@ export function SessionPreviewScreen({
   const prepareSessionEdit = useSessionStore((state) => state.prepareSessionEdit);
   const appendCareNote = useCareNoteStore((state) => state.append);
   const [careNoteText, setCareNoteText] = useState("");
+  // The care moment is its own beat (owner review 2026-09-07: never two
+  // headlines on one screen): acknowledged or skipped once, then the
+  // ordinary preview.
+  const [careDone, setCareDone] = useState(false);
 
   if (!session || !player) return <Screen>{null}</Screen>;
 
@@ -83,6 +88,49 @@ export function SessionPreviewScreen({
     onStart();
   };
 
+  if (care && !careDone) {
+    return (
+      <Screen>
+        <View style={styles.careMark}>
+          <BrandMark size="small" tint={colors.accentSoft} testID="care-mark" />
+        </View>
+        <AppText
+          variant="title"
+          style={styles.careAcknowledgment}
+          testID="care-acknowledgment"
+          accessibilityRole="header"
+        >
+          {strings.care.acknowledgment}
+        </AppText>
+        <NoteField
+          testID="care-note"
+          prompt={strings.care.notePrompt}
+          privacyNote={strings.care.notePrivacy}
+          value={careNoteText}
+          onChangeText={setCareNoteText}
+        />
+        <View style={styles.bottom}>
+          <PrimaryButton
+            testID="care-continue"
+            label={strings.care.continue}
+            onPress={() => {
+              saveCareNote();
+              setCareDone(true);
+            }}
+          />
+          <QuietButton
+            testID="care-skip"
+            label={strings.care.skip}
+            onPress={() => {
+              setCareNoteText("");
+              setCareDone(true);
+            }}
+          />
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <ScrollView
@@ -93,25 +141,6 @@ export function SessionPreviewScreen({
         // continues). Shown here; the session player stays clean.
         showsVerticalScrollIndicator
       >
-        {care && (
-          <View style={styles.care}>
-            <AppText
-              variant="title"
-              style={styles.careAcknowledgment}
-              testID="care-acknowledgment"
-            >
-              {strings.care.acknowledgment}
-            </AppText>
-            <NoteField
-              testID="care-note"
-              prompt={strings.care.notePrompt}
-              privacyNote={strings.care.notePrivacy}
-              value={careNoteText}
-              onChangeText={setCareNoteText}
-            />
-          </View>
-        )}
-
         <View style={styles.top}>
           <AppText variant="caption">{strings.preview.eyebrow}</AppText>
           <AppText variant="display" style={styles.headline} accessibilityRole="header">
@@ -122,12 +151,18 @@ export function SessionPreviewScreen({
           </AppText>
         </View>
 
-        <AppText variant="body" style={styles.fitLine} testID="preview-fit">
-          {explanation}
-        </AppText>
+        {/* Why today fits, as the one highlighted thing on the page
+            (ADR-0017): a panel edged in the green. */}
+        <View
+          style={[styles.fitPanel, { backgroundColor: colors.accentSoft, borderLeftColor: colors.accent }]}
+        >
+          <AppText variant="body" testID="preview-fit">
+            {explanation}
+          </AppText>
+        </View>
 
         <View style={styles.plan}>
-          <AppText variant="title" style={styles.planTitle}>
+          <AppText variant="caption" style={styles.planTitle}>
             {strings.preview.planTitle}
           </AppText>
           {player.blocks.map((block, index) => (
@@ -176,8 +211,9 @@ export function SessionPreviewScreen({
 }
 
 const styles = StyleSheet.create({
-  care: {
+  careMark: {
     marginTop: spacing.xl,
+    marginBottom: spacing.lg,
   },
   careAcknowledgment: {
     marginBottom: spacing.md,
@@ -196,6 +232,12 @@ const styles = StyleSheet.create({
   headline: {
     marginTop: spacing.sm,
     marginBottom: spacing.md,
+  },
+  fitPanel: {
+    borderLeftWidth: spacing.xs - 1,
+    borderRadius: radius.card / 2,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   fitLine: {
     marginTop: spacing.xl,

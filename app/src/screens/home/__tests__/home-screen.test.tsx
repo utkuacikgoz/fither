@@ -63,6 +63,13 @@ function todayEntry(
   };
 }
 
+/** An ISO day `delta` days from today (negative = past), UTC-safe. */
+function shiftDays(delta: number): string {
+  const [y, m, d] = todayIso().split("-").map(Number) as [number, number, number];
+  const date = new Date(Date.UTC(y, m - 1, d + delta));
+  return date.toISOString().slice(0, 10);
+}
+
 function seedProfile(profile: Profile) {
   useProfileStore.setState({ profile });
 }
@@ -195,6 +202,45 @@ describe("the day's card", () => {
     expect(
       screen.queryByText(strings.prompt.completedToday.headline),
     ).toBeNull();
+  });
+
+  it("names the run she is on under the open day, and what today does for it (ADR-0018)", () => {
+    seedHistory([
+      todayEntry(10, ["completed"], shiftDays(-2)),
+      todayEntry(10, ["completed"], shiftDays(-1)),
+    ]);
+    const screen = render(<HomeScreen />);
+
+    expect(screen.getByTestId("home-streak")).toBeTruthy();
+    expect(screen.getByText(strings.streak.label(2))).toBeTruthy();
+    expect(screen.getByText(strings.streak.atRiskToday)).toBeTruthy();
+    expect(screen.queryByText(strings.streak.best(2))).toBeNull();
+  });
+
+  it("counts today once trained, and names a longer best when there is one", () => {
+    seedHistory([
+      todayEntry(10, ["completed"], shiftDays(-9)),
+      todayEntry(10, ["completed"], shiftDays(-8)),
+      todayEntry(10, ["completed"], shiftDays(-7)),
+      todayEntry(10, ["completed"], shiftDays(-1)),
+      todayEntry(20, ["completed", "completed"]),
+    ]);
+    const screen = render(<HomeScreen />);
+
+    expect(screen.getByText(strings.streak.label(2))).toBeTruthy();
+    expect(screen.getByText(strings.streak.best(3))).toBeTruthy();
+    // Trained: nothing is at stake today, so nothing says so.
+    expect(screen.queryByText(strings.streak.atRiskToday)).toBeNull();
+  });
+
+  it("shows no streak line at all with no run alive: the hub never shows a zero", () => {
+    const screen = render(<HomeScreen />);
+    expect(screen.queryByTestId("home-streak")).toBeNull();
+
+    // A skipped-through day is not training and starts nothing.
+    seedHistory([todayEntry(10, ["skipped", "skipped"], shiftDays(-1))]);
+    const again = render(<HomeScreen />);
+    expect(again.queryByTestId("home-streak")).toBeNull();
   });
 
   it("yesterday's completed session never claims today", () => {
@@ -333,6 +379,11 @@ describe("copy", () => {
     for (let n = 1; n <= 5; n += 1) allowed.add(strings.home.skills.away(n));
     // A decorative glyph token, not copy (same allowance as progress).
     allowed.add(glyph.check);
+    // The streak line, every count it can show.
+    for (let n = 1; n <= 60; n += 1) {
+      allowed.add(strings.streak.label(n));
+      allowed.add(strings.streak.best(n));
+    }
     const screen = render(<HomeScreen />);
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
       // Name the offender on failure instead of just `false`.

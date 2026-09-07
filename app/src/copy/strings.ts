@@ -208,6 +208,13 @@ export const strings = {
     restNote: "Breathe.",
     restDone: "I'm ready",
     setCounter: (current: number, total: number) => `Set ${current} of ${total}`,
+    // COPY-WRITER (2026-09-07, redesign mockups): top-right caption on the
+    // block intro and the feedback question, which exercise this is of how
+    // many today. Bare numerals as the mockup shows ("1 of 3"): the screen
+    // is already the exercise, so no noun, and it stays distinct from
+    // setCounter beside it. If a noun is ever needed it is "exercise", the
+    // word she already reads in skipBlock, never "block".
+    blockCounter: (current: number, total: number) => `${current} of ${total}`,
     blockPlan: (
       sets: number,
       amount: number,
@@ -270,13 +277,22 @@ export const strings = {
     // its own screen before the preview, so it carries two buttons.
     // `continue` names where the tap goes (the preview, whose headline is
     // "Your session is ready"), never "Start": nothing starts here.
-    // `skip` is declining today's session, with equal dignity: a plain
-    // state, no "are you sure", nothing about what she'd miss, and the
-    // note she may have written is neither mentioned nor lost. If the
-    // quiet button ever only skips the note and still opens the preview,
-    // this label is wrong and must change.
+    // `skip` (pinned 2026-09-07) skips the note only: the quiet button
+    // goes straight on to the same preview as `continue`, and nothing is
+    // declined. The label names exactly that, so it never reads as
+    // turning down today's session. If the quiet button ever declines
+    // the session instead, this label is wrong and must change.
     continue: "See today's session",
-    skip: "Not today",
+    // COPY-WRITER (2026-09-07): the same button when the engine could NOT
+    // build around today's areas. `continue` would be false here: there is
+    // no session yet. The tap goes to daily.noSession ("No session fits
+    // around N areas." with the set-aside rows), a screen that recommends,
+    // so the label promises a next step, not a session. Same "See ..."
+    // shape as `continue` so the two buttons feel like one control.
+    // Rejected "Find a way through": too dramatic for the care beat, and
+    // it promises a way exists when noSession.none may say it does not.
+    continueNoSession: "See what to do",
+    skip: "Skip the note",
   },
   preview: {
     eyebrow: "Made for today",
@@ -835,6 +851,12 @@ export const strings = {
     },
     skills: {
       title: "Skills",
+      // COPY-WRITER (2026-09-07): caption above the Progress tab's
+      // next-skill tile (the movement she is climbing toward, with the
+      // tile's own "N tiers ahead" line). Was reusing `title`, which
+      // named the earned list, not the one ahead. Capability framing:
+      // it is a skill she reaches, never a goal she is behind on.
+      nextTitle: "Next skill",
       // Forward-looking, zero guilt: says where skills come from,
       // never when, and never what's absent. "counts" echoes
       // finish.note ("That counts.").
