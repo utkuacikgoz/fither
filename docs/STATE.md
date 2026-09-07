@@ -1,4 +1,4 @@
-# Where the build stands — 2026-09-07 (phase 4: the redesign built on the feature branch, awaiting the owner's merge)
+# Where the build stands — 2026-09-07 (phase 5: growth waves in progress)
 
 Read `CLAUDE.md` first, then this. Everything below is on `main` with
 green GitHub CI verified per wave commit (runs #90 onward).
@@ -67,7 +67,19 @@ that cannot write Watchman's LaunchAgent.
   aside for today, lets a session build.
 - `MAX_TIER` exported so UI never bakes the ladder length into copy.
 
-**Phase 4 — the redesign, built (branch `claude/fither-build-system-09zurs`, not on main until the owner approves)**
+**Phase 5 — growth waves (docs/implementation-checklist.md; branch `claude/fither-build-system-09zurs`, screens merge to main only after the owner approves each)**
+
+- Wave 1 on main: guest by default, promise on the equipment screen,
+  restrictions once, preview from engine facts, funnel events
+  (ADR-0024). Wave 5 on main: free-sessions experiment (ADR-0025),
+  off by default.
+- On the branch: intention store, week view, receipts, weekly reminder
+  bodies, scenario_entry, the static recipient page (web/), the
+  measurement, pilot, treatments, calibration and demo-brief documents.
+- Awaiting owner approval: Home week tile, finish receipt, intention
+  ask, weekly recap, Where I train, floor-distance work phase.
+
+**Phase 4 — the redesign, built and merged to main 2026-09-07**
 
 - ADR-0017 built screen by screen against 50+ owner-approved mockups
   (`docs/design/mockups`, rendered by `render.sh`). Dark green/black/white,
