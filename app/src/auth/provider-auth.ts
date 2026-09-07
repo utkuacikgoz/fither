@@ -4,7 +4,7 @@ import { todayIso } from "../lib/dates";
 import type { AuthPort, AuthProvider, IdentityRecord, SignInOutcome } from "./auth";
 
 // The real providers behind the auth port (ADR-0011 §3). Apple is live;
-// Google has no adapter yet and is therefore NOT offered — the port's
+// Google sign-in was removed by owner decision (2026-09-07) — the port's
 // availableProviders() is how the screen knows. Guest stays local and
 // always succeeds.
 //
@@ -57,11 +57,6 @@ export const providerAuth: AuthPort = {
     }
   },
 
-  async signInWithGoogle(): Promise<SignInOutcome> {
-    // Not offered (availableProviders); reaching here is a programming
-    // error, answered honestly rather than faked.
-    return { ok: false, reason: "failed" };
-  },
 
   async continueAsGuest(): Promise<SignInOutcome> {
     return { ok: true, identity: { kind: "guest", date: todayIso() } };

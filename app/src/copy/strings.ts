@@ -362,8 +362,9 @@ export const strings = {
   },
   // Sign-in (2026-09-01, dev-mode only for now — nothing connects yet).
   // Guest is a full peer of the provider buttons: she is never
-  // second-class for skipping an account. Apple/Google wordings are the
-  // platform-sanctioned conventions — do not restyle them.
+  // second-class for skipping an account. The Apple wording is the
+  // platform-sanctioned convention — do not restyle it. Google sign-in
+  // was removed by owner decision (2026-09-07).
   auth: {
     // COPY-WRITER (2026-09-06, owner review): the first words she reads.
     // Black ground, the mark, FITHER, this line, two buttons — so it sells
@@ -379,7 +380,6 @@ export const strings = {
     welcome: "Get stronger anywhere, on your own time.",
     welcomeSub: "10, 20 or 30 minutes. No equipment. Adapted to you, every day.",
     apple: "Continue with Apple",
-    google: "Continue with Google",
     guest: "Continue without an account",
     // Owner review (2026-09-06): the two captions that used to sit under
     // the buttons (what an account does today; that training lives on
@@ -812,7 +812,6 @@ export const strings = {
       title: "Account",
       status: {
         apple: "Signed in with Apple",
-        google: "Signed in with Google",
         guest: "Continuing without an account",
       },
       signOut: "Sign out",

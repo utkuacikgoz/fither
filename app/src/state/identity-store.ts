@@ -22,7 +22,6 @@ interface IdentityStoreState {
   identity: IdentityRecord | null;
   /** Sign in through the auth port and persist the identity. */
   signInWithApple: () => Promise<SignInResult>;
-  signInWithGoogle: () => Promise<SignInResult>;
   /** The first-class guest path (ADR-0011 §1). Never fails. */
   continueAsGuest: () => Promise<SignInResult>;
   /**
@@ -50,12 +49,6 @@ export const useIdentityStore = create<IdentityStoreState>()(
         return "done";
       },
 
-      signInWithGoogle: async () => {
-        const outcome = await getAuth().signInWithGoogle();
-        if (!outcome.ok) return outcome.reason;
-        set({ identity: outcome.identity });
-        return "done";
-      },
 
       continueAsGuest: async () => {
         const outcome = await getAuth().continueAsGuest();

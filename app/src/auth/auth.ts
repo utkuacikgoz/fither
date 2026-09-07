@@ -1,7 +1,7 @@
 // The auth port (ADR-0011 §3). The app talks to sign-in ONLY through this
 // interface; the identity store is the app-side record of who she is and
 // is evaluated offline. The only implementation today is dev-auth
-// (instant success, no network, no SDK). Wiring real Apple/Google sign-in
+// (instant success, no network, no SDK). Wiring real Apple sign-in
 // later means implementing this same interface in a new adapter and
 // switching `getAuth()` — nothing else changes. Identity gates NOTHING on
 // the training path (ADR-0011 §4): signed out never means locked out.
@@ -9,8 +9,8 @@
 import { devAuth } from "./dev-auth";
 import { providerAuth } from "./provider-auth";
 
-/** The two providers (ADR-0011 §2): Apple and Google, nothing else. */
-export type AuthProvider = "apple" | "google";
+/** The one provider (ADR-0011 §2, amended 2026-09-07): Apple. Google was removed by owner decision; guest stays the peer path. */
+export type AuthProvider = "apple";
 
 /**
  * How she continues: a provider identity or the first-class guest path.
@@ -65,7 +65,6 @@ export interface AuthPort {
    */
   checkRevoked(identity: IdentityRecord): Promise<boolean>;
   signInWithApple(): Promise<SignInOutcome>;
-  signInWithGoogle(): Promise<SignInOutcome>;
   /** The guest path is local-only and always succeeds (ADR-0011 §1). */
   continueAsGuest(): Promise<SignInOutcome>;
   signOut(): Promise<void>;
