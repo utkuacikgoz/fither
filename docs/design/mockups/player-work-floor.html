@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><title>floor Work</title><link rel="stylesheet" href="tokens.css">
+<style>
+.pline { position: absolute; top: 54px; left: 0; right: 0; height: 4px; background: var(--rail); }
+.pline i { display: block; height: 100%; width: 22%; background: var(--accent); }
+.screen { padding-top: 28px; }
+.setc { display: flex; justify-content: space-between; align-items: center; }
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; }
+.fig { width: 200px; height: 200px; background: var(--ink); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.fig.small { width: 120px; height: 120px; }
+.cue { max-width: 320px; }
+.bottom { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.numeral { font-size: 132px; letter-spacing: -3px; line-height:1; }
+.opts { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.opt { min-height: 72px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); font-size: 20px; font-weight: 600; }
+
+</style></head><body><div class="phone">
+<div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
+<div class="pline"><i></i></div>
+<div class="screen">
+
+  <div class="setc"><span class="body" style="font-size:17px">Wall Push-Up</span><span class="body" style="font-size:17px;color:var(--ink-soft)">Set 1 of 2</span></div>
+  <div class="center">
+    <div class="fig small" style="--m:url('../../../app/assets/movements/wall-push-up.png')"></div>
+    <div class="numeral">8</div>
+    <div class="body-soft" style="margin-top:-4px;font-size:19px">reps</div>
+    <div class="body-large cue" style="font-weight:600;margin-top:18px">Hands on the wall at shoulder height</div>
+  </div>
+  <div class="bottom"><div class="btn btn-primary">Done</div><div class="btn btn-quiet">Skip exercise</div></div>
+</div>
+<div class="home-indicator"></div>
+</div></body></html>
