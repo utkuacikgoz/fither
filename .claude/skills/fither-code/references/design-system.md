@@ -206,6 +206,12 @@ is what gets built.
   blocks her recommends the way out as tappable actions (the engine
   names which areas unblock; one row each, today only), never a
   description plus a generic button. Applies to every dead end.
+- 2026-09-07, share screen: four context pills in one row did not fit.
+  → Rule: never more than three pills in a row; four or more options go
+  in a two-column grid of full-width pills (the area grid's shape).
+- 2026-09-07, recipient page: "Yours would be built for yours" did not
+  read. → Rule: one thought per line on a landing page; a sentence that
+  needs a second reading is cut, not fixed.
 - 2026-09-07, growth brief, wave 1: no sign-in screen at launch (guest by
   default, Sign in with Apple lives in Settings); the promise headline
   sits on the first decision screen (equipment) instead of a welcome-only

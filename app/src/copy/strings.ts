@@ -5,6 +5,30 @@
 
 import type { BodyArea, Energy, Pattern, SessionMinutes } from "@fither/engine";
 
+// COPY-WRITER (2026-09-07, weekly rhythm): headline and share-card counts
+// are spelled out ("Three sessions this week."), the way the coach would
+// say them. Words up to twenty and the three session lengths; anything
+// beyond falls back to the numeral rather than inventing a word.
+const NUMBER_WORDS = [
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+  "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+  "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
+] as const;
+const numberWord = (n: number): string => {
+  if (n === 30) return "thirty";
+  return NUMBER_WORDS[n] ?? String(n);
+};
+const capitalised = (word: string): string =>
+  `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+// "Three sessions this week." / "One session this week." / 0 is a quiet
+// week, never an empty one. Shared by the recap headline and the recap
+// share card so the two never drift.
+const sessionsThisWeek = (count: number): string => {
+  if (count === 0) return "A quiet week.";
+  if (count === 1) return "One session this week.";
+  return `${capitalised(numberWord(count))} sessions this week.`;
+};
+
 export const strings = {
   // COPY-WRITER: home hub (2026-09-04, ADR-0013 §4) — the app's face
   // between sessions. Three cards; only the day's card carries a primary
@@ -110,6 +134,64 @@ export const strings = {
       nextDay: (days: number) =>
         `Today's session would make it ${days} in a row. Whenever you're ready.`,
     },
+  },
+  // COPY-WRITER (2026-09-07, weekly rhythm; mockups home-week and
+  // weekly-recap): the Home tile and the recap's day strip. The week is a
+  // plain count against a target she set herself (see `intention`), and
+  // the count is only ever hers to read: nothing here names a shortfall,
+  // a debt, or a day that went untrained. Days she did not train are
+  // simply not filled in.
+  //   · progress: the tile's first sentence, and the receipt's "This
+  //     week" value. Full stop on purpose: the tile follows it with
+  //     `nextLine`. Count may pass the target ("4 of 3 sessions."), which
+  //     is honest and reads as pride, not error.
+  //   · progressNoTarget: same slot with no target set. "so far" faces
+  //     forward; 0 is a plain state with the smallest possible invitation.
+  //   · nextLine: only while a target remains. Names the day, not the gap.
+  //   · met: target reached. States the count and stops; a further
+  //     session is still counted by `progress`, and this line never says
+  //     "enough" or "stop".
+  //   · dayLetters / dayNames: Monday first, the strip's labels and their
+  //     accessibility names.
+  week: {
+    title: "This week",
+    daysLabel: "Days trained",
+    progress: (count: number, target: 2 | 3) => `${count} of ${target} sessions.`,
+    progressNoTarget: (count: number) =>
+      count === 0
+        ? "Nothing yet. Any day counts."
+        : count === 1
+          ? "1 session so far."
+          : `${count} sessions so far.`,
+    nextLine: (weekday: string) => `${weekday}'s is next.`,
+    met: (target: 2 | 3) => `${capitalised(numberWord(target))} this week. Done.`,
+    dayLetters: ["M", "T", "W", "T", "F", "S", "S"],
+    dayNames: [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ],
+  },
+  // COPY-WRITER (2026-09-07, weekly rhythm; mockup weekly-intention): the
+  // one question after her first session, and the Settings row that holds
+  // the answer. `lead` says two facts and stops: it is a plan for the
+  // week, and where she changes it. The draft's "Never a debt" is gone:
+  // naming the debt is how it enters the room. Nothing about what a
+  // target does for her; the options are three plain states with equal
+  // dignity, and "No target" is not a lesser one.
+  intention: {
+    question: "How many sessions this week?",
+    lead: "A plan for the week. Change it any time in Settings.",
+    two: "Two",
+    three: "Three",
+    none: "No target",
+    settingsRow: "Sessions a week",
+    settingsValue: (target: 2 | 3 | null) =>
+      target === 2 ? "Two" : target === 3 ? "Three" : "No target",
   },
   prompt: {
     dayLabel: "Today",
@@ -623,6 +705,23 @@ export const strings = {
       midday: "Midday (12:30)",
       evening: "Evening (18:30)",
     },
+    // COPY-WRITER (2026-09-07, weekly rhythm): the daily invitation
+    // reworded for a week target. Each body stands alone on a lock screen,
+    // stays under 90 characters, and states nothing that could be stale
+    // by the time it fires: no "yesterday", no "still", no "new week".
+    // Every number in `onTrack` is a fact at scheduling time, so the
+    // scheduler must rebuild it after any session is saved. Conditional
+    // "would", as in streak.notification.nextDay: today is an invitation,
+    // never a due date. `met` never says "enough" or "done for the week":
+    // a further session counts just as much, and the line says so.
+    weekly: {
+      onTrack: (count: number, target: number) =>
+        count === 0
+          ? `Today's session would be your first of ${target} this week.`
+          : `${count} of ${target} this week. Today's session would make it ${count + 1}.`,
+      noTarget: "Ten minutes today, if today fits.",
+      met: "Your week's target is met. Another session counts just as much.",
+    },
   },
   resume: {
     // From docs/copy/draft-strings.md ("Resume prompt"). Both paths keep
@@ -668,6 +767,48 @@ export const strings = {
       headline: "Today didn't fit",
       note: "That happens. Ready when you are.",
     },
+    // COPY-WRITER (2026-09-07, weekly rhythm; mockup finish-receipt): the
+    // four-row receipt under the movement figures. Labels left, values
+    // right, no full stops on values (they are column entries, not
+    // sentences). "Hard today" reuses the feedback answer's own words
+    // (player.feedback.options.hard) so the row names exactly what she
+    // said. `length` says "planned" because the app does not measure
+    // active time; it must never claim minutes she spent. The "This week"
+    // row's value is week.progress / week.progressNoTarget, which carry a
+    // full stop for the Home tile; the callsite trims it here. `share`
+    // is the quiet button; same words as share.action, a separate key so
+    // this screen stays free to diverge.
+    receipt: {
+      doneLabel: "Done",
+      done: (n: number) => (n === 1 ? "1 movement" : `${n} movements`),
+      hardLabel: "Hard today",
+      hard: (n: number) => (n === 1 ? "1 movement" : `${n} movements`),
+      lengthLabel: "Session length",
+      length: (minutes: number) => `${minutes} minutes planned`,
+      weekLabel: "This week",
+      share: "Share this",
+    },
+  },
+  // COPY-WRITER (2026-09-07, weekly rhythm; mockup weekly-recap): the
+  // week's page. `title` is the date range the app formats ("1 to 7
+  // September"), rendered as the caption; nothing added to it. `headline`
+  // is the count in words; 0 is "A quiet week.", a fact with no verdict.
+  // The rows are receipts for the week: minutes are "planned" for the same
+  // reason as finish.receipt.length, movements are counted as done.
+  // `tierLabel` is the pattern's own name (profile.patterns.names) and
+  // `tierValue` uses "reached", the honest tier-entry verb (ADR-0012 §3).
+  // `noChange` replaces the tier rows on a week with no new tier: it
+  // never invents improvement and never hedges the sessions with "still".
+  recap: {
+    title: (range: string) => range,
+    headline: (count: number) => sessionsThisWeek(count),
+    minutesLabel: "Minutes planned",
+    movementsLabel: "Movements done",
+    tierLabel: (pattern: string) => pattern,
+    tierValue: (tier: number) => `Tier ${tier} reached`,
+    noChange: "No new tier this week. Each session counts.",
+    share: "Share this week",
+    settingsRow: "Weekly recaps",
   },
   unlock: {
     heading: "New skill",
@@ -702,6 +843,43 @@ export const strings = {
       // the share screen would read as a bug at review, and the two
       // surfaces must stay free to diverge. Not "Skip" (nothing is being
       // passed over) and not "Maybe later" (no promise to ask again).
+      notNow: "Not now",
+    },
+    // COPY-WRITER (2026-09-07, weekly rhythm; mockup share-receipt): share
+    // from a finish receipt or a recap, with one optional public context.
+    // The card says where, how long, and that it was complete: three
+    // fragments, each a fact, nothing about the body. Minutes in words
+    // (Ten, Twenty, Thirty) because the card is read, not tallied. `skip`
+    // is the fourth context chip: it passes over the question, which is
+    // exactly what it does. `message` is hers, first person, and names
+    // no minutes because the card beside it already does; the app appends
+    // the URL. `card.week` is the recap card's headline, same words as
+    // recap.headline so the page and its card agree.
+    context: {
+      question: "Where were you?",
+      home: "Home",
+      hotel: "Hotel",
+      meetings: "Between meetings",
+      skip: "Skip",
+      card: {
+        headline: (
+          context: "home" | "hotel" | "meetings" | null,
+          minutes: number,
+        ) => {
+          const time = `${capitalised(numberWord(minutes))} minutes. Session complete.`;
+          if (context === "hotel") return `Hotel room. ${time}`;
+          if (context === "meetings") return `Between meetings. ${time}`;
+          if (context === "home") return `At home. ${time}`;
+          return time;
+        },
+        sub: (movements: number) =>
+          movements === 1
+            ? "One movement, no equipment."
+            : `${capitalised(numberWord(movements))} movements, no equipment.`,
+        week: (count: number) => sessionsThisWeek(count),
+      },
+      message: (url: string) =>
+        `Built for the room I was in. No equipment. Try yours: ${url}`,
       notNow: "Not now",
     },
   },
