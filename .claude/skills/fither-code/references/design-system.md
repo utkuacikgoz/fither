@@ -206,6 +206,13 @@ is what gets built.
   blocks her recommends the way out as tappable actions (the engine
   names which areas unblock; one row each, today only), never a
   description plus a generic button. Applies to every dead end.
+- 2026-09-07, "Approved start building": the whole flow is built onto
+  the approved mockups on the feature branch (commit bb77392). Where a
+  mockup literal had no string, the existing string was used and the
+  copy-writer asked for a key rather than inventing one (care beat's
+  "See what to do", Progress's "Next skill"). → Rule: the build never
+  invents a literal to match a mockup; the mockup is corrected or the
+  copy-writer adds the key.
 - 2026-09-07, heavy-day preview: cluttered, two headlines competing. →
   Rule: never two headlines on one screen. A moment that deserves its
   own headline (the care acknowledgement) gets its own screen and one
