@@ -44,6 +44,9 @@ pure JavaScript — no rebuild is needed to switch it on.
 | `session_preview` | `minutes`, `blocks` | a built session was shown on the preview |
 | `workout_start` | `minutes` (10/20/30) | the player's first real transition |
 | `workout_complete` | `minutes`, `close` (completed / endedEarly / outOfTime / nothingDone), `first` | after the result commits, once |
+| `weekly_intention_set` | `target` (two / three / none) | she set or changed her weekly intention |
+| `share_eligible` | `source` (finish / receipt / recap) | a share was offered on that surface |
+| `share_start` | `source`, `context` (home / hotel / meetings / none) | she opened the share sheet; nothing after this is observable |
 | `paywall_view` | `surface` (gate / expired / settings) | the paywall was on screen, once per showing |
 | `scenario_entry` | `scenario` (allowlisted id) | the app opened from a shared /s/<id> link |
 | `experiment_exposure` | `experiment`, `variant` (control / three) | a variant was assigned on this phone, once per experiment (ADR-0025) |
