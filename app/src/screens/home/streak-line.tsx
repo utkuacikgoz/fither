@@ -8,9 +8,10 @@ import { fontFamily, spacing } from "../../design/tokens";
 
 // The streak on the hub (ADR-0018, owner-approved 2026-09-06): one line
 // under the headline — a green dot, the count, and one caption after it.
-// Untrained today it names what today does (never what a miss costs);
-// trained, it names her best run when there is a longer one to name.
-// Nothing renders with no run alive: the hub never shows a zero.
+// Trained today, it names her best run when there is a longer one to
+// name; untrained, the count stands alone (owner brief 2026-09-07, wave
+// 2: streak pressure is out of Home — nothing says what today does for
+// the run). Nothing renders with no run alive: the hub never shows a zero.
 
 interface StreakLineProps {
   streak: StreakState;
@@ -23,11 +24,10 @@ export function StreakLine({ streak, trainedToday, testID }: StreakLineProps) {
   const colors = useTheme();
   if (streak.current === 0) return null;
 
-  const caption = trainedToday
-    ? streak.best > streak.current
+  const caption =
+    trainedToday && streak.best > streak.current
       ? strings.streak.best(streak.best)
-      : null
-    : strings.streak.atRiskToday;
+      : null;
 
   return (
     <View

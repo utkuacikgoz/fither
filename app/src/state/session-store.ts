@@ -630,9 +630,9 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         saveFailed: false,
         saving: false,
       });
-      // Tomorrow's invitation now speaks from today's training (ADR-0018):
+      // Tomorrow's invitation now speaks from today's training (the week view):
       // the profile store above holds the committed history, so the
-      // reminder store reads the streak from it. Fire-and-forget and
+      // reminder store reads the week from it. Fire-and-forget and
       // never-throwing by contract — the finish is already on screen and
       // a scheduling failure is not her problem.
       void rescheduleInvitation();

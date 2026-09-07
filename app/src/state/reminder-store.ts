@@ -7,13 +7,13 @@
 // like every sibling. Never a nag: a decline anywhere sets `asked` and
 // nothing ever re-prompts — the Settings section is the only way back in.
 //
-// The invitation may name the streak (ADR-0018). Every schedule here
-// passes tomorrow's body, computed from today's history at that moment:
-// the engine's `computeStreak` and the app's one `todayTraining` reading,
-// worded by `invitationBody`. All of it is on-device data — airplane mode
-// changes nothing.
+// The invitation names the week (owner brief 2026-09-07, wave 2: streak
+// pressure is out of the reminders). Every schedule here passes
+// tomorrow's body, computed from today's history at that moment: the
+// engine's `weekParticipation` and the intention she holds, read through
+// the one `weekView` selector and worded by `invitationBody`. All of it is
+// on-device data — airplane mode changes nothing.
 
-import { computeStreak } from "@fither/engine";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -21,8 +21,9 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { todayIso } from "../lib/dates";
 import { invitationBody } from "../notifications/invitation-body";
 import { getNotifications, type ReminderSlot } from "../notifications/notifications";
+import { useIntentionStore } from "./intention-store";
 import { useProfileStore } from "./profile-store";
-import { todayTraining } from "./today-training";
+import { weekView } from "./week-view";
 
 interface ReminderState {
   hydrated: boolean;
@@ -156,25 +157,35 @@ export const useReminderStore = create<ReminderState>()(
 /**
  * Tomorrow's invitation body from today's history. The date is the
  * app's local calendar day (the same boundary the prompt uses); the
- * streak and "trained today" are read, never re-derived here. Before the
- * profile store hydrates the history is empty, which simply yields the
- * generic body — never a wrong streak number.
+ * week's participation and the intention verdict are read through
+ * `weekView`, never re-derived here. Before the profile store hydrates
+ * the history is empty, which simply yields the generic body — never a
+ * wrong count.
  */
 function currentInvitationBody(): string {
   const { entries } = useProfileStore.getState().history;
-  const today = todayIso();
-  return invitationBody(
-    computeStreak(entries, today),
-    todayTraining(entries, today).trained,
-  );
+  const { target } = useIntentionStore.getState();
+  const { participation } = weekView(entries, todayIso(), target);
+  return invitationBody({
+    participation,
+    target,
+    hasHistory: entries.length > 0,
+  });
 }
 
 /**
  * Refresh the scheduled invitation so tomorrow's body reflects today's
- * training (called after a session commits). Best effort, never throws:
- * nothing happens unless a slot is chosen AND the OS permission is
- * granted, and any failure leaves the previous schedule standing — the
- * finish flow must never wait on, or hear about, a notification.
+ * training. Called after a session commits (session-store) and on every
+ * return to the foreground (the root layout). The foreground call is
+ * what keeps the count honest across a date or timezone change: the
+ * body's "N of T this week" is a fact at scheduling time only, and the
+ * OS repeats a weekly trigger verbatim, so a new week, a week away, a
+ * flight across the date line or a clock set forward would otherwise
+ * replay a stale count. Re-reading `todayIso()` at each foreground puts
+ * the body back on the week the device is now in. Best effort, never
+ * throws: nothing happens unless a slot is chosen AND the OS permission
+ * is granted, and any failure leaves the previous schedule standing —
+ * the finish flow must never wait on, or hear about, a notification.
  */
 export async function rescheduleInvitation(): Promise<void> {
   const { slot } = useReminderStore.getState();
