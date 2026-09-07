@@ -14,16 +14,28 @@ import { radius, spacing } from "../tokens";
 // every fact a screen reader needs, so the image is hidden from
 // accessibility rather than given a second, redundant label.
 
-type FigureSize = "row" | "hero";
+type FigureSize = "small" | "row" | "large" | "hero";
 
 const DIMENSIONS: Record<FigureSize, number> = {
+  small: 44,
   row: 56,
+  large: 120,
   hero: 200,
 };
 
+/**
+ * The figure's colour (ADR-0017): white ink is the default everywhere a
+ * movement is simply shown (lists, the player); the green is for the
+ * one figure a screen celebrates or points at (next skill, unlock, the
+ * reached tiers of a ladder); soft grey for what is not yet reached.
+ */
+export type FigureTone = "ink" | "accent" | "soft";
+
 interface MovementFigureProps {
   movementId: string;
-  size?: FigureSize;
+  /** A named size, or an exact box in points (the ladder strip's ascent). */
+  size?: FigureSize | number;
+  tone?: FigureTone;
   /** Sits on a tinted ground (block intro) rather than the page. */
   onWash?: boolean;
   testID?: string;
@@ -32,12 +44,14 @@ interface MovementFigureProps {
 export function MovementFigure({
   movementId,
   size = "row",
+  tone = "ink",
   onWash = false,
   testID,
 }: MovementFigureProps) {
   const colors = useTheme();
   const source = movementFigure(movementId);
-  const box = DIMENSIONS[size];
+  const box = typeof size === "number" ? size : DIMENSIONS[size];
+  const tint = tone === "accent" ? colors.accent : tone === "soft" ? colors.inkSoft : colors.ink;
   // A missing figure renders nothing at all — a degraded build shows the
   // movement name, never a broken-image hole.
   if (!source) return null;
@@ -59,7 +73,7 @@ export function MovementFigure({
       <Image
         source={source}
         resizeMode="contain"
-        style={[styles.image, { tintColor: colors.accent }]}
+        style={[styles.image, { tintColor: tint }]}
       />
     </View>
   );

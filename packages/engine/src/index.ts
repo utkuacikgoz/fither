@@ -25,4 +25,5 @@ export {
   SKILL_MILESTONE_TIERS,
 } from "./apply";
 export { createInitialProfile, PATTERNS } from "./profile";
-export { computeStreak, type Streak } from "./streak";
+export { computeStreak, type StreakState } from "./streak";
+export { unblockingAreas } from "./unblocking";

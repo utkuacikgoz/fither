@@ -49,7 +49,12 @@ describe("PaywallScreen", () => {
     // The letterhead is the shared brand mark, not copy.
     expect(screen.getByText(WORDMARK)).toBeTruthy();
     expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.letter)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.lead)).toBeTruthy();
+    // The ladder she is on, drawn: six tiers, the reached ones filled.
+    expect(screen.getByTestId("paywall-ladder")).toBeTruthy();
+    for (const line of Object.values(strings.paywall.benefits)) {
+      expect(screen.getByText(line)).toBeTruthy();
+    }
     expect(screen.getByText(strings.paywall.trialLine)).toBeTruthy();
     expect(screen.getByText(strings.paywall.plans.annual.label)).toBeTruthy();
     expect(screen.getByText(strings.paywall.plans.annual.price)).toBeTruthy();
@@ -68,7 +73,7 @@ describe("PaywallScreen", () => {
   it("pre-expiry, keeps the pre-trial copy and never the expired letter", () => {
     const screen = render(<PaywallScreen />);
     expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
-    expect(screen.queryByText(strings.paywall.expired.letter)).toBeNull();
+    expect(screen.queryByText(strings.paywall.expired.recordNote)).toBeNull();
     expect(screen.queryByText(strings.paywall.expired.trialLine)).toBeNull();
     expect(screen.queryByText(strings.paywall.expired.cta)).toBeNull();
   });
@@ -78,25 +83,15 @@ describe("PaywallScreen", () => {
     const screen = render(<PaywallScreen />);
 
     expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.expired.letter)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
     expect(screen.getByText(strings.paywall.expired.trialLine)).toBeTruthy();
     expect(screen.getByText(strings.paywall.expired.cta)).toBeTruthy();
-    expect(
-      screen.getByText(
-        strings.paywall.expired.afterTrialNote(strings.paywall.plans.annual.price),
-      ),
-    ).toBeTruthy();
 
     // None of the pre-trial free-week copy survives into the expired state.
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
-    expect(screen.queryByText(strings.paywall.letter)).toBeNull();
+    expect(screen.queryByText(strings.paywall.lead)).toBeNull();
     expect(screen.queryByText(strings.paywall.trialLine)).toBeNull();
     expect(screen.queryByText(strings.paywall.cta)).toBeNull();
-    expect(
-      screen.queryByText(
-        strings.paywall.afterTrialNote(strings.paywall.plans.annual.price),
-      ),
-    ).toBeNull();
 
     // Plans, restore and disclosure are shared, state-independent.
     expect(screen.getByText(strings.paywall.plans.annual.label)).toBeTruthy();
@@ -105,7 +100,7 @@ describe("PaywallScreen", () => {
     expect(screen.getByText(strings.paywall.legal.autoRenew)).toBeTruthy();
   });
 
-  it("leads with annual: preselected, listed first, priced in the trial note", () => {
+  it("leads with annual: preselected and listed first", () => {
     const screen = render(<PaywallScreen />);
     expect(
       screen.getByTestId("paywall-plan-annual").props.accessibilityState.selected,
@@ -113,11 +108,6 @@ describe("PaywallScreen", () => {
     expect(
       screen.getByTestId("paywall-plan-monthly").props.accessibilityState.selected,
     ).toBe(false);
-    expect(
-      screen.getByText(
-        strings.paywall.afterTrialNote(strings.paywall.plans.annual.price),
-      ),
-    ).toBeTruthy();
   });
 
   it("marks the selected plan with the check glyph, and it follows the choice", () => {
@@ -136,11 +126,6 @@ describe("PaywallScreen", () => {
   it("purchases the selected plan through the port and persists the grant", async () => {
     const screen = render(<PaywallScreen />);
     fireEvent.press(screen.getByTestId("paywall-plan-monthly"));
-    expect(
-      screen.getByText(
-        strings.paywall.afterTrialNote(strings.paywall.plans.monthly.price),
-      ),
-    ).toBeTruthy();
 
     fireEvent.press(screen.getByTestId("paywall-purchase"));
     await waitFor(() =>

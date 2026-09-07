@@ -223,7 +223,13 @@ export const strings = {
       left: "Left side",
       right: "Right side",
       switchTitle: "Switch sides",
-      switchBody: "Set up on your right side when you're ready.",
+      // COPY-WRITER (2026-09-07, redesign mockups): value revised, key
+      // unchanged. This is the one line under "Switch sides", so no
+      // sibling `sideSwitch.line` key: one slot, one key. Six words, read
+      // aloud in a pause. Side neutral on purpose: it no longer presumes
+      // the right side comes second, so it stays true whichever side led.
+      // "Same again" says the set is identical, nothing new to learn.
+      switchBody: "Same again on the other side.",
       startRight: "Start right side",
     },
     feedback: {
@@ -260,6 +266,17 @@ export const strings = {
     acknowledgment: "That's a lot to carry today.",
     notePrompt: "Want to say what happened?",
     notePrivacy: "Stays on your phone. Never sent anywhere.",
+    // COPY-WRITER (2026-09-07, redesign mockups): the care moment is now
+    // its own screen before the preview, so it carries two buttons.
+    // `continue` names where the tap goes (the preview, whose headline is
+    // "Your session is ready"), never "Start": nothing starts here.
+    // `skip` is declining today's session, with equal dignity: a plain
+    // state, no "are you sure", nothing about what she'd miss, and the
+    // note she may have written is neither mentioned nor lost. If the
+    // quiet button ever only skips the note and still opens the preview,
+    // this label is wrong and must change.
+    continue: "See today's session",
+    skip: "Not today",
   },
   preview: {
     eyebrow: "Made for today",
@@ -490,6 +507,12 @@ export const strings = {
   // → `daily.fourAnswers`; the old key name itself made the false claim.
   notifications: {
     rationale: {
+      // COPY-WRITER (2026-09-07, redesign mockups): the headline above
+      // `line`. A question, because the screen is asking: four words, the
+      // coach's voice, answered by "Sounds good" below. "Daily note" is
+      // already her term for it (notifications.time.question asks "your
+      // daily note"), so the ask and the slot picker name one thing.
+      headline: "Want a daily note?",
       line: "One quiet note a day, an invitation to build today's session. That's all we'd ever send.",
       allow: "Sounds good",
       decline: "Not now",
@@ -593,6 +616,14 @@ export const strings = {
       // Rendered beneath the skill name. Honest tier-entry framing
       // (ADR-0012 §3), and still proud — she earned her way here.
       line: "Now in training.",
+      // COPY-WRITER (2026-09-07, redesign mockups): the quiet button
+      // beside share.action on the share screen. Never drawn on the card
+      // image itself. Same two words as notifications.rationale.decline,
+      // deliberately a separate key: a notifications key imported into
+      // the share screen would read as a bug at review, and the two
+      // surfaces must stay free to diverge. Not "Skip" (nothing is being
+      // passed over) and not "Maybe later" (no promise to ask again).
+      notNow: "Not now",
     },
   },
   // Settings (2026-09-01). The restore ACTION and its result messages
@@ -604,6 +635,81 @@ export const strings = {
     // Quiet footer line — the brand name carries it; "Version" would
     // just be furniture. e.g. "FITHER 1.2.0".
     version: (v: string) => `FITHER ${v}`,
+    // COPY-WRITER (2026-09-07, redesign mockups): Settings is a grouped
+    // list, values at the right, chevrons to subpages. Four section
+    // eyebrows; three of them REUSE the subpage titles so the eyebrow is
+    // the word she lands on:
+    //   · invitation → reminders.title ("Daily invitation")
+    //   · subscription → restore.title ("Subscription")
+    //   · account → account.title ("Account")
+    // Only `training` is new. One word, the plain name for the group that
+    // shapes every session (work-arounds, equipment, voice).
+    sections: {
+      training: "Training",
+    },
+    // Row labels and right-hand values. Labels that already exist as
+    // subpage titles are reused, never duplicated: the work-around row is
+    // avoid.title ("Always work around"), the voice row is voice.title
+    // ("Voice", with voice.on / voice.off as its values; the mockup's
+    // "Coach voice" is dropped, the page heading is one word and the row
+    // matches it), the notes row is careNotes.title ("Your notes"), and
+    // the invitation slot values are notifications.time.morning / midday
+    // / evening. Values are short because the column is narrow: they
+    // state the setting, they never sell it.
+    rows: {
+      equipment: "Equipment",
+      // The onboarding options ("Just me and the floor", "A sturdy chair
+      // too") are a question's answers and too long for a value column;
+      // these are the same two facts as settings, flat.
+      equipmentValue: {
+        floorOnly: "Floor only",
+        chair: "Floor and a chair",
+      },
+      // Work-around row value. One area is the caller's job (it shows the
+      // area's own label from prompt.soreness.areas); this covers none
+      // and several. A count, never "restrictions" or "problems": these
+      // are her preferences. Stays total for 1 anyway.
+      avoidValue: {
+        none: "None",
+        many: (count: number) => (count === 1 ? "1 area" : `${count} areas`),
+      },
+      // The invitation slot row. `timeOff` is the value when there is no
+      // invitation; the subpage keeps reminders.off ("No invitation") as
+      // its fourth option, this is the same state in column width.
+      time: "Time",
+      timeOff: "Off",
+      // Notes row value. "No notes" over "None": beside "Your notes" a
+      // bare "None" reads as an error state; this reads as an ordinary one.
+      notesValue: (count: number) =>
+        count === 0 ? "No notes" : count === 1 ? "1 note" : `${count} notes`,
+      // Subscription row. Its value is the plan's own label
+      // (paywall.plans.*.label), or plan.trial / plan.none below.
+      plan: "Plan",
+    },
+    // The subscription subpage. Order on screen: title (restore.title),
+    // `intro`, then the rows: the Plan row (reuse rows.plan) with the
+    // plan's label, `renews` with the date, `price` with the amount, then
+    // restore.manage and paywall.restore as the actions. `intro` is one
+    // line of plain fact, ten words: where the subscription lives and
+    // that she can change or cancel it there. No terms recap, no upsell.
+    // `trial` is the Plan value during an active free week (same words as
+    // the paywall: "your free week"). `none` is the Plan value before any
+    // purchase: not an error, not a prompt. Never render `renews` beside
+    // the lifetime plan, it has no renewal (see paywall.plans.lifetime).
+    plan: {
+      intro: "Managed through the App Store. Change or cancel there anytime.",
+      renews: "Renews",
+      price: "Price",
+      none: "None yet",
+      trial: "Free week",
+    },
+    // The header under the account status (account.status.*). One fact,
+    // the day her record began; the caller formats the date. "Training
+    // since", not "Member since": it names what she does, not a
+    // membership, and it holds for a guest with equal dignity.
+    profile: {
+      since: (date: string) => `Training since ${date}`,
+    },
     // Persistent work-arounds, same body areas as the daily prompt
     // (reuse prompt.soreness.areas for the labels). No medical framing,
     // no caution-speak: this is a preference she sets, not a condition

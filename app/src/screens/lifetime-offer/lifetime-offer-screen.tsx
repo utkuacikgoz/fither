@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
+import { nextMilestone } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
+import { LadderStrip } from "../../design/primitives/ladder-strip";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
@@ -11,7 +13,9 @@ import { WORDMARK } from "../../design/primitives/wordmark";
 import { motion, spacing, trackingWide } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { getBilling } from "../../monetization/billing";
+import { loadLibrary } from "../../session/load-library";
 import { useEntitlementStore } from "../../state/entitlement-store";
+import { useProfileStore } from "../../state/profile-store";
 import { PlanRow } from "../paywall/plan-row";
 
 // The one-time lifetime offer (ADR-0014). Same honest-letter register as
@@ -32,6 +36,12 @@ export function LifetimeOfferScreen({ onDone }: LifetimeOfferScreenProps) {
   const offering = getBilling().getLifetimeOffering();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The same picture the paywall sells with (ADR-0017): her ladder,
+  // reached tiers in the green — this is what "keep the climb" means.
+  const profile = useProfileStore((s) => s.profile);
+  const library = loadLibrary();
+  const ladderPattern = nextMilestone(profile)?.pattern ?? "push";
+  const reached = profile.patterns[ladderPattern].tier;
 
   const buy = async () => {
     if (busy) return;
@@ -57,9 +67,21 @@ export function LifetimeOfferScreen({ onDone }: LifetimeOfferScreenProps) {
           <AppText variant="caption" style={styles.letterhead}>
             {WORDMARK}
           </AppText>
-          <AppText variant="title" style={styles.headline} accessibilityRole="header">
+          <AppText variant="display" style={styles.headline} accessibilityRole="header">
             {strings.lifetimeOffer.headline}
           </AppText>
+          <AppText variant="bodySoft" style={styles.lead}>
+            {strings.lifetimeOffer.lead}
+          </AppText>
+          <View style={styles.ladder}>
+            <LadderStrip
+              testID="lifetime-offer-ladder"
+              library={library}
+              pattern={ladderPattern}
+              reached={reached}
+              reduceMotion={reduceMotion}
+            />
+          </View>
           <AppText variant="body" style={styles.body}>
             {strings.lifetimeOffer.body}
           </AppText>
@@ -112,10 +134,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   headline: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  lead: {
+    marginBottom: spacing.lg,
+  },
+  ladder: {
+    marginBottom: spacing.lg,
   },
   body: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   bottom: {
     gap: spacing.sm,
