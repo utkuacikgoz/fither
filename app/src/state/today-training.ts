@@ -18,7 +18,7 @@ import type { HistoryEntry } from "@fither/engine";
 //     minutes, and the caller must claim none.
 
 export interface TodayTraining {
-  /** At least one completed block landed in history today. */
+  /** At least one attempted block (completed or struggled) landed in history today. */
   trained: boolean;
   /**
    * Every block of every trained entry today completed. Only then may a
@@ -36,7 +36,9 @@ export function todayTraining(
   const trainedToday = entries.filter(
     (entry) =>
       entry.date === today &&
-      entry.blocks.some((block) => block.outcome === "completed"),
+      // Attempted, not just completed (owner decision 2026-09-07): a
+      // struggled block is training; only skipped is not.
+      entry.blocks.some((block) => block.outcome !== "skipped"),
   );
   return {
     trained: trainedToday.length > 0,

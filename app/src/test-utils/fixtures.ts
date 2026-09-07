@@ -3,6 +3,7 @@
 // exercised against these until it lands.
 
 import type {
+  BlockOutcome,
   ApplyResult,
   DailyPrompt,
   MovementLibrary,
@@ -138,5 +139,35 @@ export function fixtureApplyResult(): ApplyResult {
       },
     ],
     unlockedSkills: [{ pattern: "push", tier: 4, movementName: "Full Push-Up" }],
+  };
+}
+
+/**
+ * An apply result whose history entry carries the given outcomes and
+ * whose ledger is empty — the shape the engine returns for a session
+ * with nothing completed (skipped or struggled blocks earn nothing).
+ * The close reads the history entry (ADR-0023), so tests of the
+ * nothing-done and "Hard today" paths seed it here, not the ledger.
+ */
+export function fixtureApplyResultOutcomes(
+  outcomes: readonly BlockOutcome[],
+): ApplyResult {
+  const base = fixtureApplyResult();
+  const entry = base.history.entries[0]!;
+  return {
+    ...base,
+    history: {
+      entries: [
+        {
+          ...entry,
+          blocks: entry.blocks.map((block, index) => ({
+            ...block,
+            outcome: outcomes[index] ?? "skipped",
+          })),
+        },
+      ],
+    },
+    ledgerEvents: [],
+    unlockedSkills: [],
   };
 }

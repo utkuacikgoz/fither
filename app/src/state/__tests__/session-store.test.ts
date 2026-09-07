@@ -30,6 +30,7 @@ import {
 import { useSettingsStore } from "../settings-store";
 import {
   fixtureApplyResult,
+  fixtureApplyResultOutcomes,
   fixturePlayerBlocks,
   fixturePrompt,
   fixtureSession,
@@ -653,10 +654,9 @@ describe("finishSessionEarly", () => {
   });
 
   it("an ended-early session with nothing completed closes as nothingDone", async () => {
-    const base = fixtureApplyResult();
     mockedApply.mockReturnValue({
       ok: true,
-      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
     });
     useSessionStore.getState().startSession(fixturePrompt);
     useSessionStore.getState().finishSessionEarly();
@@ -742,8 +742,8 @@ describe("time-budget ceiling (ADR-0012 §2)", () => {
 
     await useSessionStore.getState().completeSession();
     expect(useSessionStore.getState().finish?.close).toEqual(
-      // The default mocked apply has a "session" event, so
-      // completedAnything holds and outOfTime stands, naming her minutes.
+      // The default mocked apply's history entry has completed blocks,
+      // so completedAnything holds and outOfTime stands, naming her minutes.
       { reason: "outOfTime", minutes: fixtureSession.minutes },
     );
   });
@@ -1093,10 +1093,9 @@ describe("trial start (ADR-0009 §2 — app-layer policy, never engine)", () => 
     // ledger event; an all-skipped apply carries none, so the trial
     // stays unstarted (ADR-0009 §2: an unused install spends no trial,
     // and skipping through a session is not using it).
-    const base = fixtureApplyResult();
     mockedApply.mockReturnValue({
       ok: true,
-      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
     });
     useSessionStore.getState().startSession(fixturePrompt);
     useSessionStore.getState().finishSessionEarly();
@@ -1136,11 +1135,20 @@ describe("trial start (ADR-0009 §2 — app-layer policy, never engine)", () => 
     const sessionId = useSessionStore.getState().sessionId;
     if (!sessionId) throw new Error("missing session id");
     const base = fixtureApplyResult();
+    const skippedEntry = {
+      ...base.history.entries[0]!,
+      blocks: base.history.entries[0]!.blocks.map((b) => ({ ...b, outcome: "skipped" as const })),
+    };
     await writeCompletionRecord({
       version: 1,
       status: "pending",
       sessionId,
-      result: { ...base, ledgerEvents: [], unlockedSkills: [] },
+      result: {
+        ...base,
+        history: { entries: [skippedEntry] },
+        ledgerEvents: [],
+        unlockedSkills: [],
+      },
       ledgerEvents: [],
       trialStartDate: null,
       purchase: null,
@@ -1149,6 +1157,8 @@ describe("trial start (ADR-0009 §2 — app-layer policy, never engine)", () => 
     await useSessionStore.getState().completeSession();
     expect(mockedApply).not.toHaveBeenCalled();
     expect(useEntitlementStore.getState().trialStartDate).toBeNull();
+    // The journal's own history entry decides the close (ADR-0023), not
+    // the in-memory player that completed every block.
     expect(useSessionStore.getState().finish?.completedAnything).toBe(false);
   });
 

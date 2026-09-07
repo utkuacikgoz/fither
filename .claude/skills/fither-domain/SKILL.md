@@ -103,7 +103,8 @@ If a feature idea needs one of these to work, the feature is wrong for this
 product. Flag it; do not build it.
 
 **Streaks (owner decision 2026-09-06, ADR-0018).** FITHER keeps a day
-streak: consecutive calendar days with at least one completed block, one
+streak: consecutive calendar days with at least one attempted block
+(completed or struggled; skipped is not training), one
 missed day per run forgiven as a rest day, the best run kept. It shows on
 the hub, the finish screen, Progress, and may be named in the daily
 invitation. The no-guilt rule still governs its words: a missed day is a

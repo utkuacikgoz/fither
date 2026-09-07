@@ -1,7 +1,8 @@
 // The day streak (ADR-0018, owner decision 2026-09-06). Pure: a fold
 // over history dates and "today", no clock, no Date object at all. A
-// day counts as trained when at least one block completed on it (the
-// same fact the "session" ledger event records). A run is consecutive
+// day counts as trained when she attempted at least one block on it:
+// completed or struggled (owner decision 2026-09-07: "Hard today" is
+// still showing up and doing the work). Skipped blocks are not training. A run is consecutive
 // calendar days of trained days; ONE missed day per run is forgiven as
 // a rest day (it adds nothing to the count, the run continues); a second
 // miss ends the run. Today is never a miss until it is over: a run that
@@ -52,7 +53,7 @@ function dayNumber(iso: string): number {
 function trainedDays(entries: readonly HistoryEntry[]): number[] {
   const days = new Set<number>();
   for (const entry of entries) {
-    if (entry.blocks.some((b) => b.outcome === "completed")) {
+    if (entry.blocks.some((b) => b.outcome !== "skipped")) {
       days.add(dayNumber(entry.date));
     }
   }

@@ -119,6 +119,7 @@ export interface FinishSummary {
    * completed block), never re-derived. False = the honest nothing-done
    * close: no "complete", no "counts" (ADR-0012 / audit P0 #5).
    */
+  /** At least one block attempted (completed or struggled); false = nothing done. */
   completedAnything: boolean;
   /**
    * The close state to render. Precedence: "nothingDone" wins over any
@@ -589,11 +590,17 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
       await writeCompletionRecord({ ...record, status: "committed" });
       await clearPersistedActiveSession();
       useActiveSessionStore.setState({ snapshot: null });
-      const completedAnything = record.result.ledgerEvents.some(
-        (e) => e.type === "session",
-      );
+      // Attempted = completed or struggled (ADR-0023): "Hard today" is
+      // still showing up and doing the work, so it closes as a session,
+      // draws its figures and counts the day. Points and progression are
+      // the engine's and unchanged. Read from the journaled result (the
+      // history entry the engine just wrote), never from ambient state,
+      // so a crash replay lands on the identical close.
+      const written = record.result.history.entries[record.result.history.entries.length - 1];
+      const completedAnything =
+        written?.blocks.some((block) => block.outcome !== "skipped") ?? false;
       // The close reason was captured where the close happened (ceiling
-      // wrap / "Finish here" / natural end). Precedence: zero completed
+      // wrap / "Finish here" / natural end). Precedence: zero attempted
       // blocks is the honest nothing-done close no matter how it ended.
       const pending = get().pendingClose;
       const close: FinishClose = !completedAnything

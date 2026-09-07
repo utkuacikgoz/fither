@@ -76,14 +76,16 @@ describe("computeStreak — today is not over", () => {
     expect(s).toStrictEqual({ current: 0, best: 2, graceUsed: false, atRisk: false });
   });
 
-  it("a day with no completed block is not a trained day", () => {
-    const entries = [
-      entry("2026-09-06"),
-      entry(TODAY, "skipped"),
-      entry(TODAY, "struggled"),
-    ];
+  it("a day with only skipped blocks is not a trained day", () => {
+    const entries = [entry("2026-09-06"), entry(TODAY, "skipped")];
     const s = computeStreak(entries, TODAY);
     expect(s).toStrictEqual({ current: 1, best: 1, graceUsed: false, atRisk: true });
+  });
+
+  it("a struggled block is showing up: the day counts (owner decision 2026-09-07)", () => {
+    const entries = [entry("2026-09-06"), entry(TODAY, "struggled")];
+    const s = computeStreak(entries, TODAY);
+    expect(s).toStrictEqual({ current: 2, best: 2, graceUsed: false, atRisk: false });
   });
 
   it("a day counts when at least one of several entries has a completed block", () => {

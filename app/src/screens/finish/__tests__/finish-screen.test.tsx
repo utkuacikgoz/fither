@@ -21,6 +21,7 @@ import {
 } from "../../../test-utils/copy-audit";
 import {
   fixtureApplyResult,
+  fixtureApplyResultOutcomes,
   fixturePlayerBlocks,
   fixtureSession,
 } from "../../../test-utils/fixtures";
@@ -112,15 +113,28 @@ describe("FinishScreen", () => {
     expect(sources.every((source) => source !== null)).toBe(true);
   });
 
-  it("draws only the completed ones: skipped and struggled blocks have no face here", async () => {
-    useSessionStore.setState({ player: figureBackedPlayer(["struggled", "completed"]) });
+  it("draws every attempted block: struggled has a face, skipped does not (owner decision 2026-09-07)", async () => {
+    useSessionStore.setState({ player: figureBackedPlayer(["struggled", "skipped"]) });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
-    await screen.findByText("+35");
+    await screen.findByText(strings.finish.headline);
     const hidden = { includeHiddenElements: true } as const;
     const sources = screen
       .getAllByTestId(/^finish-figure-\d+$/, hidden)
       .map((node) => node.findByType(Image).props.source);
-    expect(sources).toEqual([movementFigure("knee-plank")]);
+    expect(sources).toEqual([movementFigure("wall-push-up")]);
+  });
+
+  it("a 'Hard today' session closes as a session, with no points row and no 'didn't fit'", async () => {
+    useSessionStore.setState({ player: figureBackedPlayer(["struggled", "struggled"]) });
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: fixtureApplyResultOutcomes(["struggled", "struggled"]),
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
+    expect(screen.queryByText(strings.finish.nothingDone.headline)).toBeNull();
+    expect(screen.queryByTestId("finish-points")).toBeNull();
+    expect(screen.queryByText("+0")).toBeNull();
   });
 
   it("draws nothing until the close is known — figures under 'Saving' were a guess", async () => {
@@ -156,10 +170,9 @@ describe("FinishScreen", () => {
   it("a zero-completion session gets the honest close — no 'complete', no points row", async () => {
     // Every block skipped: the engine emits no "session" event and no
     // points (skip is neutral, ADR-0012). The screen must not celebrate.
-    const base = fixtureApplyResult();
     mockedApply.mockReturnValue({
       ok: true,
-      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
     });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(
@@ -206,10 +219,9 @@ describe("FinishScreen", () => {
 
   it("nothingDone wins over an early close when zero blocks completed", async () => {
     useSessionStore.setState({ pendingClose: "outOfTime" });
-    const base = fixtureApplyResult();
     mockedApply.mockReturnValue({
       ok: true,
-      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
     });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
 
@@ -272,7 +284,7 @@ describe("FinishScreen", () => {
     useSessionStore.setState({ player });
     mockedApply.mockReturnValue({
       ok: true,
-      value: { ...fixtureApplyResult(), ledgerEvents: [], unlockedSkills: [] },
+      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
     });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(
@@ -307,10 +319,9 @@ describe("FinishScreen", () => {
       require("react-native").AccessibilityInfo,
       "announceForAccessibility",
     );
-    const base = fixtureApplyResult();
     mockedApply.mockReturnValue({
       ok: true,
-      value: { ...base, ledgerEvents: [], unlockedSkills: [] },
+      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
     });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText(strings.finish.nothingDone.headline);
