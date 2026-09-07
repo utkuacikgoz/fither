@@ -13,6 +13,8 @@ import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { hasVoiceAudio } from "../../session/voice-manifest";
 import { useCareNoteStore } from "../../state/care-note-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
+import { useIntentionStore } from "../../state/intention-store";
+import { usePlaceStore } from "../../state/place-store";
 import { useReminderStore } from "../../state/reminder-store";
 import { useSettingsStore } from "../../state/settings-store";
 import { FirstMovementReadout } from "../dev-timing/first-movement-readout";
@@ -30,8 +32,10 @@ import {
 } from "./settings-values";
 
 // Settings as a grouped list (owner-approved 2026-09-06 round 6, mockup
-// settings.html): the title, a profile header, then four groups with the
-// eyebrow OUTSIDE the tile — Training, Daily invitation, Subscription,
+// settings.html; rows added by the approved settings-presets mockup,
+// 2026-09-07): the title, a profile header, then four groups with the
+// eyebrow OUTSIDE the tile — Training (Where I train first), Daily
+// invitation (time, sessions a week, weekly recaps), Subscription,
 // Account — each row stating its current value at the right and a
 // chevron to the subpage where it is edited (app/settings/*). Two rows
 // act in place instead: Restore purchase (its notice lands right under
@@ -49,11 +53,14 @@ export { DEV_ENTITLEMENT_RESET_LABEL, DEV_PREVIEW_LABELS } from "./settings-dev-
 
 /** The subpage routes the chevrons open, one per editable row. */
 export const SETTINGS_ROUTES = {
+  place: "/settings/place",
   avoid: "/settings/avoid",
   equipment: "/settings/equipment",
   voice: "/settings/voice",
   notes: "/settings/notes",
   invitation: "/settings/invitation",
+  intention: "/settings/intention",
+  recap: "/recap",
   plan: "/settings/plan",
   feedback: "/settings/feedback",
 } as const;
@@ -70,8 +77,10 @@ interface SettingsScreenProps {
 export function SettingsScreen({
   devToolsEnabled = __DEV__,
 }: SettingsScreenProps) {
+  const place = usePlaceStore((s) => s.place);
   const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
   const equipment = useSettingsStore((s) => s.equipment);
+  const target = useIntentionStore((s) => s.target);
   const voice = useSettingsStore((s) => s.voice);
   const noteCount = useCareNoteStore((s) => s.entries.length);
   const reminderSlot = useReminderStore((s) => s.slot);
@@ -108,6 +117,13 @@ export function SettingsScreen({
         <View style={styles.section}>
           <SectionCaption label={strings.settings.sections.training} />
           <SettingsGroup order={0} reduceMotion={reduceMotion} testID="settings-training">
+            <SettingsRow
+              testID="settings-row-place"
+              label={strings.place.row}
+              value={strings.place.value(place)}
+              chevron
+              onPress={() => router.push(SETTINGS_ROUTES.place)}
+            />
             <SettingsRow
               testID="settings-row-avoid"
               label={strings.settings.avoid.title}
@@ -150,8 +166,22 @@ export function SettingsScreen({
               label={strings.settings.rows.time}
               value={invitationValue(reminderSlot)}
               chevron
-              divider={false}
               onPress={() => router.push(SETTINGS_ROUTES.invitation)}
+            />
+            <SettingsRow
+              testID="settings-row-intention"
+              label={strings.intention.settingsRow}
+              value={strings.intention.settingsValue(target)}
+              chevron
+              onPress={() => router.push(SETTINGS_ROUTES.intention)}
+            />
+            {/* A door to a page, not a setting: no value to state. */}
+            <SettingsRow
+              testID="settings-row-recap"
+              label={strings.recap.settingsRow}
+              chevron
+              divider={false}
+              onPress={() => router.push(SETTINGS_ROUTES.recap)}
             />
           </SettingsGroup>
         </View>

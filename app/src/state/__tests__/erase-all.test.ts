@@ -13,6 +13,7 @@ import { useIdentityStore } from "../identity-store";
 import { useIntentionStore } from "../intention-store";
 import { useLedgerStore } from "../ledger-store";
 import { hydratedStores } from "../persisted-stores";
+import { usePlaceStore } from "../place-store";
 import { useProfileStore } from "../profile-store";
 import { useReminderStore } from "../reminder-store";
 import { useSessionStore } from "../session-store";
@@ -45,6 +46,8 @@ async function seedHer() {
   useEntitlementStore.getState().recordQualifyingSession("her:1", "2026-08-01");
   useReminderStore.setState({ slot: "morning", asked: true });
   useIntentionStore.getState().setTarget(3);
+  usePlaceStore.getState().setQuiet("hotel", "always");
+  usePlaceStore.getState().setPlace("hotel");
   await flushPersistence();
 }
 
@@ -77,6 +80,8 @@ describe("eraseEverything", () => {
     expect(useReminderStore.getState().asked).toBe(false);
     expect(useIntentionStore.getState().target).toBeNull();
     expect(useIntentionStore.getState().asked).toBe(false);
+    expect(usePlaceStore.getState().place).toBe("home");
+    expect(usePlaceStore.getState().presets.hotel.quiet).toBe("ask");
     // Live app, not a relaunch: every store must still read as hydrated,
     // or the route guards would wait forever on an empty disk.
     for (const store of hydratedStores) {

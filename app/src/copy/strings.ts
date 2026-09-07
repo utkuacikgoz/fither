@@ -28,6 +28,13 @@ const sessionsThisWeek = (count: number): string => {
   if (count === 1) return "One session this week.";
   return `${capitalised(numberWord(count))} sessions this week.`;
 };
+// COPY-WRITER (2026-09-07, wave 4, place preset): the two places, named
+// once. place.home / place.hotel and place.value read from here so the
+// Settings row's value and the page's options can never disagree.
+const PLACE_LABELS = {
+  home: "Home",
+  hotel: "Hotel",
+} as const;
 
 export const strings = {
   // COPY-WRITER: home hub (2026-09-04, ADR-0013 §4) — the app's face
@@ -141,30 +148,38 @@ export const strings = {
   // the count is only ever hers to read: nothing here names a shortfall,
   // a debt, or a day that went untrained. Days she did not train are
   // simply not filled in.
+  //
+  // `count` is distinct DAYS trained, not sessions (owner rule: two
+  // sessions on one day never read as two planned training days). So
+  // every line here says "days". The intention still asks "How many
+  // sessions this week?" because its answer means sessions on different
+  // days; that is the one place the word stays. recap.headline counts
+  // sessions and says so; it is a different number and must not share
+  // these lines.
   //   · progress: the tile's first sentence, and the receipt's "This
   //     week" value. Full stop on purpose: the tile follows it with
-  //     `nextLine`. Count may pass the target ("4 of 3 sessions."), which
-  //     is honest and reads as pride, not error.
+  //     `nextLine`. Count may pass the target ("4 of 3 days trained."),
+  //     which is honest and reads as pride, not error.
   //   · progressNoTarget: same slot with no target set. "so far" faces
   //     forward; 0 is a plain state with the smallest possible invitation.
   //   · nextLine: only while a target remains. Names the day, not the gap.
-  //   · met: target reached. States the count and stops; a further
-  //     session is still counted by `progress`, and this line never says
-  //     "enough" or "stop".
+  //   · met: target reached. States the count and stops; a further day
+  //     is still counted by `progress`, and this line never says "enough"
+  //     or "stop".
   //   · dayLetters / dayNames: Monday first, the strip's labels and their
   //     accessibility names.
   week: {
     title: "This week",
     daysLabel: "Days trained",
-    progress: (count: number, target: 2 | 3) => `${count} of ${target} sessions.`,
+    progress: (count: number, target: 2 | 3) => `${count} of ${target} days trained.`,
     progressNoTarget: (count: number) =>
       count === 0
         ? "Nothing yet. Any day counts."
         : count === 1
-          ? "1 session so far."
-          : `${count} sessions so far.`,
+          ? "1 day trained so far."
+          : `${count} days trained so far.`,
     nextLine: (weekday: string) => `${weekday}'s is next.`,
-    met: (target: 2 | 3) => `${capitalised(numberWord(target))} this week. Done.`,
+    met: (target: 2 | 3) => `${capitalised(numberWord(target))} days this week. Done.`,
     dayLetters: ["M", "T", "W", "T", "F", "S", "S"],
     dayNames: [
       "Monday",
@@ -223,6 +238,17 @@ export const strings = {
       question: "Do you need to be quiet right now?",
       yes: "Keep it quiet",
       no: "Sound is fine",
+      // COPY-WRITER (2026-09-07, wave 4, place preset): caption on this
+      // question when Where I train has Quiet movements set to Always,
+      // so "Keep it quiet" arrives already selected. A line is needed:
+      // an answer she did not tap, with nothing said about it, reads as
+      // a slip. Two facts. Why it is set ("Always" is the setting's own
+      // word, "this place" is the page's), and that today is still hers,
+      // in the words place.lead already used. Nothing about where the
+      // setting lives: she is a few taps from a session and Settings can
+      // wait. Renders only when the preset made the choice, never on
+      // "Ask me each day".
+      presetLine: "Always quiet for this place. Today's answer is still yours.",
     },
     soreness: {
       question: "Anything sore or off-limits today?",
@@ -710,17 +736,20 @@ export const strings = {
     // stays under 90 characters, and states nothing that could be stale
     // by the time it fires: no "yesterday", no "still", no "new week".
     // Every number in `onTrack` is a fact at scheduling time, so the
-    // scheduler must rebuild it after any session is saved. Conditional
+    // scheduler must rebuild it after any session is saved. `count` is
+    // distinct DAYS trained, as in `week`, and the line says "days" so
+    // two sessions on one day never read as two. It only fires on an
+    // untrained day, which is why "today would make it" holds. Conditional
     // "would", as in streak.notification.nextDay: today is an invitation,
     // never a due date. `met` never says "enough" or "done for the week":
-    // a further session counts just as much, and the line says so.
+    // a further day counts just as much, and the line says so.
     weekly: {
       onTrack: (count: number, target: number) =>
         count === 0
-          ? `Today's session would be your first of ${target} this week.`
-          : `${count} of ${target} this week. Today's session would make it ${count + 1}.`,
+          ? `Today would be your first of ${target} days this week.`
+          : `${count} of ${target} days this week. Today would make it ${count + 1}.`,
       noTarget: "Ten minutes today, if today fits.",
-      met: "Your week's target is met. Another session counts just as much.",
+      met: "Your week's target is met. Another day counts just as much.",
     },
   },
   resume: {
@@ -1014,17 +1043,22 @@ export const strings = {
     // COPY-WRITER: coach voice (2026-09-04). The one recorded voice reads
     // each movement's cue aloud during a session — the same cue lines
     // already on screen, nothing extra. Off by default; she turns it on
-    // here. The body states two facts and stops: what it reads, and that
-    // it stays silent on a day she answered "Keep it quiet" in the daily
-    // prompt (same words as prompt.quiet.yes, on purpose — one promise,
-    // kept where she made it). No voice name, no provider, no "coming
+    // here. The body states two facts and stops: what it reads, and how
+    // it sits with a quiet day. No voice name, no provider, no "coming
     // soon", nothing sold. The heading is one word because the body does
     // the explaining. The two rows name the plain state she gets —
     // "Spoken" / "Silent" — with equal dignity: off is not a loss, and
     // neither row mentions the other.
+    //
+    // COPY-WRITER (2026-09-07, wave 4, place preset): second sentence
+    // replaced. It used to promise silence on any day she kept it quiet.
+    // Quiet movements and the voice are now separate (place.note), so
+    // that promise would be false: the voice plays on a quiet day too,
+    // and headphones are how it stays hers alone. Nothing about the
+    // place preset here; the voice is one setting whatever the place.
     voice: {
       title: "Voice",
-      body: "Reads each movement's cue aloud during your session. Stays silent on any day you keep it quiet.",
+      body: "Reads each movement's cue aloud during your session, quiet days included. With headphones, no one else hears it.",
       on: "Spoken",
       off: "Silent",
     },
@@ -1081,6 +1115,56 @@ export const strings = {
     dev: {
       title: "Developer tools",
     },
+  },
+  // COPY-WRITER (2026-09-07, wave 4; mockups settings-presets and
+  // settings-place): the place preset. One row under Training, one page.
+  // She picks Home or Hotel, and each place keeps its own equipment and
+  // its own quiet default. The voice is one setting for both places; it
+  // sits on this page only because `note` says how it relates to quiet.
+  //   · row / title: the same three words, so the row is the page she
+  //     lands on; they must never diverge. First person, as the mockups:
+  //     it is her statement of fact, and "Where you train" would read as
+  //     us asking a question the page does not ask.
+  //   · lead: two facts. Switching is the whole mechanic, and the daily
+  //     questions are untouched by it: a preset only sets what the quiet
+  //     question starts from, the answer is still hers each day.
+  //     "Each day's", not the draft's "Today's": a settings page is not
+  //     tied to a day. prompt.quiet.presetLine keeps the same promise in
+  //     the same words when the preset shows up in the prompt.
+  //   · home / hotel: same words as share.context.home / hotel, separate
+  //     keys on purpose (a share key on a settings page reads as a bug at
+  //     review). `value` is the Settings row's right-hand value; it and
+  //     the two options read from one constant so they cannot drift.
+  //   · quietAsk / quietAlways: the quiet default's two states, equal
+  //     dignity. "Ask me each day" is the plain state (the daily question
+  //     asks, as it always has). "Always" sits beside the row label and
+  //     reads "Quiet movements: Always". The value is never "Never": on
+  //     Ask the question is still there, nothing is switched off.
+  //   · sectionVoice / voiceRow: "Voice" is settings.voice.title, and the
+  //     row's values are settings.voice.on / off ("Spoken" / "Silent"),
+  //     never the mockup's "Off". The caption differs from the row so the
+  //     page does not say "Voice" twice.
+  //   · note: the one fact this page and the Voice page share. Quiet
+  //     movements keep the room quiet; the voice is a separate choice,
+  //     and headphones are how it stays hers alone on a quiet day.
+  // No dashes; every line under 100 characters.
+  place: {
+    row: "Where I train",
+    title: "Where I train",
+    lead: "Switch when you travel. Each day's answers stay yours.",
+    sectionPlace: "Place",
+    home: PLACE_LABELS.home,
+    hotel: PLACE_LABELS.hotel,
+    sectionAtHome: "At home",
+    sectionAtHotel: "At a hotel",
+    equipmentRow: "Equipment",
+    quietRow: "Quiet movements",
+    quietAsk: "Ask me each day",
+    quietAlways: "Always",
+    sectionVoice: "Coaching audio",
+    voiceRow: "Voice",
+    note: "Quiet movements and the voice are separate. Headphones can carry the voice through a quiet session.",
+    value: (place: "home" | "hotel"): string => PLACE_LABELS[place],
   },
   // COPY-WRITER: feedback (2026-09-07, owner decision). One row under the
   // Account group in Settings, one subpage: a text field, an optional

@@ -1,9 +1,9 @@
 import { useRouter } from "expo-router";
 
+import { nextCloseAsk } from "../src/lib/close-flow";
 import { RouteGuard } from "../src/lib/route-guard";
 import { maybeRequestReview } from "../src/lib/rating";
 import { UnlockScreen } from "../src/screens/unlock/unlock-screen";
-import { reminderAskDue } from "../src/state/reminder-store";
 import { ratingMomentReached } from "../src/state/rating-store";
 import { useSessionStore } from "../src/state/session-store";
 
@@ -15,9 +15,10 @@ import { useSessionStore } from "../src/state/session-store";
 // checklist: after experienced value — a skill unlock) — but only from
 // her second completed session onward, so her first ever close is never
 // interrupted. The completed-close count was recorded on the way out of
-// /finish; nothing increments here. The one-time notification ask takes
-// the same exit when it is still owed (first completed session — which
-// is exactly when the rating gate cannot be reached yet).
+// /finish; nothing increments here. The one-time asks (the weekly
+// intention, then the notification ask — lib/close-flow.ts) take the
+// same exit when still owed (first completed session — which is exactly
+// when the rating gate cannot be reached yet).
 export default function UnlockRoute() {
   const router = useRouter();
   const resetSession = useSessionStore((s) => s.resetSession);
@@ -26,8 +27,9 @@ export default function UnlockRoute() {
       <UnlockScreen
         onContinue={() => {
           const { finish } = useSessionStore.getState();
-          if (finish?.completedAnything && reminderAskDue()) {
-            router.replace("/reminder-ask");
+          const ask = nextCloseAsk(finish);
+          if (ask) {
+            router.replace(ask);
             return;
           }
           if (ratingMomentReached()) {

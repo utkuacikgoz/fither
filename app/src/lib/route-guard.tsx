@@ -32,6 +32,7 @@ import { isFinished } from "../session/player-machine";
 import { useActiveSessionStore } from "../state/active-session-store";
 import { useEntitlementStore } from "../state/entitlement-store";
 import { useIdentityStore } from "../state/identity-store";
+import { intentionAskDue } from "../state/intention-store";
 import { useLedgerStore } from "../state/ledger-store";
 import { useProfileStore } from "../state/profile-store";
 import { useReminderStore } from "../state/reminder-store";
@@ -58,6 +59,12 @@ export type RouteRequirement =
   | "finishedSession"
   /** /unlock: at least one skill actually unlocked this session. */
   | "pendingUnlock"
+  /**
+   * /intention: a close with an attempted block behind it AND the one
+   * weekly-intention ask still owed (wave 2). Once `asked` persists, a
+   * cold open or re-entry redirects home — the ask never runs twice.
+   */
+  | "intentionAsk"
   /**
    * /reminder-ask: a close with completed work behind it AND the one
    * in-context ask still owed. A cold open (or any re-entry once
@@ -133,6 +140,11 @@ function requirementMet(requirement: RouteRequirement): boolean {
       return finish !== null || (player !== null && isFinished(player));
     case "pendingUnlock":
       return finish !== null && finish.unlockedSkills.length > 0;
+    case "intentionAsk":
+      // Like the reminder store, the intention store sits outside the
+      // shared hydration set; intentionAskDue fails safe toward not
+      // asking until its persisted `asked` is known.
+      return finish !== null && finish.completedAnything && intentionAskDue();
     case "reminderAsk": {
       // The reminder store is deliberately NOT in the shared hydration
       // set (no other route needs it); an unhydrated read fails SAFE

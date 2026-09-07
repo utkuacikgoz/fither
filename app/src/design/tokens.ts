@@ -94,6 +94,13 @@ export const typeScale = {
   display: 44,
   numeral: 64, // points, rest counts
   count: 96, // the live rep count / hold timer in the work phase (ADR-0017)
+  /**
+   * The work phase's count at floor distance (owner-approved
+   * 2026-09-07, mockup player-work-floor): the phone lies on the floor
+   * a body-length away, so the one number she reads mid-set is set far
+   * larger than any other numeral.
+   */
+  countFloor: 132,
 } as const;
 
 /** Letter-spacing per role: tight at display sizes, open on eyebrows. */
@@ -101,6 +108,8 @@ export const tracking = {
   display: -1,
   title: -0.4,
   caption: 0.4,
+  /** The floor-distance count: tighter than display, so two digits read as one number. */
+  countFloor: -3,
 } as const;
 
 /**
@@ -112,6 +121,15 @@ export const tracking = {
  * would push a 3-digit count to ≈356pt and off-screen.
  */
 export const numeralMaxFontScale = 2;
+
+/**
+ * Dynamic Type cap for the floor-distance count ONLY. It starts at 132pt,
+ * already the largest thing in the product; at this cap two tabular
+ * digits (~0.6em each) span ≈253pt, inside the same 272pt content width
+ * the numeral cap is sized to. The general 2× cap would push them to
+ * ≈317pt and off the narrowest supported iPhone.
+ */
+export const countFloorMaxFontScale = 1.6;
 
 // Manrope (SIL OFL, bundled under assets/fonts/manrope — ADR-0017), one
 // family for text and numerals. iOS registers each weight file under its

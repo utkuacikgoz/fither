@@ -1,11 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { Image } from "react-native";
 
 import { strings } from "../../../copy/strings";
 import { glyph } from "../../../design/tokens";
 import { movementFigure } from "../../../session/movement-figures";
+import { usePlaceStore } from "../../../state/place-store";
 import { useSettingsStore } from "../../../state/settings-store";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
 import { EQUIPMENT_FIGURES } from "../../onboarding/onboarding-screen";
@@ -48,6 +49,22 @@ describe("Settings → Equipment", () => {
     fireEvent.press(screen.getByTestId("equipment-chair"));
     expect(useSettingsStore.getState().equipment).toEqual(["none", "chair", "wall"]);
     expect(screen.getByTestId("equipment-chair-check", hidden)).toBeTruthy();
+  });
+
+  it("writes the ACTIVE place's remembered equipment too, and only that place's", async () => {
+    const screen = render(<EquipmentPage />);
+    fireEvent.press(screen.getByTestId("equipment-floor-only"));
+    expect(usePlaceStore.getState().presets.home.equipment).toEqual(["none", "wall"]);
+    expect(usePlaceStore.getState().presets.hotel.equipment).toEqual(["none", "wall"]);
+    await flushPersistence();
+    expect(await AsyncStorage.getItem("fither/place-v1")).not.toContain("chair");
+
+    // At the hotel, the same page edits the hotel's list; home keeps its own.
+    act(() => usePlaceStore.getState().setPlace("hotel"));
+    fireEvent.press(screen.getByTestId("equipment-chair"));
+    expect(useSettingsStore.getState().equipment).toEqual(["none", "chair", "wall"]);
+    expect(usePlaceStore.getState().presets.hotel.equipment).toEqual(["none", "chair", "wall"]);
+    expect(usePlaceStore.getState().presets.home.equipment).toEqual(["none", "wall"]);
   });
 
   it("renders no user-facing text outside strings.ts", () => {

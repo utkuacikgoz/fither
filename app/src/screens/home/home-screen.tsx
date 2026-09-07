@@ -20,22 +20,25 @@ import { useSessionStore } from "../../state/session-store";
 import { todaySessionState } from "../../state/today-session";
 import { useLifetimeOffer } from "../../state/use-lifetime-offer";
 import { todayTraining } from "../../state/today-training";
-import { PatternGlance, patternGlanceLabel } from "./pattern-glance";
+import { useWeekView } from "../../state/week-view";
 import { StreakLine } from "./streak-line";
+import { WeekTile } from "./week-tile";
 
-// The home hub (ADR-0013 §4, rehung in ADR-0017): the app's face between
-// sessions. One hierarchy — an eyebrow, one display headline and the
-// one green action set straight on the page, then two quieter tiles
-// (the five ladders, the skill she is climbing toward), each a read of
-// what the stores and the engine already carry. The hero is not a card:
-// the day is the page, the tiles are on it.
+// The home hub (ADR-0013 §4, rehung in ADR-0017; the week added by the
+// owner brief of 2026-09-07, wave 2): the app's face between sessions.
+// One hierarchy — an eyebrow, one display headline and the one green
+// action set straight on the page, then two quieter tiles (this week,
+// the skill she is climbing toward), each a read of what the stores and
+// the engine already carry. The five ladders live on Progress. The hero
+// is not a card: the day is the page, the tiles are on it.
 //
 // Nothing here decides a rule: "done for today" comes from
-// state/today-training.ts (one definition, shared), tiers come from the
-// engine-written profile, skill names from the engine's milestoneMovement
-// via session/skill-name.ts. The four questions live one push away at
-// /prompt, exactly as decided (ADR-0003/0006) — this screen never asks
-// one of them itself.
+// state/today-training.ts (one definition, shared), the week from
+// state/week-view.ts over the engine's participation, tiers come from
+// the engine-written profile, skill names from the engine's
+// milestoneMovement via session/skill-name.ts. The four questions live
+// one push away at /prompt, exactly as decided (ADR-0003/0006) — this
+// screen never asks one of them itself.
 
 export function HomeScreen() {
   const reduceMotion = useReducedMotion();
@@ -61,6 +64,8 @@ export function HomeScreen() {
   // unstarted session goes to the preview, never straight to the player.
   const todaySession = todaySessionState(session, player, today);
   const inFlight = todaySession === "inFlight";
+  // The week she is in, against the intention she set (or none).
+  const week = useWeekView();
 
   const library = loadLibrary();
   // What she is working toward — the engine decides which milestone is
@@ -165,22 +170,9 @@ export function HomeScreen() {
           </View>
         </FadeIn>
 
-        <Card
-          order={1}
-          reduceMotion={reduceMotion}
-          testID="home-patterns"
-          accessibilityLabel={patternGlanceLabel(profile)}
-          onPress={() => router.push("/progress")}
-        >
-          <AppText variant="caption" style={styles.cardHeading}>
-            {strings.profile.patterns.title}
-          </AppText>
-          <PatternGlance
-            profile={profile}
-            reduceMotion={reduceMotion}
-            baseDelayMs={motion.staggerMs}
-          />
-        </Card>
+        <View style={styles.week}>
+          <WeekTile view={week} today={today} order={1} reduceMotion={reduceMotion} />
+        </View>
 
         <Card
           order={2}
@@ -249,6 +241,9 @@ const styles = StyleSheet.create({
   quietAction: {
     marginTop: spacing.lg,
     alignItems: "flex-start",
+  },
+  week: {
+    marginBottom: spacing.xl,
   },
   cardHeading: {
     marginBottom: spacing.md,

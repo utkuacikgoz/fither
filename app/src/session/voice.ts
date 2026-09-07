@@ -8,9 +8,10 @@ import { voiceCue } from "./voice-manifest";
 // network and airplane mode changes nothing.
 //
 // Two rules live outside this file, where the facts are: the player
-// decides WHETHER to speak (her Settings choice, and never on a day she
-// answered "quiet"); this module only speaks a cue it was handed. The
-// phone's silent switch wins absolutely — playsInSilentMode stays false,
+// decides WHETHER to speak (her Settings choice, and that alone — quiet
+// movements and the voice are separate, so a quiet day never mutes it;
+// owner brief 2026-09-07, wave 4); this module only speaks a cue it was
+// handed. The phone's silent switch wins absolutely — playsInSilentMode stays false,
 // the platform default, and is set explicitly so a future change is a
 // visible decision rather than a drift.
 //

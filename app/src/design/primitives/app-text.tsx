@@ -1,7 +1,13 @@
 import { StyleSheet, Text, type TextProps } from "react-native";
 
 import { useTheme } from "../theme";
-import { fontFamily, numeralMaxFontScale, tracking, typeScale } from "../tokens";
+import {
+  countFloorMaxFontScale,
+  fontFamily,
+  numeralMaxFontScale,
+  tracking,
+  typeScale,
+} from "../tokens";
 
 type Variant =
   | "caption"
@@ -11,7 +17,8 @@ type Variant =
   | "title"
   | "display"
   | "numeral"
-  | "count";
+  | "count"
+  | "countFloor";
 
 interface AppTextProps extends TextProps {
   variant?: Variant;
@@ -24,7 +31,9 @@ interface AppTextProps extends TextProps {
  * minimum and Dynamic Type stays on. One deliberate exception: the
  * numeral variant caps its scaling (numeralMaxFontScale — see the
  * token's sizing math) so a 3-digit count stays on-screen at the
- * largest accessibility sizes. Body, titles and captions scale freely.
+ * largest accessibility sizes; countFloor, the work phase's number read
+ * from the floor, caps tighter still (countFloorMaxFontScale). Body,
+ * titles and captions scale freely.
  */
 export function AppText({ variant = "body", color, style, ...rest }: AppTextProps) {
   const colors = useTheme();
@@ -35,7 +44,9 @@ export function AppText({ variant = "body", color, style, ...rest }: AppTextProp
       {...rest}
       {...(variant === "numeral" || variant === "count"
         ? { maxFontSizeMultiplier: numeralMaxFontScale }
-        : null)}
+        : variant === "countFloor"
+          ? { maxFontSizeMultiplier: countFloorMaxFontScale }
+          : null)}
       style={[styles[variant], { color: color ?? defaultColor }, style]}
     />
   );
@@ -87,6 +98,13 @@ const styles = StyleSheet.create({
     fontSize: typeScale.count,
     letterSpacing: tracking.display * 2,
     lineHeight: typeScale.count * 1.05,
+    fontVariant: ["tabular-nums"],
+  },
+  countFloor: {
+    fontFamily: fontFamily.semibold,
+    fontSize: typeScale.countFloor,
+    letterSpacing: tracking.countFloor,
+    lineHeight: typeScale.countFloor,
     fontVariant: ["tabular-nums"],
   },
 });
