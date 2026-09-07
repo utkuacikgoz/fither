@@ -178,6 +178,7 @@ export function UnlockScreen({ onContinue }: UnlockScreenProps) {
                 movementId={skillFigureId(library, skill.pattern, skill.tier)}
                 size="hero"
                 tone="accent"
+                animate
                 testID={`unlock-figure-${skill.pattern}-${skill.tier}`}
               />
             </Animated.View>

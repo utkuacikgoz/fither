@@ -33,6 +33,11 @@ export const DAILY_BODIES: readonly string[] = [
 /** iOS weekday numbers for weekly triggers: 1 (Sunday) through 7. */
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
+/** iOS weekday (1 = Sunday … 7 = Saturday) of the day after `now`, local time. */
+export function tomorrowWeekday(now: Date): number {
+  return ((now.getDay() + 1) % 7) + 1;
+}
+
 function toPermissionState(
   response: Notifications.NotificationPermissionsStatus,
 ): PermissionState {
@@ -52,21 +57,34 @@ export const expoNotificationsPort: NotificationsPort = {
     return toPermissionState(await Notifications.requestPermissionsAsync());
   },
 
-  async scheduleDaily(slot: ReminderSlot) {
+  async scheduleDaily(slot: ReminderSlot, tomorrowBody: string) {
     // One invitation a day, full stop: replace whatever was scheduled.
     await Notifications.cancelAllScheduledNotificationsAsync();
     const { hour, minute } = SLOT_TIMES[slot];
-    // Rotation via the schedule: seven repeating weekly triggers, one per
-    // weekday at the same slot time, cycling the four bodies. Any given
-    // week shows all four; no code has to run between deliveries, so the
-    // rotation survives the app never being opened. No title — the lock
-    // screen already names the app; the body carries the invitation.
-    for (const weekday of WEEKDAYS) {
+    // Seven repeating weekly triggers, one per weekday at the same slot
+    // time. Tomorrow's weekday carries the caller's streak-aware body
+    // (see the port for why tomorrow, never later today); the other six
+    // cycle the four generic bodies starting the day after tomorrow, so
+    // any week still shows all four and no code has to run between
+    // deliveries — the rotation survives the app never being opened.
+    // Every reschedule (a session commit, a slot choice) replaces the
+    // whole set, so tomorrow's body is fresh as long as she trains; a
+    // week without either lets the weekly trigger repeat it. No title —
+    // the lock screen already names the app; the body is the invitation.
+    // The clock read here is the adapter's own: this is the IO layer,
+    // and the port stays free of dates.
+    const tomorrow = tomorrowWeekday(new Date());
+    for (let offset = 0; offset < WEEKDAYS.length; offset++) {
+      // Walk the week starting tomorrow: offset 0 is tomorrow's weekday,
+      // 1 the day after, and so on round to later today (offset 6).
+      const weekday = ((tomorrow - 1 + offset) % 7) + 1;
       // The modulo keeps the index in range; the fallback only satisfies
       // the checked-index type and can never fire.
       const body =
-        DAILY_BODIES[(weekday - 1) % DAILY_BODIES.length] ??
-        strings.notifications.daily.fitsToday;
+        offset === 0
+          ? tomorrowBody
+          : (DAILY_BODIES[(offset - 1) % DAILY_BODIES.length] ??
+            strings.notifications.daily.fitsToday);
       await Notifications.scheduleNotificationAsync({
         content: { body },
         trigger: {

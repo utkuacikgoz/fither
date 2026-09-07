@@ -84,7 +84,7 @@ describe("ReminderAskScreen", () => {
     fireEvent.press(screen.getByTestId("reminder-ask-allow"));
     fireEvent.press(await screen.findByTestId("reminder-ask-midday"));
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
-    expect(port.scheduleDaily).toHaveBeenCalledWith("midday");
+    expect(port.scheduleDaily).toHaveBeenCalledWith("midday", expect.any(String));
     expect(useReminderStore.getState().slot).toBe("midday");
     expect(useReminderStore.getState().asked).toBe(true);
   });

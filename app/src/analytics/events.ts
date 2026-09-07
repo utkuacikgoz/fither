@@ -27,6 +27,8 @@ export interface AnalyticsEvents {
     close: WorkoutCloseReason;
     /** Her first ever completed session — the paywall stamp moment. */
     first: boolean;
+    /** The day streak after this session committed (ADR-0018); 0 when nothing completed. */
+    streak: number;
   };
   /** A store trial began through the purchase sheet (ADR-0014 §6). */
   trial_start: { plan: "annual" | "monthly" };

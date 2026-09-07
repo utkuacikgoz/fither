@@ -13,12 +13,12 @@ describe("analytics port", () => {
 
   it("records events oldest first with their properties", () => {
     track("workout_start", { minutes: 10 });
-    track("workout_complete", { minutes: 10, close: "completed", first: true });
+    track("workout_complete", { minutes: 10, close: "completed", first: true, streak: 1 });
     expect(recordedEvents()).toEqual([
       { name: "workout_start", properties: { minutes: 10 } },
       {
         name: "workout_complete",
-        properties: { minutes: 10, close: "completed", first: true },
+        properties: { minutes: 10, close: "completed", first: true, streak: 1 },
       },
     ]);
   });

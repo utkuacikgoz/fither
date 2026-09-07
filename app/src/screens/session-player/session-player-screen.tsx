@@ -209,6 +209,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             <MovementFigure
               movementId={block.movementId}
               size="hero"
+              animate
               testID="player-figure-intro"
             />
             <AppText variant="display" accessibilityRole="header">{block.name}</AppText>
@@ -259,6 +260,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             <MovementFigure
               movementId={block.movementId}
               size="large"
+              animate
               testID="player-figure-work"
             />
             {phase.side !== null && (
