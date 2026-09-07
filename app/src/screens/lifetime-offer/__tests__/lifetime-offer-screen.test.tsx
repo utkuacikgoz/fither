@@ -17,6 +17,8 @@ beforeEach(() => {
 it("shows the one plan with its price on the row, not in prose, and nothing about renewal", () => {
   const screen = render(<LifetimeOfferScreen onDone={jest.fn()} />);
   expect(screen.getByText(strings.lifetimeOffer.headline)).toBeTruthy();
+  expect(screen.getByText(strings.lifetimeOffer.lead)).toBeTruthy();
+  expect(screen.getByTestId("lifetime-offer-ladder")).toBeTruthy();
   expect(screen.getByText(strings.paywall.plans.lifetime.price)).toBeTruthy();
   expect(screen.getByText(strings.paywall.plans.lifetime.note)).toBeTruthy();
   expect(screen.queryByText(strings.paywall.afterTrialNote(strings.paywall.plans.lifetime.price))).toBeNull();

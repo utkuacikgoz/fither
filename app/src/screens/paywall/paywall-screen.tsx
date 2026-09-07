@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
+import { nextMilestone } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -8,13 +9,16 @@ import { FadeIn } from "../../design/primitives/fade-in";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
+import { LadderStrip } from "../../design/primitives/ladder-strip";
 import { WORDMARK } from "../../design/primitives/wordmark";
 import { useTheme } from "../../design/theme";
-import { hairline, spacing, trackingWide } from "../../design/tokens";
+import { hairline, radius, spacing, trackingWide } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { getBilling, type PlanId } from "../../monetization/billing";
 import { entitlementStatus } from "../../monetization/entitlement";
+import { loadLibrary } from "../../session/load-library";
 import { useEntitlementStore } from "../../state/entitlement-store";
+import { useProfileStore } from "../../state/profile-store";
 import { PlanRow } from "./plan-row";
 
 // The paywall as an honest letter (design-system): what's included and
@@ -54,16 +58,17 @@ type Notice = "none" | "purchaseFailed" | "restoreEmpty" | "restoreFailed";
 export const DEV_RESET_LABEL = "[dev] Reset entitlement";
 
 interface PaywallScreenProps {
-  /**
-   * Optional chrome above the letter. The gated day (audit P0 #7,
-   * ADR-0009 §3) passes the daily surface's corner doors here so
-   * Progress and Settings stay reachable while only new-session
-   * generation is gated. The letter itself is unchanged either way.
-   */
+  /** Optional chrome above the screen: the gated day's own eyebrow. */
   headerSlot?: ReactNode;
+  /**
+   * Rendered as the Today tab (the gated day, ADR-0009 §3): the record
+   * note ("your record stays yours") is stated whatever the trial state,
+   * because on that surface it is the boundary she needs to hear.
+   */
+  inDay?: boolean;
 }
 
-export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
+export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps = {}) {
   const purchasePlan = useEntitlementStore((s) => s.purchasePlan);
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
   const resetForDev = useEntitlementStore((s) => s.resetForDev);
@@ -82,18 +87,29 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
   const expired =
     entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }) ===
     "trialExpired";
+  // The selling screen (ADR-0017, owner-approved 2026-09-06): a promise
+  // headline, one lead, the ladder she is on drawn as a picture, three
+  // benefits, the plans. The expired day keeps its own headline and the
+  // record note; everything else is the same honest image.
   const copy = expired
-    ? strings.paywall.expired
+    ? {
+        headline: strings.paywall.expired.headline,
+        lead: strings.paywall.expired.recordNote,
+        trialLine: strings.paywall.expired.trialLine,
+        cta: strings.paywall.expired.cta,
+      }
     : {
         headline: strings.paywall.headline,
-        letter: strings.paywall.letter,
+        lead: strings.paywall.lead,
         trialLine: strings.paywall.trialLine,
         cta: strings.paywall.cta,
-        afterTrialNote: strings.paywall.afterTrialNote,
       };
-
-  const selectedOffering =
-    offerings.find((o) => o.plan === selected) ?? offerings[0];
+  // The ladder is hers: the pattern the engine points her at next, with
+  // the tiers she has reached in the green (nextMilestone decides).
+  const profile = useProfileStore((s) => s.profile);
+  const library = loadLibrary();
+  const ladderPattern = nextMilestone(profile)?.pattern ?? "push";
+  const reached = profile.patterns[ladderPattern].tier;
 
   const buy = async () => {
     if (busy) return;
@@ -130,16 +146,45 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
           <AppText variant="caption" style={styles.letterhead}>
             {WORDMARK}
           </AppText>
-          <AppText variant="title" style={styles.headline}>
+          <AppText
+            variant={expired ? "title" : "display"}
+            style={styles.headline}
+            accessibilityRole="header"
+          >
             {copy.headline}
           </AppText>
-          <AppText variant="body" style={styles.letter}>
-            {copy.letter}
+          <AppText variant="bodySoft" style={styles.lead}>
+            {copy.lead}
           </AppText>
-          <AppText variant="bodySoft" style={styles.trialLine}>
-            {copy.trialLine}
-          </AppText>
+          {inDay && !expired && (
+            <AppText variant="caption" style={styles.recordNote} testID="paywall-record-note">
+              {strings.paywall.expired.recordNote}
+            </AppText>
+          )}
         </FadeIn>
+
+        <View style={styles.ladder}>
+          <LadderStrip
+            testID="paywall-ladder"
+            library={library}
+            pattern={ladderPattern}
+            reached={reached}
+            reduceMotion={reduceMotion}
+          />
+        </View>
+
+        <View style={styles.benefits} testID="paywall-benefits">
+          {[
+            strings.paywall.benefits.adapts,
+            strings.paywall.benefits.anywhere,
+            strings.paywall.benefits.simple,
+          ].map((line) => (
+            <View key={line} style={styles.benefit}>
+              <View style={[styles.dot, { backgroundColor: colors.accent }]} />
+              <AppText variant="body">{line}</AppText>
+            </View>
+          ))}
+        </View>
 
         <View style={styles.plans}>
           {offerings.map((offering) => (
@@ -154,6 +199,9 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
           ))}
         </View>
 
+        <AppText variant="caption" style={styles.trialLine}>
+          {copy.trialLine}
+        </AppText>
         <PrimaryButton
           testID="paywall-purchase"
           label={copy.cta}
@@ -161,11 +209,6 @@ export function PaywallScreen({ headerSlot }: PaywallScreenProps = {}) {
             void buy();
           }}
         />
-        {selectedOffering ? (
-          <AppText variant="caption" style={styles.afterTrial}>
-            {copy.afterTrialNote(selectedOffering.priceLabel)}
-          </AppText>
-        ) : null}
 
         <View style={styles.restore}>
           {/* The purchase notice sits above Restore, adjacent to the
@@ -260,44 +303,63 @@ function PlanRowFor({ plan, priceLabel, noteLabel, selected, onSelect }: PlanRow
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingTop: spacing.xl,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
   },
   letterhead: {
-    textAlign: "center",
     letterSpacing: trackingWide,
-    marginBottom: spacing.xl,
-  },
-  headline: {
     marginBottom: spacing.md,
   },
-  letter: {
+  headline: {
+    marginBottom: spacing.sm,
+  },
+  lead: {
+    marginBottom: spacing.lg,
+  },
+  recordNote: {
+    marginTop: -spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  ladder: {
+    marginBottom: spacing.lg,
+  },
+  benefits: {
+    gap: spacing.sm + spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  benefit: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm + spacing.xs,
+  },
+  dot: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  plans: {
+    gap: spacing.sm + spacing.xs,
     marginBottom: spacing.md,
   },
   trialLine: {
-    marginBottom: spacing.xxl,
-  },
-  plans: {
-    marginBottom: spacing.sm,
-  },
-  afterTrial: {
     textAlign: "center",
-    marginTop: spacing.md,
+    marginBottom: spacing.sm + spacing.xs,
   },
   restore: {
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   noticeText: {
     textAlign: "center",
   },
   rule: {
     borderTopWidth: hairline,
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
   },
   legal: {
-    marginTop: spacing.lg,
+    textAlign: "center",
   },
   devReset: {
     marginTop: spacing.xl,
