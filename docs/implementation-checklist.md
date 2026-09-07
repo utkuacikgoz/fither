@@ -36,6 +36,29 @@ done), `live` (external flow reachable by a real user). Nothing below is
 | Funnel events: first_use_entry, onboarding_complete, session_preview, paywall_view, experiment_exposure (ADR-0024) | built | analytics/events.ts |
 | Under-60-second first movement: no simulator in this environment, timing not measured here; the taps from first launch to the first movement are now: equipment, minutes, energy, quiet, All good, Start, Begin (7 taps, one screen fewer than before); five-user observation still owner's | not measured | docs/gate-3-protocol.md |
 
+## Wave 2: layer built, screens awaiting approval
+
+| item | status | where |
+|---|---|---|
+| Intention store (2, 3, none), week view over the engine's participation, receipts (completed, partial, hard, empty), weekly reminder bodies, streak pressure out of Home | built | state/intention-store, state/week-view, session/receipt, notifications/invitation-body |
+| Home week tile, finish receipt, intention ask, weekly recap, share from receipt | mockups sent, awaiting approval | docs/design/mockups |
+
+## Wave 3: recipient page built, in-app share awaiting approval
+
+| item | status | where |
+|---|---|---|
+| Static recipient page, allowlisted scenarios, association template, README, 12 tests, previews | built (not live: domain, listing, collector are external) | web/ |
+| scenario_entry event from /s/<id> links, allowlist in events.ts | built | analytics/deep-link.ts |
+| Share image with chosen context, share from receipts and recaps, re-pick after install | mockup approved (share-receipt); build pending the finish receipt approval | |
+
+## Wave 4: documents written, screens awaiting approval
+
+| item | status | where |
+|---|---|---|
+| Where I train (Home, Hotel) preset, quiet movements separate from the voice, floor-distance work phase | mockups sent, awaiting approval | docs/design/mockups |
+| Calibration proposal for coach review | written | docs/calibration-proposal.md |
+| Demonstration asset briefs, first six | written | docs/demo-asset-briefs.md |
+
 ## Wave 5: monetization experiment (built early, no UI)
 
 | item | status | where |

@@ -2,7 +2,7 @@ import { render } from "@testing-library/react-native";
 import { useLinkingURL } from "expo-linking";
 
 import { clearRecordedEvents, recordedEvents } from "../dev-analytics";
-import { deepLinkPath, useDeepLinkTracking } from "../deep-link";
+import { scenarioFromPath, deepLinkPath, useDeepLinkTracking } from "../deep-link";
 
 const mockedUrl = jest.mocked(useLinkingURL);
 
@@ -62,5 +62,18 @@ describe("useDeepLinkTracking", () => {
     mockedUrl.mockReturnValue("fither://today?email=her@example.com");
     render(<Probe />);
     expect(JSON.stringify(recordedEvents())).not.toContain("example.com");
+  });
+});
+
+describe("scenario_entry (ADR-0024 §3)", () => {
+  it("reads only allowlisted ids from /s/<id>", () => {
+    expect(scenarioFromPath("/s/quiet_house")).toBe("quiet_house");
+    expect(scenarioFromPath("/s/friends_week")).toBe("friends_week");
+    expect(scenarioFromPath("/s/unknown_thing")).toBeNull();
+    expect(scenarioFromPath("/s/../x")).toBeNull();
+    expect(scenarioFromPath("/s/<script>")).toBeNull();
+    expect(scenarioFromPath("/s/" + "a".repeat(300))).toBeNull();
+    expect(scenarioFromPath("/today")).toBeNull();
+    expect(scenarioFromPath("/s/QUIET_HOUSE")).toBeNull();
   });
 });

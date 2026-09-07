@@ -25,6 +25,7 @@ describe("analytics events", () => {
       "workout_start",
       "workout_complete",
       "paywall_view",
+      "scenario_entry",
       "experiment_exposure",
       "trial_start",
     ]);

@@ -40,11 +40,24 @@ export interface AnalyticsEvents {
   };
   /** The paywall was shown: the gated day, the expired state, or Settings. */
   paywall_view: { surface: "gate" | "expired" | "settings" };
+  /** The app opened from a shared scenario link (ADR-0024 §3); the allowlisted id only. */
+  scenario_entry: { scenario: ScenarioId };
   /** An experiment assigned this phone a variant (ADR-0025); once per experiment. */
   experiment_exposure: { experiment: "free_sessions_v1"; variant: "control" | "three" };
   /** A store trial began through the purchase sheet (ADR-0014 §6). */
   trial_start: { plan: "annual" | "monthly" };
 }
+
+/** The public scenario ids a shared link may carry; anything else is dropped. */
+export const SCENARIO_IDS = [
+  "friends_week",
+  "between_meetings",
+  "away_from_home",
+  "quiet_house",
+  "session",
+  "week",
+] as const;
+export type ScenarioId = (typeof SCENARIO_IDS)[number];
 
 export type AnalyticsEventName = keyof AnalyticsEvents;
 
@@ -57,6 +70,7 @@ export const ANALYTICS_EVENT_NAMES: readonly AnalyticsEventName[] = [
   "workout_start",
   "workout_complete",
   "paywall_view",
+  "scenario_entry",
   "experiment_exposure",
   "trial_start",
 ];
