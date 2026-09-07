@@ -236,6 +236,7 @@ describe("the day's card", () => {
   it("shows no streak line at all with no run alive: the hub never shows a zero", () => {
     const screen = render(<HomeScreen />);
     expect(screen.queryByTestId("home-streak")).toBeNull();
+    screen.unmount();
 
     // A skipped-through day is not training and starts nothing.
     seedHistory([todayEntry(10, ["skipped", "skipped"], shiftDays(-1))]);
