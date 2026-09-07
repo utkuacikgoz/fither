@@ -17,6 +17,7 @@
 //   fither/lifetime-offer-v1  lifetime-offer-store.ts the one lifetime ask (ADR-0014)
 //   fither/rating-v1          rating-store.ts         the rating prompt's bookkeeping
 //   fither/experiments-v1     experiment-store.ts     the experiment seed + assignments (ADR-0025)
+//   fither/intention-v1       intention-store.ts      the weekly intention (2, 3, none) + asked flag
 
 import type { StoreApi } from "zustand";
 
@@ -29,6 +30,7 @@ import { useExperimentStore } from "./experiment-store";
 import { useFeedbackStore } from "./feedback-store";
 import { useFirstMovementStore } from "./first-movement-store";
 import { useIdentityStore } from "./identity-store";
+import { useIntentionStore } from "./intention-store";
 import { useLedgerStore } from "./ledger-store";
 import { useLifetimeOfferStore } from "./lifetime-offer-store";
 import { useProfileStore } from "./profile-store";
@@ -52,6 +54,7 @@ export const persistedStores = [
   useRatingStore,
   useFeedbackStore,
   useExperimentStore,
+  useIntentionStore,
 ] as const;
 
 /** The persisted keys, read from the stores' own persist configs. */

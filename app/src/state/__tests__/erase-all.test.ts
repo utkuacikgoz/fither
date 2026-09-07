@@ -10,6 +10,7 @@ import { fixturePrompt } from "../../test-utils/fixtures";
 import { eraseEverything } from "../erase-all";
 import { useEntitlementStore } from "../entitlement-store";
 import { useIdentityStore } from "../identity-store";
+import { useIntentionStore } from "../intention-store";
 import { useLedgerStore } from "../ledger-store";
 import { hydratedStores } from "../persisted-stores";
 import { useProfileStore } from "../profile-store";
@@ -43,6 +44,7 @@ async function seedHer() {
   await useEntitlementStore.getState().purchasePlan("annual");
   useEntitlementStore.getState().recordQualifyingSession("her:1", "2026-08-01");
   useReminderStore.setState({ slot: "morning", asked: true });
+  useIntentionStore.getState().setTarget(3);
   await flushPersistence();
 }
 
@@ -73,6 +75,8 @@ describe("eraseEverything", () => {
     expect(useEntitlementStore.getState().trialUsed).toBe(false);
     expect(useReminderStore.getState().slot).toBeNull();
     expect(useReminderStore.getState().asked).toBe(false);
+    expect(useIntentionStore.getState().target).toBeNull();
+    expect(useIntentionStore.getState().asked).toBe(false);
     // Live app, not a relaunch: every store must still read as hydrated,
     // or the route guards would wait forever on an empty disk.
     for (const store of hydratedStores) {
