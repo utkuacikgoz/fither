@@ -39,8 +39,13 @@ pure JavaScript — no rebuild is needed to switch it on.
 | Event | Properties | Fires |
 |---|---|---|
 | `deep_link_open` | `path` | launch URL and each new URL, once; path only |
+| `first_use_entry` | none | a fresh install reached its first decision screen (ADR-0024) |
+| `onboarding_complete` | `equipment` (floor / chair) | onboarding handed off to the daily prompt |
+| `session_preview` | `minutes`, `blocks` | a built session was shown on the preview |
 | `workout_start` | `minutes` (10/20/30) | the player's first real transition |
 | `workout_complete` | `minutes`, `close` (completed / endedEarly / outOfTime / nothingDone), `first` | after the result commits, once |
+| `paywall_view` | `surface` (gate / expired / settings) | the paywall was on screen, once per showing |
+| `experiment_exposure` | `experiment`, `variant` (control / three) | a variant was assigned on this phone, once per experiment (ADR-0025) |
 | `trial_start` | `plan` (annual / monthly) | the store granted a subscription trial |
 
 No `identify()` is ever called; the distinct id is PostHog's anonymous

@@ -67,7 +67,15 @@ export function DailyPromptScreen({
   const previousPrompt = useSessionStore((s) => s.prompt);
   const equipment = useSettingsStore((s) => s.equipment);
   const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
+  const setAlwaysAvoid = useSettingsStore((s) => s.setAlwaysAvoid);
   const sessionSalt = useSettingsStore((s) => s.sessionSalt);
+  // Restrictions are asked once (owner brief 2026-09-07, wave 1):
+  // onboarding no longer has an avoid step, so on the FIRST session —
+  // nothing remembered yet and nothing trained yet, both read from the
+  // stores — the soreness step offers to keep today's picks as the
+  // permanent list. A returning user edits that list in Settings.
+  const hasHistory = useProfileStore((s) => s.history.entries.length > 0);
+  const firstSession = alwaysAvoid.length === 0 && !hasHistory;
   // The same six-store hydration set the launch surface and the route
   // guards wait on — one definition (lib/route-guard.ts), so a store
   // added there is waited on here too. Identity is in it: a slow
@@ -97,6 +105,9 @@ export function DailyPromptScreen({
   const [avoid, setAvoid] = useState<BodyArea[]>(
     previousPrompt?.avoid.filter((area) => !alwaysAvoid.includes(area)) ?? [],
   );
+  // "Remember for every session": OFF by default — a permanent list is
+  // hers to opt into, never a side effect of a sore morning.
+  const [remember, setRemember] = useState(false);
   const [careNoteText, setCareNoteText] = useState("");
   // Today-only exceptions (owner decision 2026-09-07): an area she sets
   // aside from the no-session outcome leaves today's list, whether it
@@ -152,6 +163,17 @@ export function DailyPromptScreen({
     } else {
       setStep("error");
     }
+  };
+
+  // The first-session confirm: if she chose to remember, today's picks
+  // become the permanent list BEFORE the session is built. The merge in
+  // finish() is unchanged — the list was empty, so today's avoid list is
+  // identical either way; only tomorrow's differs. Nothing is discarded.
+  const confirmSoreness = () => {
+    if (firstSession && remember && avoid.length > 0) {
+      setAlwaysAvoid(avoid);
+    }
+    finish(avoid);
   };
 
   const setAsideArea = (area: BodyArea) => {
@@ -379,6 +401,19 @@ export function DailyPromptScreen({
                 onToggle={toggleArea}
                 testIDPrefix="soreness"
               />
+              {/* First session only, and only once something is picked
+                  (docs/design/mockups/prompt-soreness-first.html). */}
+              {firstSession && avoid.length > 0 && (
+                <View style={styles.remember}>
+                  <RowButton
+                    testID="soreness-remember"
+                    label={strings.prompt.soreness.remember}
+                    multiSelect
+                    selected={remember}
+                    onPress={() => setRemember((current) => !current)}
+                  />
+                </View>
+              )}
             </FadeIn>
           </ScrollView>
           <View style={styles.bottom}>
@@ -394,7 +429,7 @@ export function DailyPromptScreen({
                 <PrimaryButton
                   testID="soreness-confirm"
                   label={strings.prompt.soreness.confirm}
-                  onPress={() => finish(avoid)}
+                  onPress={confirmSoreness}
                 />
               </>
             ) : (
@@ -464,6 +499,9 @@ const styles = StyleSheet.create({
   countCue: {
     marginBottom: spacing.sm,
     textAlign: "center",
+  },
+  remember: {
+    marginTop: spacing.md + spacing.xs,
   },
   scrollContent: {
     paddingBottom: spacing.xl,

@@ -152,6 +152,16 @@ export const strings = {
       // count cue under multi-select body-area pickers.
       areasNoted: (count: number) =>
         count === 1 ? "1 area noted" : `${count} areas noted`,
+      // COPY-WRITER (2026-09-07, wave 1 "first use"): restrictions are asked
+      // once. On a first session, when she has picked areas, a toggle row
+      // under the grid offers to keep the picks as the permanent list
+      // (settings.avoid, "Always work around"). A toggle label, so it
+      // names what the switch does and stops: no caption under it. No
+      // "these"/"this": the row also renders on a single pick, where
+      // "these" breaks (same reason as onboarding.avoid.confirm). Off is
+      // the plain state; the label never says what she'd lose by leaving
+      // it off.
+      remember: "Remember for every session",
       areas: {
         shoulders: "Shoulders",
         wrists: "Wrists",
@@ -313,6 +323,50 @@ export const strings = {
       staleFocus: "A movement you haven't seen lately is back today.",
       tasteBlock: "Ends with a first look at your next level. Optional.",
     },
+    // COPY-WRITER (2026-09-07, wave 1 "first use"): the preview explains
+    // today's session as a short list of engine facts, one line each,
+    // under `factsTitle`. Every line is a fact the engine actually
+    // reports (Session.adaptations plus the prompt's own answers); the
+    // UI maps, it never re-derives. Caption: "Why it fits", three words
+    // that name the list's job (the domain's "show the adaptation": why
+    // today's session fits her answers) and echo the tagline's verb. Not
+    // "Built for today": the eyebrow above already says "Made for today",
+    // and the two would sit on one screen saying the same thing twice.
+    //   · minutes: a count, full stop. "movements" is the word she reads
+    //     for the library everywhere else ("Every movement stays quiet",
+    //     voice.body); singular handled.
+    //   · avoid: `areas` arrives lower case ("knees and back"). "loads" is
+    //     the plain verb; no "protect", no "injury", no caution-speak.
+    //   · lowEnergy: the real numbers (spec: 3 sets per block, 2 on low
+    //     energy, same tier). Cause named last, as her answer, not a state.
+    //   · quiet: only ever emitted when the filter removed something.
+    //   · floorOnly / withChair: her equipment answer, read back. The wall
+    //     is ambient in the engine (every room has one) so neither line
+    //     names it; the two lines are parallel so the chair reads as one
+    //     more thing in the same room, never as "better".
+    //   · softLanding: `pattern` lower case ("push", "hip hinge"). "since"
+    //     makes the hard set a reason, not a verdict; she said "Hard today"
+    //     and this is that answer kept.
+    //   · staleFocus: fires at 3 or more training days without the
+    //     pattern, so "a few sessions" is literal. Counted in her sessions,
+    //     never in days away (rule 3: absence is never named).
+    //   · taste: `movement` is the library name ("Full Push-Up"). One set,
+    //     optional, both stated; "first look" as in adaptations.tasteBlock.
+    // No dashes; each line under 50 characters at any input.
+    factsTitle: "Why it fits",
+    facts: {
+      minutes: (minutes: number, blocks: number) =>
+        `${minutes} minutes, ${blocks} ${blocks === 1 ? "movement" : "movements"}.`,
+      avoid: (areas: string) => `Nothing that loads your ${areas}.`,
+      lowEnergy: "Two sets instead of three, for low energy.",
+      quiet: "Every movement stays quiet.",
+      floorOnly: "Just you and the floor.",
+      withChair: "You, the floor and a chair.",
+      softLanding: (pattern: string) => `Lighter on ${pattern}, since last time was hard.`,
+      staleFocus: (pattern: string) =>
+        `${pattern.charAt(0).toUpperCase()}${pattern.slice(1)} is back today. It's been a few sessions.`,
+      taste: (movement: string) => `Ends with a first look at ${movement}. One set, optional.`,
+    },
   },
   // Onboarding — docs/copy/draft-strings.md §1, wired verbatim. Three
   // screens, one decision each, then the handoff eyebrow atop the first
@@ -334,6 +388,15 @@ export const strings = {
       cta: "Begin",
     },
     equipment: {
+      // COPY-WRITER (2026-09-07, wave 1 "first use"): a fresh install opens
+      // here as a guest, so this is now the first screen she reads. The
+      // brand headline (welcome.headline, ADR-0006) sits above; `lead`
+      // does what auth.welcomeSub used to do on a first run, the terms in
+      // one breath (three lengths, adapted daily), then turns toward the
+      // question below with the room she is standing in. Numerals, the
+      // same shape as the prompt's own buttons. No "no equipment": the
+      // question that follows says it better than a claim would. 15 words.
+      lead: "10, 20 or 30 minutes, adapted to you every day. First, the room you're in.",
       question: "What's within reach?",
       options: {
         floorOnly: "Just me and the floor",
@@ -814,6 +877,19 @@ export const strings = {
         apple: "Signed in with Apple",
         guest: "Continuing without an account",
       },
+      // COPY-WRITER (2026-09-07, wave 1 "first use"): Sign in with Apple
+      // moves here from the retired sign-in screen. `signIn` is the row,
+      // in Apple's own sanctioned wording, do not restyle. `signInLead` is
+      // the one line above it for a guest, and it is deliberately honest:
+      // there is no server, so an account keeps nothing, syncs nothing and
+      // restores nothing today. It states the fact (no account needed) and
+      // leaves the door open, with no reason attached because none exists
+      // yet. "Sign in", not "Sign in with Apple": the row directly below
+      // says the provider, and one screen should not say it twice. When a
+      // real benefit ships (backup, a second phone) this line changes to
+      // name it, and only then.
+      signIn: "Sign in with Apple",
+      signInLead: "No account needed. Sign in if you like.",
       signOut: "Sign out",
       signOutNote: "Your training stays on this phone.",
       erase: "Erase everything on this phone",

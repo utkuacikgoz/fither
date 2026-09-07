@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
+import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { WORDMARK } from "../../../design/primitives/wordmark";
 import { glyph } from "../../../design/tokens";
@@ -250,4 +251,20 @@ it("closing the store sheet says nothing — only a process failure gets the ret
   expect(spy).toHaveBeenCalledTimes(1);
   expect(screen.queryByTestId("paywall-purchase-error")).toBeNull();
   spy.mockRestore();
+});
+
+describe("paywall_view (ADR-0024)", () => {
+  beforeEach(() => clearRecordedEvents());
+
+  it("reports the gated day once, naming the surface and nothing else", () => {
+    render(<PaywallScreen inDay />);
+    expect(recordedEvents()).toEqual([
+      { name: "paywall_view", properties: { surface: "gate" } },
+    ]);
+  });
+
+  it("reports the settings surface when shown outside the day", () => {
+    render(<PaywallScreen />);
+    expect(recordedEvents().map((e) => e.properties)).toEqual([{ surface: "settings" }]);
+  });
 });

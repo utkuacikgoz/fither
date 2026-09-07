@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { nextMilestone } from "@fither/engine";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
@@ -16,6 +17,7 @@ import { hairline, radius, spacing, trackingWide } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { getBilling, type PlanId } from "../../monetization/billing";
 import { entitlementStatus } from "../../monetization/entitlement";
+import { useFreeSessionsAllowance } from "../../monetization/experiment";
 import { loadLibrary } from "../../session/load-library";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useProfileStore } from "../../state/profile-store";
@@ -74,6 +76,8 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
   const resetForDev = useEntitlementStore((s) => s.resetForDev);
   const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
   const trialUsed = useEntitlementStore((s) => s.trialUsed);
+  const qualifyingSessions = useEntitlementStore((s) => s.qualifyingSessions);
+  const freeSessions = useFreeSessionsAllowance();
   const purchase = useEntitlementStore((s) => s.purchase);
 
   const colors = useTheme();
@@ -85,8 +89,19 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
 
   // The expired gate state, from the same policy the launch gate uses.
   const expired =
-    entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }) ===
-    "trialExpired";
+    entitlementStatus({
+      firstCompletedDate: trialStartDate,
+      purchase,
+      trialUsed,
+      qualifyingSessions,
+      freeSessions,
+    }) === "trialExpired";
+  // paywall_view (ADR-0024): the platform observed the paywall on
+  // screen, once per showing; which surface, nothing about her.
+  const surface = expired ? "expired" : inDay ? "gate" : "settings";
+  useEffect(() => {
+    track("paywall_view", { surface });
+  }, [surface]);
   // The selling screen (ADR-0017, owner-approved 2026-09-06): a promise
   // headline, one lead, the ladder she is on drawn as a picture, three
   // benefits, the plans. The expired day keeps its own headline and the

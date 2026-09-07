@@ -26,4 +26,14 @@ export {
 } from "./apply";
 export { createInitialProfile, PATTERNS } from "./profile";
 export { computeStreak, type StreakState } from "./streak";
+export {
+  trainedDay,
+  weekOf,
+  weekParticipation,
+  weeklyIntentionMet,
+  weeksParticipation,
+  type Week,
+  type WeekParticipation,
+  type WeeklyTarget,
+} from "./week";
 export { unblockingAreas } from "./unblocking";

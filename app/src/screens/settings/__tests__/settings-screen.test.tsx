@@ -72,7 +72,9 @@ describe("SettingsScreen — the grouped list", () => {
       strings.settings.rows.plan,
       strings.paywall.restore,
       strings.settings.account.title,
-      strings.settings.account.signOut,
+      // A guest (resetSettingsStores leaves no identity) gets the door
+      // in, never a sign-out.
+      strings.settings.account.signIn,
       strings.settings.account.erase,
       strings.settings.dev.title,
       VERSION_LINE,

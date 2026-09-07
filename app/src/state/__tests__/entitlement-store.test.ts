@@ -2,7 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { clearRecordedEvents, recordedEvents } from "../../analytics/dev-analytics";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
-import { useEntitlementStore } from "../entitlement-store";
+import { entitlementStatus } from "../../monetization/entitlement";
+import { FREE_SESSIONS_EXPERIMENT } from "../../monetization/experiment";
+import { migrateEntitlement, useEntitlementStore } from "../entitlement-store";
 
 async function flushPersistence() {
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -14,6 +16,9 @@ beforeEach(async () => {
   useEntitlementStore.setState({
     trialStartDate: null,
     purchase: null,
+    trialUsed: false,
+    qualifyingSessions: 0,
+    lastQualifyingSessionId: null,
     hydrated: true,
     hydrationFailed: false,
   });
@@ -25,11 +30,12 @@ beforeEach(async () => {
 });
 
 describe("entitlement store", () => {
-  it("stamps the trial start once — later completions never move it", () => {
-    const { markSessionCompleted } = useEntitlementStore.getState();
-    markSessionCompleted("2026-08-31");
-    markSessionCompleted("2026-09-02");
+  it("stamps the trial start once — later completions count but never move it", () => {
+    const { recordQualifyingSession } = useEntitlementStore.getState();
+    recordQualifyingSession("s1", "2026-08-31");
+    recordQualifyingSession("s2", "2026-09-02");
     expect(useEntitlementStore.getState().trialStartDate).toBe("2026-08-31");
+    expect(useEntitlementStore.getState().qualifyingSessions).toBe(2);
   });
 
   it("purchasePlan grants instantly through dev billing and persists", async () => {
@@ -62,12 +68,14 @@ describe("entitlement store", () => {
 
   it("dev reset clears the app-side entitlement but not the dev receipt", async () => {
     await useEntitlementStore.getState().purchasePlan("monthly");
-    useEntitlementStore.getState().markSessionCompleted("2026-08-31");
+    useEntitlementStore.getState().recordQualifyingSession("s1", "2026-08-31");
 
     useEntitlementStore.getState().resetForDev();
     const state = useEntitlementStore.getState();
     expect(state.purchase).toBeNull();
     expect(state.trialStartDate).toBeNull();
+    expect(state.qualifyingSessions).toBe(0);
+    expect(state.lastQualifyingSessionId).toBeNull();
     // The fake store account still remembers — that's what restore is for.
     expect(useDevReceiptStore.getState().receipt).toMatchObject({
       plan: "monthly",
@@ -166,5 +174,161 @@ describe("the store's word (ADR-0014 §6)", () => {
     await useEntitlementStore.getState().refreshFromStore();
     expect(useEntitlementStore.getState().purchase?.plan).toBe("lifetime");
     spy.mockRestore();
+  });
+});
+
+describe("qualifying sessions (ADR-0025)", () => {
+  const ENTITLEMENT_KEY = "fither/entitlement-v1";
+
+  /** The store's facts through the policy, for a given allowance. */
+  function statusFor(freeSessions: number) {
+    const { trialStartDate, purchase, trialUsed, qualifyingSessions } =
+      useEntitlementStore.getState();
+    return entitlementStatus({
+      firstCompletedDate: trialStartDate,
+      purchase,
+      trialUsed,
+      qualifyingSessions,
+      freeSessions,
+    });
+  }
+
+  it("counts one per committed session id — a journal replay of the same record never counts twice", () => {
+    const { recordQualifyingSession } = useEntitlementStore.getState();
+    recordQualifyingSession("2026-08-31:seed-1", "2026-08-31");
+    // The crash-replay: the identical committed record, applied again.
+    recordQualifyingSession("2026-08-31:seed-1", "2026-08-31");
+    recordQualifyingSession("2026-08-31:seed-1", "2026-08-31");
+    expect(useEntitlementStore.getState().qualifyingSessions).toBe(1);
+    expect(useEntitlementStore.getState().lastQualifyingSessionId).toBe("2026-08-31:seed-1");
+    recordQualifyingSession("2026-09-02:seed-2", "2026-09-02");
+    expect(useEntitlementStore.getState().qualifyingSessions).toBe(2);
+  });
+
+  it("walks the gate under both variants as sessions are committed", () => {
+    const control = FREE_SESSIONS_EXPERIMENT.variants.control;
+    const three = FREE_SESSIONS_EXPERIMENT.variants.three;
+    expect(statusFor(control)).toBe("beforeTrial");
+    expect(statusFor(three)).toBe("beforeTrial");
+    useEntitlementStore.getState().recordQualifyingSession("s1", "2026-08-31");
+    expect(statusFor(control)).toBe("gated");
+    expect(statusFor(three)).toBe("beforeTrial");
+    useEntitlementStore.getState().recordQualifyingSession("s2", "2026-09-01");
+    expect(statusFor(three)).toBe("beforeTrial");
+    useEntitlementStore.getState().recordQualifyingSession("s3", "2026-09-02");
+    expect(statusFor(three)).toBe("gated");
+    expect(statusFor(control)).toBe("gated");
+  });
+
+  it("an active subscriber is unaffected by the count; a lapsed one stays expired", async () => {
+    await useEntitlementStore.getState().purchasePlan("annual");
+    for (let i = 1; i <= 4; i += 1) {
+      useEntitlementStore.getState().recordQualifyingSession(`s${i}`, "2026-09-0" + i);
+      expect(statusFor(1)).toBe("purchased");
+      expect(statusFor(3)).toBe("purchased");
+    }
+    // The store says the trial lapsed.
+    useEntitlementStore.setState({ purchase: null });
+    expect(statusFor(1)).toBe("trialExpired");
+    expect(statusFor(3)).toBe("trialExpired");
+  });
+
+  it("persists the count and comes back after a relaunch", async () => {
+    useEntitlementStore.getState().recordQualifyingSession("s1", "2026-08-31");
+    useEntitlementStore.getState().recordQualifyingSession("s2", "2026-09-01");
+    await flushPersistence();
+    const persisted = await AsyncStorage.getItem(ENTITLEMENT_KEY);
+    expect(persisted).toContain('"qualifyingSessions":2');
+
+    useEntitlementStore.setState({
+      trialStartDate: null,
+      qualifyingSessions: 0,
+      lastQualifyingSessionId: null,
+      hydrated: false,
+    });
+    await flushPersistence();
+    await AsyncStorage.setItem(ENTITLEMENT_KEY, persisted ?? "");
+    await useEntitlementStore.persist.rehydrate();
+    await flushPersistence();
+    const state = useEntitlementStore.getState();
+    expect(state.qualifyingSessions).toBe(2);
+    expect(state.lastQualifyingSessionId).toBe("s2");
+    expect(state.trialStartDate).toBe("2026-08-31");
+    // The replay of s2 after the relaunch still counts nothing.
+    state.recordQualifyingSession("s2", "2026-09-01");
+    expect(useEntitlementStore.getState().qualifyingSessions).toBe(2);
+  });
+
+  it("migrates a pre-experiment record: a stamped first session is one spent qualifying session", async () => {
+    // The process dies first (the reset rewrites disk), then disk holds
+    // exactly what it held before ADR-0025 (and what the completion
+    // journal's canonical write still holds): no count at all.
+    useEntitlementStore.setState({ hydrated: false });
+    await flushPersistence();
+    await AsyncStorage.setItem(
+      ENTITLEMENT_KEY,
+      JSON.stringify({
+        state: { trialStartDate: "2026-08-20", purchase: null, trialUsed: false },
+        version: 0,
+      }),
+    );
+    await useEntitlementStore.persist.rehydrate();
+    await flushPersistence();
+    const state = useEntitlementStore.getState();
+    expect(state.qualifyingSessions).toBe(1);
+    expect(state.trialStartDate).toBe("2026-08-20");
+    expect(state.purchase).toBeNull();
+    expect(state.trialUsed).toBe(false);
+    // She keeps today's policy under control and gains two under three.
+    expect(statusFor(1)).toBe("gated");
+    expect(statusFor(3)).toBe("beforeTrial");
+  });
+
+  it("migration never touches purchase or trialUsed, and a fresh record stays at zero", () => {
+    expect(
+      migrateEntitlement({
+        trialStartDate: "2026-08-20",
+        purchase: { plan: "annual", date: "2026-08-21", trial: true },
+        trialUsed: true,
+      }),
+    ).toEqual({
+      trialStartDate: "2026-08-20",
+      purchase: { plan: "annual", date: "2026-08-21", trial: true },
+      trialUsed: true,
+      qualifyingSessions: 1,
+    });
+    expect(migrateEntitlement({ trialStartDate: null, purchase: null, trialUsed: false })).toEqual({
+      trialStartDate: null,
+      purchase: null,
+      trialUsed: false,
+      qualifyingSessions: 0,
+    });
+    // A record that already counts is read back verbatim: a consumed
+    // allowance is never reset.
+    const counted = {
+      trialStartDate: "2026-08-20",
+      purchase: null,
+      trialUsed: false,
+      qualifyingSessions: 3,
+      lastQualifyingSessionId: "s3",
+    };
+    expect(migrateEntitlement(counted)).toEqual(counted);
+    expect(migrateEntitlement(undefined)).toEqual({});
+  });
+
+  it("offline changes nothing: the count and the policy read disk alone", () => {
+    const fetchSpy = jest.fn(() => {
+      throw new Error("network reached");
+    });
+    const previousFetch = globalThis.fetch;
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    try {
+      useEntitlementStore.getState().recordQualifyingSession("s1", "2026-08-31");
+      expect(statusFor(3)).toBe("beforeTrial");
+      expect(statusFor(1)).toBe("gated");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
   });
 });

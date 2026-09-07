@@ -54,11 +54,30 @@ export async function persistCanonicalCompletion(
       persisted({ profile: record.result.profile, history: record.result.history }),
     ),
     AsyncStorage.setItem(LEDGER_STORAGE_KEY, persisted({ events: record.ledgerEvents })),
-    AsyncStorage.setItem(
-      ENTITLEMENT_STORAGE_KEY,
-      persisted({ trialStartDate: record.trialStartDate, purchase: record.purchase }),
+    // The canonical write keeps every other persisted entitlement field
+    // (trialUsed, the free-session count, ADR-0025) exactly as it was on
+    // disk: a crash between this write and the store's own must not
+    // reset a consumed allowance.
+    persistedEntitlement().then((existing) =>
+      AsyncStorage.setItem(
+        ENTITLEMENT_STORAGE_KEY,
+        persisted({ ...existing, trialStartDate: record.trialStartDate, purchase: record.purchase }),
+      ),
     ),
   ]);
+}
+
+/** The entitlement key's current persisted state, or {} when absent or unreadable. */
+async function persistedEntitlement(): Promise<Record<string, unknown>> {
+  try {
+    const raw = await AsyncStorage.getItem(ENTITLEMENT_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    const state = (parsed as { state?: unknown } | null)?.state;
+    return state && typeof state === "object" ? (state as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
 
 export function clearPersistedActiveSession(): Promise<void> {

@@ -12,6 +12,7 @@ import { useActiveSessionStore } from "../active-session-store";
 import { devPersistedKeys, wipeAllPersistedStateForDev } from "../dev-reset";
 import { useEntitlementStore } from "../entitlement-store";
 import { useFirstMovementStore } from "../first-movement-store";
+import { useIdentityStore } from "../identity-store";
 import { useLedgerStore } from "../ledger-store";
 import { useProfileStore } from "../profile-store";
 import { useSessionStore } from "../session-store";
@@ -45,7 +46,7 @@ function seedPreviousTester() {
   useLedgerStore
     .getState()
     .append([{ type: "session", points: 20, date: "2026-08-01" }]);
-  useEntitlementStore.getState().markSessionCompleted("2026-08-01");
+  useEntitlementStore.getState().recordQualifyingSession("previous-tester:1", "2026-08-01");
   useDevReceiptStore.getState().setReceipt({ plan: "annual", date: "2026-08-01" });
   useFirstMovementStore.getState().record({
     t0: 1_756_700_000_000,
@@ -138,6 +139,7 @@ describe("dev first-run reset (persistence-layer wipe)", () => {
         "fither/lifetime-offer-v1",
         "fither/rating-v1",
         "fither/feedback-v1",
+        "fither/experiments-v1",
       ].sort(),
     );
   });
@@ -190,13 +192,14 @@ describe("dev first-run reset (persistence-layer wipe)", () => {
         onResumeFinished={jest.fn()}
       />,
     );
-    // First-ever-open branch: sign-in first (identity wiped too), never
-    // the prompt or the paywall. (This previously asserted onboarding's
-    // headline, which passed only because sign-in shared the same
-    // sentence — the reset's true first screen is sign-in.)
+    // First-ever-open branch: the identity was wiped too, so the launch
+    // makes her a guest on its own (owner brief 2026-09-07) and opens on
+    // onboarding's one screen — never sign-in, the prompt or the paywall.
     await waitFor(() =>
-      expect(screen.getByText(strings.auth.guest)).toBeTruthy(),
+      expect(screen.getByText(strings.onboarding.equipment.lead)).toBeTruthy(),
     );
+    expect(screen.queryByText(strings.auth.guest)).toBeNull();
+    expect(useIdentityStore.getState().identity?.kind).toBe("guest");
     // The launch stamped this lifetime's tracker as a true first run — a
     // first work-phase entry would be recorded as THE Gate 3 number.
     const run = firstMovementTracker.captureWorkEntry("work", () => Date.now());

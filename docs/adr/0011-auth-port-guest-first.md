@@ -1,6 +1,6 @@
 # ADR-0011: Sign-in behind a port, guest-first
 
-- Status: accepted (amended 2026-09-07: Google removed by owner decision; Apple and guest remain)
+- Status: accepted (amended 2026-09-07: Google removed by owner decision; Apple and guest remain. Amended again the same day, growth wave 1: no sign-in screen at launch. A fresh install becomes a guest automatically; Sign in with Apple lives in Settings → Account; a revoked Apple credential or a sign-out returns her to guest, never to a sign-in screen. Existing identities are never replaced.)
 - Date: 2026-09-01
 
 ## Context

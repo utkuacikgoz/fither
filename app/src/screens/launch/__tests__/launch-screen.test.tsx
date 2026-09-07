@@ -66,8 +66,8 @@ beforeEach(() => {
     hydrated: true,
     hydrationFailed: false,
   });
-  // This suite exercises the surface past sign-in (launch-gating owns
-  // the sign-in placement), so an identity is always present here.
+  // This suite exercises the surface past identity (launch-gating owns
+  // guest-by-default), so an identity is always present here.
   useIdentityStore.setState({
     identity: { kind: "guest", date: "2026-08-01" },
     hydrated: true,
@@ -163,9 +163,11 @@ describe("LaunchScreen", () => {
     const screen = render(<LaunchScreen {...callbacks()} />);
     jest.restoreAllMocks();
 
-    // The launch surface routed to onboarding — the measured window
-    // includes it, because a first-run user must cross it to move.
+    // The launch surface routed to onboarding (the promise heads its one
+    // equipment screen) — the measured window includes it, because a
+    // first-run user must cross it to move.
     expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
+    expect(screen.getByText(strings.onboarding.equipment.lead)).toBeTruthy();
     const run = firstMovementTracker.captureWorkEntry("work", () => 60_000);
     expect(run).toEqual({ t0: 2_000, t1: 60_000, deltaMs: 58_000, firstRun: true });
   });

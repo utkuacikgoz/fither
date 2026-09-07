@@ -1,5 +1,6 @@
 import { RouteGuard } from "../../src/lib/route-guard";
 import { entitlementStatus, isEntitled } from "../../src/monetization/entitlement";
+import { useFreeSessionsAllowance } from "../../src/monetization/experiment";
 import { GatedDailySurface } from "../../src/screens/launch/gated-daily-surface";
 import { HomeScreen } from "../../src/screens/home/home-screen";
 import { useEntitlementStore } from "../../src/state/entitlement-store";
@@ -19,8 +20,16 @@ function TodayTab() {
   const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
   const purchase = useEntitlementStore((s) => s.purchase);
   const trialUsed = useEntitlementStore((s) => s.trialUsed);
+  const qualifyingSessions = useEntitlementStore((s) => s.qualifyingSessions);
+  const freeSessions = useFreeSessionsAllowance();
   const entitled = isEntitled(
-    entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
+    entitlementStatus({
+      firstCompletedDate: trialStartDate,
+      purchase,
+      trialUsed,
+      qualifyingSessions,
+      freeSessions,
+    }),
   );
   return entitled ? <HomeScreen /> : <GatedDailySurface />;
 }

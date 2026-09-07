@@ -11,9 +11,11 @@ import {
 import { WORDMARK } from "../../../design/primitives/wordmark";
 import { SignInScreen } from "../sign-in-screen";
 
-// The one first-run decision (ADR-0011): three options with equal
-// dignity, guest one tap and infallible, honest notes about what an
-// account does, and a calm error path that always leaves guest open.
+// How she continues (ADR-0011): options with equal dignity, guest one
+// tap and infallible, and a calm error path that always leaves guest
+// open. Since the owner brief of 2026-09-07 (guest by default) the
+// screen is reached from Settings as a pushed route, where she is
+// already a guest and only the provider is offered (`fromSettings`).
 
 beforeEach(() => {
   useIdentityStore.setState({
@@ -86,6 +88,38 @@ it("an in-flight sign-in shows pending on the tapped option and quiets the rest 
   // Release the port: the sign-in completes and the states clear.
   useDevAuthSessionStore.setState({ hydrated: true });
   await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+});
+
+describe("from Settings (guest by default, owner brief 2026-09-07)", () => {
+  it("offers the provider only — she is already a guest, so the guest button would change nothing", () => {
+    useIdentityStore.setState({ identity: { kind: "guest", date: "2026-09-01" } });
+    const screen = render(<SignInScreen fromSettings onDone={jest.fn()} />);
+    expect(screen.getByTestId("sign-in-apple")).toBeTruthy();
+    expect(screen.queryByTestId("sign-in-guest")).toBeNull();
+    expect(screen.queryByText(strings.auth.guest)).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("a landed Apple identity replaces the guest and calls onDone", async () => {
+    useIdentityStore.setState({ identity: { kind: "guest", date: "2026-09-01" } });
+    const onDone = jest.fn();
+    const screen = render(<SignInScreen fromSettings onDone={onDone} />);
+    fireEvent.press(screen.getByTestId("sign-in-apple"));
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    expect(useIdentityStore.getState().identity?.kind).toBe("apple");
+  });
+
+  it("a failed provider sign-in keeps her a guest, with the calm error and no guest button", async () => {
+    useIdentityStore.setState({ identity: { kind: "guest", date: "2026-09-01" } });
+    useDevAuthSessionStore.setState({ hydrated: false, hydrationFailed: true });
+    const onDone = jest.fn();
+    const screen = render(<SignInScreen fromSettings onDone={onDone} />);
+    fireEvent.press(screen.getByTestId("sign-in-apple"));
+    await waitFor(() => expect(screen.getByTestId("sign-in-error")).toBeTruthy());
+    expect(onDone).not.toHaveBeenCalled();
+    expect(useIdentityStore.getState().identity?.kind).toBe("guest");
+    expect(screen.queryByTestId("sign-in-guest")).toBeNull();
+  });
 });
 
 it("every rendered string comes from strings.ts", () => {
