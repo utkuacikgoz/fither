@@ -28,14 +28,11 @@ beforeEach(() => {
   });
 });
 
-it("renders all three ways to continue, with the honest notes", async () => {
+it("renders both ways to continue, with the honest notes", () => {
   const screen = render(<SignInScreen />);
   expect(screen.getByText(strings.auth.welcome)).toBeTruthy();
   expect(screen.getByText(strings.auth.welcomeSub)).toBeTruthy();
   expect(screen.getByText(strings.auth.apple)).toBeTruthy();
-  // Provider buttons render once the port says which adapters exist;
-  // the dev port offers both.
-  expect(await screen.findByText(strings.auth.google)).toBeTruthy();
   expect(screen.getByText(strings.auth.guest)).toBeTruthy();
   // Owner review 2026-09-06: no explanatory captions under the buttons.
   expect(screen.queryByText(/keeps your place/)).toBeNull();
@@ -46,7 +43,6 @@ it("renders all three ways to continue, with the honest notes", async () => {
 
 it.each([
   ["sign-in-apple", "apple"],
-  ["sign-in-google", "google"],
   ["sign-in-guest", "guest"],
 ] as const)("%s lands the %s identity and calls onDone", async (testID, kind) => {
   const onDone = jest.fn();
@@ -85,9 +81,6 @@ it("an in-flight sign-in shows pending on the tapped option and quiets the rest 
     ).toBe(true),
   );
   expect(
-    screen.getByTestId("sign-in-google").props.accessibilityState.disabled,
-  ).toBe(true);
-  expect(
     screen.getByTestId("sign-in-guest").props.accessibilityState.disabled,
   ).toBe(true);
   // Release the port: the sign-in completes and the states clear.
@@ -104,11 +97,12 @@ it("every rendered string comes from strings.ts", () => {
   }
 });
 
-it("offers only the providers the port has adapters for — never a button that would fake success", async () => {
+it("offers only the providers the port has adapters for — never a button that would fake success", () => {
   const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
   const spy = jest.spyOn(getAuth(), "availableProviders").mockReturnValue(["apple"]);
   const screen = render(<SignInScreen onDone={jest.fn()} />);
   expect(screen.queryByTestId("sign-in-google")).toBeNull();
+  expect(screen.getAllByRole("button")).toHaveLength(2);
   expect(screen.getByTestId("sign-in-apple")).toBeTruthy();
   expect(screen.getByTestId("sign-in-guest")).toBeTruthy();
   spy.mockRestore();

@@ -19,11 +19,7 @@ export function ProfileHeader() {
   const entries = useProfileStore((s) => s.history.entries);
   const copy = strings.settings.account;
   const status =
-    identity?.kind === "apple"
-      ? copy.status.apple
-      : identity?.kind === "google"
-        ? copy.status.google
-        : copy.status.guest;
+    identity?.kind === "apple" ? copy.status.apple : copy.status.guest;
   const since = sinceLine(entries);
 
   return (

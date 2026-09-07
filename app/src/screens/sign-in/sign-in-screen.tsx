@@ -29,14 +29,13 @@ interface SignInScreenProps {
 
 export function SignInScreen({ onDone }: SignInScreenProps) {
   const signInWithApple = useIdentityStore((s) => s.signInWithApple);
-  const signInWithGoogle = useIdentityStore((s) => s.signInWithGoogle);
   const continueAsGuest = useIdentityStore((s) => s.continueAsGuest);
 
   const reduceMotion = useReducedMotion();
   // Which option is in flight (audit S9): the tapped button shows its
   // pending state, siblings quiet down, and everything clears on failure
   // so she can retry — guest included, always.
-  const [pending, setPending] = useState<"apple" | "google" | "guest" | null>(
+  const [pending, setPending] = useState<"apple" | "guest" | null>(
     null,
   );
   const [failed, setFailed] = useState(false);
@@ -48,7 +47,7 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
   const [providers] = useState<AuthProvider[]>(() => getAuth().availableProviders());
 
   const run = async (
-    tone: "apple" | "google" | "guest",
+    tone: "apple" | "guest",
     action: () => Promise<SignInResult>,
   ) => {
     if (pending) return;
@@ -92,18 +91,6 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
             quieted={pending !== null && pending !== "apple"}
             onPress={() => {
               void run("apple", signInWithApple);
-            }}
-          />
-        )}
-        {providers.includes("google") && (
-          <AuthButton
-            testID="sign-in-google"
-            tone="google"
-            label={strings.auth.google}
-            pending={pending === "google"}
-            quieted={pending !== null && pending !== "google"}
-            onPress={() => {
-              void run("google", signInWithGoogle);
             }}
           />
         )}

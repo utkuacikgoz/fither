@@ -1,6 +1,6 @@
 # ADR-0011: Sign-in behind a port, guest-first
 
-- Status: accepted
+- Status: accepted (amended 2026-09-07: Google removed by owner decision; Apple and guest remain)
 - Date: 2026-09-01
 
 ## Context

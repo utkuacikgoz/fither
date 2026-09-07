@@ -12,11 +12,11 @@ import {
 // The three ways to continue, with EQUAL visual dignity (ADR-0011 §1):
 // same shape, same height, same weight. Tones follow platform affordance
 // conventions without leaving the token palette — Apple's mandated
-// dark-filled look uses the ink token, Google's light look uses surface
-// with a hairline, and guest carries the brand's own sage. Guest is
+// dark-filled look uses the ink token, and guest carries the brand's
+// own green. Guest is
 // never a grey afterthought link.
 
-type Tone = "apple" | "google" | "guest";
+type Tone = "apple" | "guest";
 
 interface AuthButtonProps {
   tone: Tone;
@@ -42,21 +42,11 @@ export function AuthButton({
   quieted = false,
 }: AuthButtonProps) {
   const colors = useTheme();
-  const fill =
-    tone === "apple"
-      ? colors.ink
-      : tone === "google"
-        ? colors.surface
-        : colors.accent;
+  const fill = tone === "apple" ? colors.ink : colors.accent;
   // Guest reads theme onAccent: the dark theme's light sage needs dark
   // ink, not bone (contrast — see the token's comment).
-  const text =
-    tone === "apple"
-      ? colors.bg
-      : tone === "google"
-        ? colors.ink
-        : colors.onAccent;
-  const border = tone === "google" ? colors.line : fill;
+  const text = tone === "apple" ? colors.bg : colors.onAccent;
+  const border = fill;
   return (
     <Pressable
       accessibilityRole="button"

@@ -1,5 +1,5 @@
 // DEV-ONLY auth implementation (ADR-0011 §3): instant success, zero
-// network, zero SDK. It exists so the whole sign-in flow — Apple, Google,
+// network, zero SDK. It exists so the whole sign-in flow — Apple,
 // guest, sign-out, the error path — is fully clickable before real
 // providers are wired. Its one piece of state is a persisted fake
 // "session" that plays the role of the provider-side credential, using
@@ -86,7 +86,7 @@ export const devAuth: AuthPort = {
   },
 
   availableProviders(): AuthProvider[] {
-    return ["apple", "google"];
+    return ["apple"];
   },
 
   async checkRevoked() {
@@ -97,9 +97,6 @@ export const devAuth: AuthPort = {
     return signInAs("apple");
   },
 
-  signInWithGoogle(): Promise<SignInOutcome> {
-    return signInAs("google");
-  },
 
   async continueAsGuest(): Promise<SignInOutcome> {
     // Guest is local-only and never fails (ADR-0011 §1) — the error

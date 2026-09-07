@@ -2,7 +2,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 
 import { providerAuth } from "../provider-auth";
 
-// The real providers behind the port: Apple live, Google not offered,
+// The real provider behind the port: Apple live,
 // no name and no email ever requested (ADR-0011 §6).
 
 const mocked = AppleAuthentication as unknown as {
@@ -10,9 +10,8 @@ const mocked = AppleAuthentication as unknown as {
   getCredentialStateAsync: jest.Mock;
 };
 
-it("offers Apple, and never Google without an adapter", async () => {
+it("offers Apple only", () => {
   expect(providerAuth.availableProviders()).toEqual(["apple"]);
-  expect(await providerAuth.signInWithGoogle()).toEqual({ ok: false, reason: "failed" });
 });
 
 it("signs in with no scopes and keeps only the opaque user id", async () => {
