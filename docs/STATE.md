@@ -59,8 +59,10 @@ that cannot write Watchman's LaunchAgent.
   unlocks, append-only points (20/25/30 by length, +5 new-tier block,
   +25 unlock). Skip is progression-neutral (ADR-0012); struggled alone
   drives easing/regression; absence never regresses. Counters are
-  `cleanCount`/`struggleCount` — the word "streak" is banned from the
-  codebase, enforced by a shape-guard test.
+  `cleanCount`/`struggleCount`. A day streak (ADR-0018) is a pure fold
+  over history: consecutive trained days, one rest day forgiven per run,
+  best run kept; `unblockingAreas` names which single avoided area, set
+  aside for today, lets a session build.
 - `MAX_TIER` exported so UI never bakes the ladder length into copy.
 
 **Phase 2 — the full app flow (all audit waves shipped)**
