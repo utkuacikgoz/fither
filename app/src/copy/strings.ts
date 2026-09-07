@@ -893,6 +893,11 @@ export const strings = {
       // never when, and never what's absent. "counts" echoes
       // finish.note ("That counts.").
       empty: "Named skills land here as you reach new tiers. Every session counts toward the first.",
+      // COPY-WRITER TO REVIEW (ui-engineer, 2026-09-07): the name of a
+      // milestone when the movement library is absent (a degraded build
+      // only). Says the ladder and the rung in her own vocabulary
+      // ("Push", "Tier 4 of 6") instead of a raw pattern id.
+      unnamed: (pattern: string, tier: string) => `${pattern}, ${tier}`,
     },
     points: {
       // A record of work done, never a balance: points buy nothing and

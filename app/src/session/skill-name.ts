@@ -1,9 +1,12 @@
 import {
+  MAX_TIER,
   milestoneMovement,
   type MovementLibrary,
   type Pattern,
   type Tier,
 } from "@fither/engine";
+
+import { strings } from "../copy/strings";
 
 /**
  * The canonical ladder-step name at (pattern, tier) — how an earned skill
@@ -20,8 +23,17 @@ export function skillLabel(
   pattern: Pattern,
   tier: Tier,
 ): string {
-  if (!library) return pattern;
-  return milestoneMovement(library, pattern, tier)?.name ?? pattern;
+  // A degraded build (library absent, or a milestone the library no
+  // longer names) still says the ladder and the rung in her own words,
+  // never a raw pattern id.
+  const name = library ? milestoneMovement(library, pattern, tier)?.name : undefined;
+  return (
+    name ??
+    strings.profile.skills.unnamed(
+      strings.profile.patterns.names[pattern],
+      strings.profile.tier(tier, MAX_TIER),
+    )
+  );
 }
 
 /**
