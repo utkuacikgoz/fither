@@ -995,6 +995,7 @@ if (invokedDirectly) {
     "neverEmptyWithoutAvoid",
     "emptyIffPoolEmpty",
     "unblockingNonEmptyWhenEmpty",
+    "filledAtLeast80pct",
   ];
   const broken = hard.filter((k) => (result.failureCounts.get(k) ?? 0) > 0);
   if (broken.length > 0) {

@@ -24,6 +24,7 @@ const HARD = [
   "emptyIffPoolEmpty",
   "unblockingNonEmptyWhenEmpty",
   "filledToTargetWithAtMostOneAvoid",
+  "filledAtLeast80pct",
 ] as const;
 
 describe("coverage of the daily-prompt space", () => {
@@ -40,9 +41,12 @@ describe("coverage of the daily-prompt space", () => {
     expect(result.failureCounts.get(invariant) ?? 0).toBe(0);
   });
 
-  it("a session is never over budget and never empty with fewer than three avoided areas", () => {
+  it("a session is never over budget, never under the 90% target, and never empty with fewer than three avoided areas", () => {
     for (const [key, bucket] of result.buckets) {
       expect(bucket.overBudget, key).toBe(0);
+      // Owner decision 2026-09-07: the minutes she asked for are the
+      // minutes she gets, however few patterns survive her avoid list.
+      expect(bucket.belowTarget, key).toBe(0);
       const size = Number(key.split(":")[1]);
       if (size <= 2) expect(bucket.empty, key).toBe(0);
     }

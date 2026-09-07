@@ -86,7 +86,10 @@ that cannot write Watchman's LaunchAgent.
   never a constraint violation, empty only at 3+ avoided areas (44 sets)
   and always unblockable; two owner findings (underfill with 2+ areas at
   20/30 minutes, repeated movements in long sessions) recorded there.
-- Tests: app 80 suites / 653 tests, engine 122; typecheck clean.
+- ADR-0021: the cap grows as patterns fall away (one pattern can carry
+  30 minutes) and the picker takes a fresh movement down the ladder
+  before repeating; whole space now fills to 90%, sim gates unchanged.
+- Tests: app 80 suites / 653 tests, engine 127; typecheck clean.
 
 **Phase 2 — the full app flow (all audit waves shipped)**
 
