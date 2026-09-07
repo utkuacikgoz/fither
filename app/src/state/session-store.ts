@@ -1,9 +1,10 @@
-import type {
-  ApplyResult,
-  BlockOutcome,
-  DailyPrompt,
-  Session,
-  SessionMinutes,
+import {
+  computeStreak,
+  type ApplyResult,
+  type BlockOutcome,
+  type DailyPrompt,
+  type Session,
+  type SessionMinutes,
 } from "@fither/engine";
 import { create } from "zustand";
 
@@ -40,6 +41,7 @@ import { useEntitlementStore } from "./entitlement-store";
 import { useFirstMovementStore } from "./first-movement-store";
 import { useProfileStore } from "./profile-store";
 import { useLedgerStore } from "./ledger-store";
+import { rescheduleInvitation } from "./reminder-store";
 import { useSettingsStore } from "./settings-store";
 import {
   clearPersistedActiveSession,
@@ -611,11 +613,23 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         saveFailed: false,
         saving: false,
       });
+      // Tomorrow's invitation now speaks from today's training (ADR-0018):
+      // the profile store above holds the committed history, so the
+      // reminder store reads the streak from it. Fire-and-forget and
+      // never-throwing by contract — the finish is already on screen and
+      // a scheduling failure is not her problem.
+      void rescheduleInvitation();
       if (!alreadyReported) {
         track("workout_complete", {
           minutes: session.minutes,
           close: close.reason,
           first: completedAnything && entitlementBefore.trialStartDate === null,
+          // The engine's count over the history the commit just wrote,
+          // relative to the session's own day (ADR-0018 §5).
+          streak: computeStreak(
+            useProfileStore.getState().history.entries,
+            session.date,
+          ).current,
         });
       }
     } catch (error) {

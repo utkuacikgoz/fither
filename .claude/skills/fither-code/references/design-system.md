@@ -206,6 +206,12 @@ is what gets built.
   blocks her recommends the way out as tappable actions (the engine
   names which areas unblock; one row each, today only), never a
   description plus a generic button. Applies to every dead end.
+- 2026-09-07, feedback subpage: the lead paragraph and the privacy
+  caption were "too much text, show do not tell". → Rule: a form screen
+  is its title, its fields and its one button. What a field is for goes
+  in its placeholder; what happens to the data is not a caption on the
+  form. Approved as: title, field, optional email, Send; the sent state
+  is the mark, one line, one soft line, Done.
 - 2026-09-07, "Approved start building": the whole flow is built onto
   the approved mockups on the feature branch (commit bb77392). Where a
   mockup literal had no string, the existing string was used and the

@@ -55,6 +55,7 @@ export const SETTINGS_ROUTES = {
   notes: "/settings/notes",
   invitation: "/settings/invitation",
   plan: "/settings/plan",
+  feedback: "/settings/feedback",
 } as const;
 
 interface SettingsScreenProps {

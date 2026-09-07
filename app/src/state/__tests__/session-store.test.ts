@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 
 import { clearRecordedEvents, recordedEvents } from "../../analytics/dev-analytics";
+import { strings } from "../../copy/strings";
 import { capturedErrors, clearCapturedErrors } from "../../monitoring/quiet-monitoring";
 import { firstMovementTracker } from "../../lib/first-movement-timer";
 import { applyResult } from "../../session/apply-result";
@@ -17,6 +19,7 @@ import { useFirstMovementStore } from "../first-movement-store";
 import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
+import { useReminderStore } from "../reminder-store";
 import { useSessionStore } from "../session-store";
 import * as journal from "../completion-journal";
 import {
@@ -39,6 +42,9 @@ jest.mock("../../session/create-session", () => ({
   createSession: jest.fn(),
 }));
 jest.mock("../../session/apply-result", () => ({ applyResult: jest.fn() }));
+// The calendar is pinned to the fixture session's date so the streak the
+// invitation names is the one the committed history holds.
+jest.mock("../../lib/dates", () => ({ todayIso: () => "2026-08-31" }));
 
 const mockedCreate = jest.mocked(createSession);
 const mockedApply = jest.mocked(applyResult);
@@ -202,7 +208,7 @@ describe("session store", () => {
       expect(recordedEvents()).toEqual([
         {
           name: "workout_complete",
-          properties: { minutes: 10, close: "completed", first: true },
+          properties: { minutes: 10, close: "completed", first: true, streak: 1 },
         },
       ]);
     });
@@ -1166,5 +1172,102 @@ describe("trial start (ADR-0009 §2 — app-layer policy, never engine)", () => 
     useEntitlementStore.setState({ hydrated: false });
     const result = useSessionStore.getState().startSession(fixturePrompt);
     expect(result).toEqual({ ok: false, reason: "notReady" });
+  });
+});
+
+describe("the daily invitation after a commit (ADR-0018)", () => {
+  const scheduleAsync = jest.mocked(Notifications.scheduleNotificationAsync);
+  const cancelAsync = jest.mocked(Notifications.cancelAllScheduledNotificationsAsync);
+  const getPermissionAsync = jest.mocked(Notifications.getPermissionsAsync);
+
+  function granted() {
+    getPermissionAsync.mockResolvedValue({
+      status: "granted",
+      granted: true,
+      canAskAgain: true,
+    } as unknown as Notifications.NotificationPermissionsStatus);
+  }
+
+  async function flushReschedule() {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  beforeEach(() => {
+    useReminderStore.setState({ slot: null, asked: true, hydrated: true });
+  });
+
+  afterEach(() => {
+    useReminderStore.setState({ slot: null });
+  });
+
+  it("re-schedules her slot with the streak body once the commit has landed", async () => {
+    useReminderStore.setState({ slot: "evening" });
+    granted();
+    // The history the scheduler read from: captured at the moment of the
+    // first schedule call, to prove the profile store was written first.
+    let entriesSeen = -1;
+    scheduleAsync.mockImplementation(async () => {
+      if (entriesSeen < 0) {
+        entriesSeen = useProfileStore.getState().history.entries.length;
+      }
+      return "notification-id";
+    });
+
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    await useSessionStore.getState().completeSession();
+    await flushReschedule();
+
+    expect(useSessionStore.getState().finish?.completedAnything).toBe(true);
+    expect(cancelAsync).toHaveBeenCalledTimes(1);
+    expect(scheduleAsync).toHaveBeenCalledTimes(7);
+    expect(entriesSeen).toBe(1);
+    // Trained today, a 1-day run: tomorrow's session would make it 2.
+    const bodies = scheduleAsync.mock.calls.map(([r]) => r.content.body);
+    expect(bodies).toContain(strings.streak.notification.nextDay(2));
+    for (const [request] of scheduleAsync.mock.calls) {
+      expect(request.trigger).toMatchObject({ hour: 18, minute: 30 });
+    }
+  });
+
+  it("schedules nothing when no slot is chosen", async () => {
+    granted();
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    await useSessionStore.getState().completeSession();
+    await flushReschedule();
+    expect(getPermissionAsync).not.toHaveBeenCalled();
+    expect(scheduleAsync).not.toHaveBeenCalled();
+  });
+
+  it("schedules nothing when the OS permission is not granted", async () => {
+    useReminderStore.setState({ slot: "morning" });
+    getPermissionAsync.mockResolvedValue({
+      status: "denied",
+      granted: false,
+      canAskAgain: false,
+    } as unknown as Notifications.NotificationPermissionsStatus);
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    await useSessionStore.getState().completeSession();
+    await flushReschedule();
+    expect(scheduleAsync).not.toHaveBeenCalled();
+    expect(useSessionStore.getState().finish).not.toBeNull();
+  });
+
+  it("a scheduling failure never touches the finish flow", async () => {
+    useReminderStore.setState({ slot: "midday" });
+    granted();
+    cancelAsync.mockRejectedValue(new Error("native down"));
+    useSessionStore.getState().startSession(fixturePrompt);
+    playWholeSession();
+    await useSessionStore.getState().completeSession();
+    await flushReschedule();
+    const state = useSessionStore.getState();
+    expect(state.finish?.pointsEarned).toBe(35);
+    expect(state.saveFailed).toBe(false);
+    expect(capturedErrors).toHaveLength(0);
+    // The reminder store keeps her slot: the next commit tries again.
+    expect(useReminderStore.getState().slot).toBe("midday");
   });
 });

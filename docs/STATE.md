@@ -1,4 +1,4 @@
-# Where the build stands — 2026-09-05 (phase 3 reviewed and fixed; store, analytics and crash reporting wired)
+# Where the build stands — 2026-09-07 (phase 4: the redesign built on the feature branch, awaiting the owner's merge)
 
 Read `CLAUDE.md` first, then this. Everything below is on `main` with
 green GitHub CI verified per wave commit (runs #90 onward).
@@ -64,6 +64,29 @@ that cannot write Watchman's LaunchAgent.
   best run kept; `unblockingAreas` names which single avoided area, set
   aside for today, lets a session build.
 - `MAX_TIER` exported so UI never bakes the ladder length into copy.
+
+**Phase 4 — the redesign, built (branch `claude/fither-build-system-09zurs`, not on main until the owner approves)**
+
+- ADR-0017 built screen by screen against 50+ owner-approved mockups
+  (`docs/design/mockups`, rendered by `render.sh`). Dark green/black/white,
+  Manrope, tab icons, shared back header, grouped lists in Progress and
+  Settings with six subpages, the care moment as its own beat, the
+  unlock in two beats (moment, then the white share card).
+- Day streak (ADR-0018): engine `computeStreak`; hub line, finish pill,
+  Progress, the daily invitation's body (rescheduled after every commit
+  and on every foreground); `workout_complete.streak` in analytics.
+- The no-session outcome recommends the way out: engine
+  `unblockingAreas`, one tappable "Set aside X today" row each.
+- Figures move (ADR-0019): two generated keyframes per movement, a
+  crossfade loop where the figure is the hero, still under Reduce Motion.
+- Feedback (ADR-0020): Settings → Send feedback, port + offline queue,
+  endpoint set by `EXPO_PUBLIC_FEEDBACK_URL` (docs/feedback-setup.md).
+- Coverage audit (`pnpm --filter @fither/engine coverage`,
+  docs/engine-decision-tree.md): 331,776 prompts; never over budget,
+  never a constraint violation, empty only at 3+ avoided areas (44 sets)
+  and always unblockable; two owner findings (underfill with 2+ areas at
+  20/30 minutes, repeated movements in long sessions) recorded there.
+- Tests: app 80 suites / 653 tests, engine 122; typecheck clean.
 
 **Phase 2 — the full app flow (all audit waves shipped)**
 

@@ -26,9 +26,14 @@ function flatStyle(node: { props: Record<string, unknown> }): Record<string, unk
 }
 
 describe("account section", () => {
-  it("is two rows under the Account caption: sign out plain, erase in the danger colour", () => {
+  it("is three rows under the Account caption: feedback opens its page, sign out plain, erase in the danger colour", () => {
     const view = renderSection();
     expect(view.getByText(copy.title)).toBeTruthy();
+    // Dev builds always carry the feedback row (in-memory adapter).
+    expect(view.getByText(strings.feedback.row)).toBeTruthy();
+    expect(view.getByTestId("settings-feedback-chevron", { includeHiddenElements: true })).toBeTruthy();
+    fireEvent.press(view.getByTestId("settings-feedback"));
+    expect(router.push).toHaveBeenCalledWith("/settings/feedback");
     expect(view.getByTestId("settings-sign-out")).toBeTruthy();
     expect(flatStyle(view.getByText(copy.erase)).color).toBe(darkColors.danger);
     expect(flatStyle(view.getByText(copy.signOut)).color).toBe(darkColors.ink);

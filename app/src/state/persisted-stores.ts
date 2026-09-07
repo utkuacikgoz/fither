@@ -24,6 +24,7 @@ import { useDevReceiptStore } from "../monetization/dev-billing";
 import { useActiveSessionStore } from "./active-session-store";
 import { useCareNoteStore } from "./care-note-store";
 import { useEntitlementStore } from "./entitlement-store";
+import { useFeedbackStore } from "./feedback-store";
 import { useFirstMovementStore } from "./first-movement-store";
 import { useIdentityStore } from "./identity-store";
 import { useLedgerStore } from "./ledger-store";
@@ -47,6 +48,7 @@ export const persistedStores = [
   useReminderStore,
   useLifetimeOfferStore,
   useRatingStore,
+  useFeedbackStore,
 ] as const;
 
 /** The persisted keys, read from the stores' own persist configs. */

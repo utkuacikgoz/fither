@@ -4,6 +4,7 @@ import { router } from "expo-router";
 
 import AvoidRoute from "../../../../app/settings/avoid";
 import EquipmentRoute from "../../../../app/settings/equipment";
+import FeedbackRoute from "../../../../app/settings/feedback";
 import InvitationRoute from "../../../../app/settings/invitation";
 import NotesRoute from "../../../../app/settings/notes";
 import PlanRoute from "../../../../app/settings/plan";
@@ -26,6 +27,7 @@ it.each([
   ["/settings/invitation", InvitationRoute, strings.settings.reminders.title],
   ["/settings/notes", NotesRoute, strings.settings.careNotes.title],
   ["/settings/plan", PlanRoute, strings.settings.restore.title],
+  ["/settings/feedback", FeedbackRoute, strings.feedback.title],
 ])("%s renders its page — always a valid destination", (_path, Route, title) => {
   const screen = render(<Route />);
   expect(screen.getByText(title)).toBeTruthy();

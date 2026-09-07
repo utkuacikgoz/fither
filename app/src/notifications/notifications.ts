@@ -45,8 +45,17 @@ export interface NotificationsPort {
    * Schedule the one daily invitation at the slot's local time,
    * replacing any previous schedule — there is never more than one
    * invitation a day, whatever was scheduled before.
+   *
+   * `tomorrowBody` is the body of TOMORROW's firing (ADR-0018: the
+   * invitation may name the streak). It is computed by the caller from
+   * today's history at scheduling time, which is why it belongs to
+   * tomorrow and never to a firing later today: both streak bodies speak
+   * from the day after today ("today's session would make it N",
+   * "still going"), so a firing later today would misreport whenever she
+   * has already trained. Later today (if the slot has not passed) and
+   * the other five days keep the rotating generic bodies.
    */
-  scheduleDaily(slot: ReminderSlot): Promise<void>;
+  scheduleDaily(slot: ReminderSlot, tomorrowBody: string): Promise<void>;
   /** Cancel every scheduled invitation ("No invitation"). */
   cancelAll(): Promise<void>;
 }

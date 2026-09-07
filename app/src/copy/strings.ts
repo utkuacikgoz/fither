@@ -829,6 +829,38 @@ export const strings = {
       title: "Developer tools",
     },
   },
+  // COPY-WRITER: feedback (2026-09-07, owner decision). One row under the
+  // Account group in Settings, one subpage: a text field, an optional
+  // email, a Send button. It posts to a small endpoint that emails the
+  // owner, and queues on the phone while offline. The lead says two
+  // things and stops: it reaches a person, and what is useful to write.
+  // No "we value your feedback": the fact that a person reads it is the
+  // valuing. `sentNote` promises a real inbox, never a reply time. `queued`
+  // is a plain state, not an apology. `privacy` lists exactly what goes
+  // (her words, app version, phone model) and what never does (anything
+  // about her training), and that no name or account rides along unless
+  // she types one. `failed` keeps her words on screen and names the
+  // retry: the Send button stays, so it says "Send again", not
+  // errors.tryAgain. Every line under 90 characters except lead and
+  // privacy.
+  feedback: {
+    row: "Send feedback",
+    title: "Tell us what you think",
+    lead: "This goes to the person who makes FITHER. Most useful: what got in the way, and what you wish it did.",
+    placeholder: "What's on your mind?",
+    send: "Send",
+    sent: "Sent. Thank you for taking the time.",
+    sentNote: "It lands in a real inbox, read by one person, so a reply can take a while.",
+    queued: "Saved on this phone. It sends on its own when you're back online.",
+    privacy:
+      "Your words go with the app version and your phone model. Nothing about your training. No name or account is attached unless you write one.",
+    includeEmail: "Your email, if you'd like a reply",
+    emailPlaceholder: "Optional",
+    failed: "Couldn't send this just now. Your words are still here. Try Send again in a minute.",
+    // COPY-WRITER TO REVIEW (ui-engineer, 2026-09-07): the one button on the
+    // sent state, per the approved mockup settings-feedback-sent.
+    done: "Done",
+  },
   // Progress screen (2026-09-01). Titled "Progress", not "Profile":
   // this screen shows what her body can do — pattern tiers, named
   // skills, points — not who she is. "Profile" invites identity/body

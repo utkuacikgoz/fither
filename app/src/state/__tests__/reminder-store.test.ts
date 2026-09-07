@@ -1,3 +1,5 @@
+import type { HistoryEntry } from "@fither/engine";
+import { createInitialProfile } from "@fither/engine";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { strings } from "../../copy/strings";
@@ -7,7 +9,12 @@ import {
   SLOT_TIMES,
   type NotificationsPort,
 } from "../../notifications/notifications";
-import { reminderAskDue, useReminderStore } from "../reminder-store";
+import { useProfileStore } from "../profile-store";
+import {
+  reminderAskDue,
+  rescheduleInvitation,
+  useReminderStore,
+} from "../reminder-store";
 
 // The store is tested against a MOCKED port (the port pattern's whole
 // point): no SDK, no native module — just the contract between state
@@ -23,7 +30,31 @@ jest.mock("../../notifications/notifications", () => {
   return { ...actual, getNotifications: () => port };
 });
 
+// The calendar is pinned so history dates mean something: "today" is
+// 2026-09-07 throughout, and the streak body reads from it.
+jest.mock("../../lib/dates", () => ({ todayIso: () => "2026-09-07" }));
+
 const port = getNotifications() as jest.Mocked<NotificationsPort>;
+
+const GENERIC_BODIES = Object.values(strings.notifications.daily);
+
+/** A history entry with one completed block on `date`. */
+function trainedOn(date: string): HistoryEntry {
+  return {
+    date,
+    minutes: 10,
+    blocks: [{ movementId: "wall-push-up", pattern: "push", outcome: "completed" }],
+  };
+}
+
+function seedHistory(entries: HistoryEntry[]) {
+  useProfileStore.setState({
+    profile: createInitialProfile(),
+    history: { entries },
+    hydrated: true,
+    hydrationFailed: false,
+  });
+}
 
 async function flushPersistence() {
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -41,6 +72,7 @@ beforeEach(async () => {
     hydrated: true,
     hydrationFailed: false,
   });
+  seedHistory([]);
 });
 
 describe("reminder store", () => {
@@ -81,7 +113,7 @@ describe("reminder store", () => {
     await expect(useReminderStore.getState().chooseSlot("midday")).resolves.toBe(
       true,
     );
-    expect(port.scheduleDaily).toHaveBeenCalledWith("midday");
+    expect(port.scheduleDaily).toHaveBeenCalledWith("midday", expect.any(String));
     expect(useReminderStore.getState().slot).toBe("midday");
     await flushPersistence();
     expect(await AsyncStorage.getItem("fither/reminders-v1")).toContain(
@@ -103,7 +135,7 @@ describe("reminder store", () => {
     ).resolves.toBe(true);
     expect(port.getPermission).toHaveBeenCalledTimes(1);
     expect(port.requestPermission).toHaveBeenCalledTimes(1);
-    expect(port.scheduleDaily).toHaveBeenCalledWith("evening");
+    expect(port.scheduleDaily).toHaveBeenCalledWith("evening", expect.any(String));
     expect(useReminderStore.getState().slot).toBe("evening");
     // Engaging the section herself also ends the in-context ask forever.
     expect(useReminderStore.getState().asked).toBe(true);
@@ -113,7 +145,7 @@ describe("reminder store", () => {
     port.getPermission.mockResolvedValue("granted");
     await useReminderStore.getState().chooseSlotWithPermission("morning");
     expect(port.requestPermission).not.toHaveBeenCalled();
-    expect(port.scheduleDaily).toHaveBeenCalledWith("morning");
+    expect(port.scheduleDaily).toHaveBeenCalledWith("morning", expect.any(String));
   });
 
   it("an OS denial on the Settings path schedules nothing, honestly", async () => {
@@ -140,6 +172,90 @@ describe("reminder store", () => {
     expect(reminderAskDue()).toBe(false);
     useReminderStore.setState({ hydrated: true, asked: false });
     expect(reminderAskDue()).toBe(true);
+  });
+});
+
+describe("the invitation names the streak (ADR-0018)", () => {
+  it("chooseSlot with no run alive passes a generic body", async () => {
+    await useReminderStore.getState().chooseSlot("morning");
+    const [, body] = port.scheduleDaily.mock.calls[0] ?? [];
+    expect(GENERIC_BODIES).toContain(body);
+  });
+
+  it("chooseSlot after today's session: tomorrow would make it current + 1", async () => {
+    seedHistory([trainedOn("2026-09-06"), trainedOn("2026-09-07")]);
+    await useReminderStore.getState().chooseSlot("evening");
+    expect(port.scheduleDaily).toHaveBeenCalledWith(
+      "evening",
+      strings.streak.notification.nextDay(3),
+    );
+  });
+
+  it("chooseSlot on an untrained day with a run alive: still going at today's count", async () => {
+    seedHistory([trainedOn("2026-09-05"), trainedOn("2026-09-06")]);
+    await useReminderStore.getState().chooseSlot("midday");
+    expect(port.scheduleDaily).toHaveBeenCalledWith(
+      "midday",
+      strings.streak.notification.keepsGoing(2),
+    );
+  });
+
+  it("the day after a rest day still reads 'still going' — the run survived", async () => {
+    // Trained the 4th and 5th, nothing the 6th (the forgiven day), today open.
+    seedHistory([trainedOn("2026-09-04"), trainedOn("2026-09-05")]);
+    await useReminderStore.getState().chooseSlot("midday");
+    expect(port.scheduleDaily).toHaveBeenCalledWith(
+      "midday",
+      strings.streak.notification.keepsGoing(2),
+    );
+  });
+
+  it("two clear days: no run alive, generic again — nothing about what ended", async () => {
+    seedHistory([trainedOn("2026-09-01"), trainedOn("2026-09-02")]);
+    await useReminderStore.getState().chooseSlot("morning");
+    const [, body] = port.scheduleDaily.mock.calls[0] ?? [];
+    expect(GENERIC_BODIES).toContain(body);
+  });
+
+  describe("rescheduleInvitation", () => {
+    it("does nothing without a chosen slot", async () => {
+      seedHistory([trainedOn("2026-09-07")]);
+      await rescheduleInvitation();
+      expect(port.getPermission).not.toHaveBeenCalled();
+      expect(port.scheduleDaily).not.toHaveBeenCalled();
+    });
+
+    it("does nothing while the OS permission is not granted — and never asks", async () => {
+      useReminderStore.setState({ slot: "morning" });
+      port.getPermission.mockResolvedValue("denied");
+      await rescheduleInvitation();
+      expect(port.requestPermission).not.toHaveBeenCalled();
+      expect(port.scheduleDaily).not.toHaveBeenCalled();
+    });
+
+    it("re-schedules the chosen slot with today's streak body when granted", async () => {
+      useReminderStore.setState({ slot: "evening" });
+      port.getPermission.mockResolvedValue("granted");
+      seedHistory([trainedOn("2026-09-07")]);
+      await rescheduleInvitation();
+      expect(port.scheduleDaily).toHaveBeenCalledTimes(1);
+      expect(port.scheduleDaily).toHaveBeenCalledWith(
+        "evening",
+        strings.streak.notification.nextDay(2),
+      );
+      // The slot she chose is untouched.
+      expect(useReminderStore.getState().slot).toBe("evening");
+    });
+
+    it("swallows a failing port — best effort, never a throw", async () => {
+      useReminderStore.setState({ slot: "morning" });
+      port.getPermission.mockResolvedValue("granted");
+      port.scheduleDaily.mockRejectedValue(new Error("native down"));
+      await expect(rescheduleInvitation()).resolves.toBeUndefined();
+      port.getPermission.mockRejectedValue(new Error("native down"));
+      await expect(rescheduleInvitation()).resolves.toBeUndefined();
+      expect(useReminderStore.getState().slot).toBe("morning");
+    });
   });
 });
 

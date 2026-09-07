@@ -1,6 +1,11 @@
-import { Image, StyleSheet, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, Image, StyleSheet, View } from "react-native";
 
-import { movementFigure } from "../../session/movement-figures";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
+import {
+  movementFigure,
+  movementFigureFrames,
+} from "../../session/movement-figures";
 import { useTheme } from "../theme";
 import { radius, spacing } from "../tokens";
 
@@ -13,6 +18,14 @@ import { radius, spacing } from "../tokens";
 // Decorative by construction: the movement's NAME and prescription carry
 // every fact a screen reader needs, so the image is hidden from
 // accessibility rather than given a second, redundant label.
+//
+// Motion (ADR-0019, owner decision 2026-09-07 "option 1 now"): where the
+// figure is the hero it breathes between its two keyframes, a slow
+// crossfade on a loop, drawn with the Animated API alone. Reduce Motion
+// or a missing second frame shows frame A, still.
+
+/** Half a breath: one crossfade from frame A to B, or back. */
+export const FIGURE_LOOP_HALF_MS = 1400;
 
 type FigureSize = "small" | "row" | "large" | "hero";
 
@@ -43,6 +56,8 @@ interface MovementFigureProps {
   tint?: string;
   /** Sits on a tinted ground (block intro) rather than the page. */
   onWash?: boolean;
+  /** Breathe between the two keyframes (the hero figure only). */
+  animate?: boolean;
   testID?: string;
 }
 
@@ -52,10 +67,31 @@ export function MovementFigure({
   tone = "ink",
   tint: tintOverride,
   onWash = false,
+  animate = false,
   testID,
 }: MovementFigureProps) {
   const colors = useTheme();
+  const reduceMotion = useReducedMotion();
   const source = movementFigure(movementId);
+  const frames = movementFigureFrames(movementId);
+  const looping = animate && !reduceMotion && frames !== null;
+  const blend = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!looping) {
+      blend.setValue(0);
+      return;
+    }
+    const half = (toValue: number) =>
+      Animated.timing(blend, {
+        toValue,
+        duration: FIGURE_LOOP_HALF_MS,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      });
+    const loop = Animated.loop(Animated.sequence([half(1), half(0)]));
+    loop.start();
+    return () => loop.stop();
+  }, [looping, blend, movementId]);
   const box = typeof size === "number" ? size : DIMENSIONS[size];
   const tint =
     tintOverride ??
@@ -78,11 +114,32 @@ export function MovementFigure({
         },
       ]}
     >
-      <Image
-        source={source}
-        resizeMode="contain"
-        style={[styles.image, { tintColor: tint }]}
-      />
+      {looping && frames ? (
+        <>
+          <Animated.Image
+            source={frames[0]}
+            resizeMode="contain"
+            style={[
+              styles.image,
+              { tintColor: tint },
+              { opacity: Animated.subtract(1, blend) },
+            ]}
+            testID={testID ? `${testID}-frame-a` : undefined}
+          />
+          <Animated.Image
+            source={frames[1]}
+            resizeMode="contain"
+            style={[styles.image, styles.overlay, { tintColor: tint }, { opacity: blend }]}
+            testID={testID ? `${testID}-frame-b` : undefined}
+          />
+        </>
+      ) : (
+        <Image
+          source={source}
+          resizeMode="contain"
+          style={[styles.image, { tintColor: tint }]}
+        />
+      )}
     </View>
   );
 }
@@ -95,5 +152,8 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+  overlay: {
+    position: "absolute",
   },
 });

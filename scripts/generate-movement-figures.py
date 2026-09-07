@@ -1,8 +1,14 @@
-"""Movement figures: one line-figure per movement, drawn from pose data.
+"""Movement figures: two line-figure keyframes per movement, from pose data.
 
 Placeholder art with real intent (ADR-0013). Figures render as solid
 white silhouettes on transparency so React Native can tintColor them to
 the theme's accent — one asset set, correct in light and dark.
+
+Every movement has two keyframes (ADR-0019): `<id>.png` is the pose the
+app has always shown, `<id>-b.png` is the other end of its range of
+motion (push-up bottom, squat standing, bridge down, hinge upright). A
+hold gets a subtle, still-correct variation — a slight hip shift or the
+free limb moved — never a broken pose. The app crossfades the pair.
 
 Brief 6's commissioned animation replaces the RENDERING; the pose data
 here is the reference it works from.
@@ -121,10 +127,13 @@ def pose(**kw):
     base.update(kw)
     return base
 
-def standing(lean=0.0, arm=("fwd", 0.0)):
-    """Upright figure; lean tips the whole body from the ankles."""
+def standing(lean=0.0, arm=("fwd", 0.0), x0=0.0):
+    """Upright figure; lean tips the whole body from the ankles.
+
+    x0 slides the whole figure sideways, so a standing keyframe can share
+    its feet with the folded/lunged pose it pairs with."""
     def sx(y, x):  # shift by lean proportional to height above ground
-        return x + lean * (0.86 - y)
+        return x + x0 + lean * (0.86 - y)
     j = {
         "hip_near": (sx(0.55, 0.44), 0.55), "hip_far": (sx(0.55, 0.44), 0.55),
         "knee_near": (sx(0.71, 0.44), 0.71), "knee_far": (sx(0.71, 0.43), 0.71),
@@ -147,6 +156,12 @@ def standing(lean=0.0, arm=("fwd", 0.0)):
     elif kind == "wall":  # hands on the wall, elbows bent and out
         j.update(elbow_near=(sx(0.38, 0.60), 0.38), wrist_near=(sx(0.31, 0.78), 0.31),
                  elbow_far=(sx(0.39, 0.59), 0.39), wrist_far=(sx(0.32, 0.77), 0.32))
+    elif kind == "wall_top":  # hands on the wall, arms pressed long (push-up top)
+        j.update(elbow_near=(sx(0.32, 0.62), 0.32), wrist_near=(sx(0.31, 0.78), 0.31),
+                 elbow_far=(sx(0.33, 0.61), 0.33), wrist_far=(sx(0.32, 0.77), 0.32))
+    elif kind == "w":     # elbows at shoulder height, forearms up (wall-slide bottom)
+        j.update(elbow_near=(sx(0.31, 0.52), 0.31), wrist_near=(sx(0.20, 0.53), 0.20),
+                 elbow_far=(sx(0.32, 0.51), 0.32), wrist_far=(sx(0.21, 0.52), 0.21))
     elif kind == "hold":  # gripping a frame, arms straight ahead
         j.update(elbow_near=(sx(0.34, 0.62), 0.34), wrist_near=(sx(0.33, 0.80), 0.33),
                  elbow_far=(sx(0.35, 0.61), 0.35), wrist_far=(sx(0.34, 0.79), 0.34))
@@ -155,26 +170,49 @@ def standing(lean=0.0, arm=("fwd", 0.0)):
                  elbow_far=(sx(0.37, 0.33), 0.37), wrist_far=(sx(0.31, 0.51), 0.31))
     return pose(**j)
 
-def plank(hip_y=0.62, knees=False, hands=True, hand_x=0.20, incline=0.0):
-    """Horizontal support: hands (or forearms) forward, body a line."""
+def plank(hip_y=0.62, knees=False, hands=True, hand_x=0.20, incline=0.0,
+          bend=0.0, rock=0.0, tap=False, reach=False):
+    """Horizontal support: hands (or forearms) forward, body a line.
+
+    bend 0 = arms long (plank / push-up top), 1 = push-up bottom: the
+    hands stay planted, the shoulders sink toward them and the elbows
+    fold back. rock slides hips and shoulders forward over the hands (a
+    hold's slight shift). tap brings the near hand to the far shoulder;
+    reach extends the far arm and far leg (kneeling balance reach)."""
     sh_y = hip_y - 0.10 - incline
+    drop = 0.09 * bend          # how far the shoulders sink at the bottom
+    hip_drop = drop * (0.0 if knees else 0.85)   # knees on the floor stay put
+    fx = rock * 1.3             # upper-body forward shift for a hold
     j = {
-        "hip_near": (0.55, hip_y), "hip_far": (0.55, hip_y + 0.005),
-        "knee_near": (0.70, hip_y + 0.07 if knees else hip_y + 0.05),
-        "knee_far": (0.70, hip_y + 0.075 if knees else hip_y + 0.055),
+        "hip_near": (0.55 + rock, hip_y + hip_drop),
+        "hip_far": (0.55 + rock, hip_y + hip_drop + 0.005),
+        "knee_near": (0.70, hip_y + 0.07 if knees else hip_y + 0.05 + drop * 0.45),
+        "knee_far": (0.70, hip_y + 0.075 if knees else hip_y + 0.055 + drop * 0.45),
         "ankle_near": (0.86, hip_y + 0.16 if knees else hip_y + 0.10),
         "ankle_far": (0.86, hip_y + 0.165 if knees else hip_y + 0.105),
         "toe_near": (0.90, hip_y + 0.20 if knees else hip_y + 0.15),
         "toe_far": (0.90, hip_y + 0.205 if knees else hip_y + 0.155),
-        "shoulder": (0.32, sh_y), "neck": (0.26, sh_y - 0.02),
-        "head": (0.20, sh_y - 0.04), "tail": (0.27, sh_y - 0.10),
-        "elbow_near": (0.28, sh_y + 0.09), "wrist_near": (hand_x + 0.06, sh_y + 0.18),
-        "elbow_far": (0.29, sh_y + 0.095), "wrist_far": (hand_x + 0.07, sh_y + 0.185),
+        "shoulder": (0.32 + fx + 0.02 * bend, sh_y + drop),
+        "neck": (0.26 + fx + 0.02 * bend, sh_y - 0.02 + drop),
+        "head": (0.20 + fx + 0.02 * bend, sh_y - 0.04 + drop),
+        "tail": (0.27 + fx + 0.02 * bend, sh_y - 0.10 + drop),
+        # elbows fold back and up as the shoulders come down; hands planted
+        "elbow_near": (0.28 - 0.08 * bend, sh_y + 0.09 + 0.03 * bend),
+        "wrist_near": (hand_x + 0.06, sh_y + 0.18),
+        "elbow_far": (0.29 - 0.08 * bend, sh_y + 0.095 + 0.03 * bend),
+        "wrist_far": (hand_x + 0.07, sh_y + 0.185),
     }
     if knees:
         j["ankle_near"] = (0.88, hip_y + 0.02); j["ankle_far"] = (0.88, hip_y + 0.025)
         j["toe_near"] = (0.93, hip_y + 0.01); j["toe_far"] = (0.93, hip_y + 0.015)
         j["knee_near"] = (0.72, hip_y + 0.16); j["knee_far"] = (0.72, hip_y + 0.165)
+    if tap:   # near hand lifts to the far shoulder, the other arm holds
+        j["elbow_near"] = (0.22, sh_y + 0.08)
+        j["wrist_near"] = (0.31, sh_y + 0.02)
+    if reach: # far arm long ahead, far leg long behind (bird-dog line)
+        j["elbow_far"] = (0.22, sh_y - 0.02); j["wrist_far"] = (0.10, sh_y - 0.06)
+        j["knee_far"] = (0.74, hip_y + 0.03); j["ankle_far"] = (0.90, hip_y + 0.01)
+        j["toe_far"] = (0.95, hip_y)
     return pose(**j)
 
 def squat(depth=0.5):
@@ -195,10 +233,15 @@ def squat(depth=0.5):
         spine_bend=0.03 * depth,
     )
 
-def bridge(single=False, elevated=False):
-    """On her back, hips lifted."""
+def bridge(single=False, elevated=False, lift=1.0, arms="floor"):
+    """On her back, hips lifted.
+
+    lift 1 = hips at the top, 0 = resting on the floor. single lifts the
+    far leg (True) or the near one ("near", the march's other step).
+    arms "up" reaches both hands to the ceiling (a hold's variation)."""
     fy = 0.86
-    hy = 0.60 if not elevated else 0.56
+    top = 0.60 if not elevated else 0.56
+    hy = 0.76 - (0.76 - top) * lift
     j = dict(
         hip_near=(0.50, hy), hip_far=(0.50, hy + 0.005),
         knee_near=(0.68, 0.66), knee_far=(0.67, 0.665),
@@ -209,12 +252,17 @@ def bridge(single=False, elevated=False):
         elbow_near=(0.26, 0.84), wrist_near=(0.34, fy),
         elbow_far=(0.27, 0.845), wrist_far=(0.35, fy + 0.005),
     )
-    if single:  # one leg extended toward the ceiling
+    if single == "near":  # the near leg extended toward the ceiling
+        j.update(knee_near=(0.66, 0.52), ankle_near=(0.74, 0.40), toe_near=(0.80, 0.36))
+    elif single:  # one leg extended toward the ceiling
         j.update(knee_far=(0.66, 0.52), ankle_far=(0.74, 0.40), toe_far=(0.80, 0.36))
+    if arms == "up":  # both arms straight up from the shoulders
+        j.update(elbow_near=(0.29, 0.68), wrist_near=(0.30, 0.58),
+                 elbow_far=(0.30, 0.685), wrist_far=(0.31, 0.585))
     return pose(**j)
 
-def lying(knees_up=True, reach=False):
-    """On her back on the floor."""
+def lying(knees_up=True, reach=False, tabletop=False):
+    """On her back on the floor. tabletop lifts the far leg to 90/90."""
     j = dict(
         hip_near=(0.52, 0.76), hip_far=(0.52, 0.765),
         knee_near=(0.68, 0.66), knee_far=(0.67, 0.665),
@@ -227,10 +275,17 @@ def lying(knees_up=True, reach=False):
     )
     if not knees_up:  # one heel slid out long
         j.update(knee_far=(0.72, 0.79), ankle_far=(0.88, 0.83), toe_far=(0.93, 0.84))
+    if tabletop:      # far thigh vertical, shin level — the heel-tap's top
+        j.update(knee_far=(0.60, 0.58), ankle_far=(0.74, 0.60), toe_far=(0.79, 0.62))
     return pose(**j)
 
-def sidelying():
-    """Side plank: propped on one forearm, body a diagonal."""
+def sidelying(arm="up"):
+    """Side plank: propped on one forearm, body a diagonal.
+
+    The free arm points at the ceiling ("up") or rests along the hip
+    ("hip") — the hold's subtle second frame."""
+    free = (dict(elbow_far=(0.38, 0.32), wrist_far=(0.40, 0.18)) if arm == "up"
+            else dict(elbow_far=(0.44, 0.50), wrist_far=(0.52, 0.58)))
     return pose(
         hip_near=(0.56, 0.62), hip_far=(0.56, 0.625),
         knee_near=(0.72, 0.72), knee_far=(0.715, 0.725),
@@ -239,16 +294,18 @@ def sidelying():
         shoulder=(0.34, 0.46), neck=(0.31, 0.40), head=(0.29, 0.34),
         tail=(0.23, 0.36),
         elbow_near=(0.30, 0.60), wrist_near=(0.24, 0.72),
-        elbow_far=(0.38, 0.32), wrist_far=(0.40, 0.18),
+        **free,
     )
 
-def seated():
-    """On a chair, one knee lifted."""
+def seated(lift=True):
+    """On a chair, one knee lifted (or both feet down when lift is False)."""
+    far = (dict(knee_far=(0.60, 0.56), ankle_far=(0.70, 0.60), toe_far=(0.76, 0.585))
+           if lift else
+           dict(knee_far=(0.61, 0.625), ankle_far=(0.63, 0.845), toe_far=(0.70, 0.865)))
     return pose(
         hip_near=(0.44, 0.62), hip_far=(0.44, 0.625),
-        knee_near=(0.62, 0.62), knee_far=(0.60, 0.56),
-        ankle_near=(0.64, 0.84), ankle_far=(0.70, 0.60),
-        toe_near=(0.71, 0.86), toe_far=(0.76, 0.585),
+        knee_near=(0.62, 0.62), ankle_near=(0.64, 0.84), toe_near=(0.71, 0.86),
+        **far,
         shoulder=(0.42, 0.36), neck=(0.43, 0.31), head=(0.44, 0.25),
         tail=(0.36, 0.30),
         elbow_near=(0.52, 0.46), wrist_near=(0.58, 0.56),
@@ -284,9 +341,15 @@ def split(depth=0.6, elevated=False):
         elbow_far=(0.52, 0.425), wrist_far=(0.54, 0.535),
     )
 
-def wallsit(depth=1.0):
-    """Back to the wall, thighs toward parallel."""
+def wallsit(depth=1.0, arms="thighs"):
+    """Back to the wall, thighs toward parallel. arms "fwd" holds them
+    out level — the hold's free-limb variation."""
     hy = 0.56 + 0.08 * depth
+    hands = (dict(elbow_near=(0.45, hy - 0.16), wrist_near=(0.52, hy - 0.04),
+                  elbow_far=(0.44, hy - 0.165), wrist_far=(0.51, hy - 0.045))
+             if arms == "thighs" else
+             dict(elbow_near=(0.50, hy - 0.23), wrist_near=(0.64, hy - 0.22),
+                  elbow_far=(0.49, hy - 0.235), wrist_far=(0.63, hy - 0.225)))
     return pose(
         hip_near=(0.36, hy), hip_far=(0.36, hy + 0.005),
         knee_near=(0.62, hy + 0.02), knee_far=(0.61, hy + 0.025),
@@ -294,12 +357,12 @@ def wallsit(depth=1.0):
         toe_near=(0.70, 0.885), toe_far=(0.69, 0.887),
         shoulder=(0.35, hy - 0.26), neck=(0.36, hy - 0.31), head=(0.37, hy - 0.37),
         tail=(0.30, hy - 0.32),
-        elbow_near=(0.45, hy - 0.16), wrist_near=(0.52, hy - 0.04),
-        elbow_far=(0.44, hy - 0.165), wrist_far=(0.51, hy - 0.045),
+        **hands,
     )
 
-def prone(arms="w"):
-    """Face down on the floor, arms in W / Y / T."""
+def prone(arms="w", raised=True):
+    """Face down on the floor, arms in W / Y / T — lifted, or resting on
+    the floor ahead of her (raised=False, the raise's bottom)."""
     j = dict(
         hip_near=(0.58, 0.72), hip_far=(0.58, 0.725),
         knee_near=(0.74, 0.74), knee_far=(0.735, 0.745),
@@ -308,7 +371,10 @@ def prone(arms="w"):
         shoulder=(0.34, 0.68), neck=(0.28, 0.66), head=(0.22, 0.63),
         tail=(0.27, 0.58),
     )
-    if arms == "y":
+    if not raised:
+        j.update(elbow_near=(0.26, 0.71), wrist_near=(0.15, 0.73),
+                 elbow_far=(0.27, 0.715), wrist_far=(0.16, 0.735))
+    elif arms == "y":
         j.update(elbow_near=(0.24, 0.58), wrist_near=(0.13, 0.44),
                  elbow_far=(0.25, 0.585), wrist_far=(0.14, 0.445))
     elif arms == "t":
@@ -319,17 +385,20 @@ def prone(arms="w"):
                  elbow_far=(0.25, 0.635), wrist_far=(0.23, 0.525))
     return pose(**j)
 
-def pike():
-    """Hips high, inverted V."""
+def pike(bend=0.0):
+    """Hips high, inverted V. bend 1 = pike push-up bottom: the head
+    lowers toward the hands, elbows folding back; hands stay planted."""
+    dy = 0.08 * bend
     return pose(
-        hip_near=(0.56, 0.36), hip_far=(0.56, 0.365),
+        hip_near=(0.56 - 0.01 * bend, 0.36 + 0.03 * bend),
+        hip_far=(0.56 - 0.01 * bend, 0.365 + 0.03 * bend),
         knee_near=(0.70, 0.60), knee_far=(0.695, 0.605),
         ankle_near=(0.80, 0.85), ankle_far=(0.795, 0.855),
         toe_near=(0.86, 0.87), toe_far=(0.855, 0.875),
-        shoulder=(0.38, 0.56), neck=(0.34, 0.62), head=(0.30, 0.68),
-        tail=(0.28, 0.60),
-        elbow_near=(0.32, 0.70), wrist_near=(0.28, 0.84),
-        elbow_far=(0.33, 0.705), wrist_far=(0.29, 0.845),
+        shoulder=(0.38 - 0.02 * bend, 0.56 + dy), neck=(0.34 - 0.02 * bend, 0.62 + dy),
+        head=(0.30 - 0.02 * bend, 0.68 + dy), tail=(0.28 - 0.02 * bend, 0.60 + dy),
+        elbow_near=(0.32 - 0.08 * bend, 0.70 + 0.02 * bend), wrist_near=(0.28, 0.84),
+        elbow_far=(0.33 - 0.08 * bend, 0.705 + 0.02 * bend), wrist_far=(0.29, 0.845),
     )
 
 # ---------- movement → pose
@@ -402,6 +471,79 @@ POSES = {
     "plank-walkout": plank(hip_y=0.60, hand_x=0.10),
 }
 
+# The second keyframe: the other end of each movement's range (ADR-0019).
+# Reps pair top with bottom; holds pair the pose with a subtle, still-
+# correct variation. Same pose functions, different parameters — nothing
+# here is a new drawing.
+_UP = standing(x0=0.04, arm=("down", 0))      # upright, arms hanging, feet where the hinge's are
+POSES_B = {
+    # push — bottom of the press
+    "wall-push-up": standing(lean=0.07, arm=("wall_top", 0)),
+    "wide-wall-push-up": standing(lean=0.08, arm=("wall_top", 0)),
+    "wall-push-up-hold": standing(lean=0.145, arm=("wall", 0)),       # hold: a breath shallower
+    "incline-push-up": plank(hip_y=0.60, incline=0.16, bend=1.0),
+    "wide-incline-push-up": plank(hip_y=0.60, incline=0.18, bend=1.0),
+    "incline-push-up-hold": plank(hip_y=0.60, incline=0.17, rock=0.025),   # hold: hips shift forward
+    "kneeling-push-up": plank(hip_y=0.62, knees=True, bend=1.0),
+    "wide-kneeling-push-up": plank(hip_y=0.62, knees=True, bend=1.0),
+    "incline-pike-push-up": pike(bend=1.0),
+    "full-push-up": plank(hip_y=0.64, bend=1.0),
+    "pike-push-up": pike(bend=1.0),
+    "decline-push-up": plank(hip_y=0.58, incline=-0.10, bend=1.0),
+    "archer-push-up": plank(hip_y=0.64, hand_x=0.12, bend=1.0),
+    # pull — arms long vs drawn in
+    "shoulder-blade-squeeze": standing(arm=("down", 0)),
+    "wall-slide": standing(arm=("w", 0)),
+    "prone-w-raise": prone("w", raised=False),
+    "doorframe-lean-row": standing(lean=-0.05, arm=("row", 0)),
+    "prone-y-raise": prone("y", raised=False),
+    "doorframe-row": standing(lean=-0.09, arm=("row", 0)),
+    "prone-y-t-w-raise": prone("t", raised=False),
+    "deep-doorframe-row": standing(lean=-0.12, arm=("row", 0)),
+    "single-arm-doorframe-row": standing(lean=-0.28, arm=("hold", 0)),
+    "single-arm-doorframe-row-pause": standing(lean=-0.28, arm=("hold", 0)),
+    # squat — standing tall
+    "supported-sit-to-stand": squat(0.10),
+    "high-wall-sit": wallsit(0.55, arms="fwd"),                        # hold: arms held out
+    "partial-squat": squat(0.10),
+    "sit-to-stand": squat(0.10),
+    "wall-sit": wallsit(1.0, arms="fwd"),                              # hold: arms held out
+    "half-squat": squat(0.10),
+    "air-squat": squat(0.10),
+    "sumo-squat": squat(0.10),
+    "paused-squat": squat(0.10),
+    "split-squat": split(0.05),
+    "reverse-lunge": standing(x0=0.04, arm=("down", 0)),
+    "elevated-split-squat": split(0.05, elevated=True),
+    "single-leg-sit-to-stand": squat(0.10),
+    # hinge — hips down / upright
+    "glute-bridge": bridge(lift=0.0),
+    "glute-bridge-hold": bridge(arms="up"),                            # hold: arms to the ceiling
+    "standing-hip-hinge": _UP,
+    "glute-bridge-march": bridge(single="near"),                       # the other step
+    "paused-glute-bridge": bridge(lift=0.0),
+    "hinge-and-reach": standing(x0=0.04, arm=("up", 0)),
+    "single-leg-glute-bridge": bridge(single=True, lift=0.0),
+    "feet-elevated-glute-bridge": bridge(elevated=True, lift=0.0),
+    "single-leg-hip-hinge": _UP,
+    "hip-thrust": bridge(elevated=True, lift=0.0),
+    "single-leg-elevated-bridge": bridge(single=True, elevated=True, lift=0.0),
+    "single-leg-hip-thrust": bridge(single=True, elevated=True, lift=0.0),
+    # core — holds shift, reps move the free limb
+    "wall-plank": standing(lean=0.18, arm=("wall", 0)),               # hold: a breath shallower
+    "seated-knee-lift": seated(lift=False),
+    "lying-heel-slide": lying(knees_up=True),
+    "incline-plank": plank(hip_y=0.60, incline=0.14, rock=0.025),     # hold
+    "kneeling-balance-reach": plank(hip_y=0.60, knees=True, reach=True),
+    "lying-heel-tap": lying(knees_up=True, tabletop=True),
+    "knee-plank": plank(hip_y=0.62, knees=True, rock=0.025),          # hold
+    "knee-side-plank": sidelying(arm="hip"),                           # hold: free arm rests
+    "full-plank": plank(hip_y=0.64, rock=0.025),                       # hold
+    "side-plank": sidelying(arm="hip"),                                # hold: free arm rests
+    "plank-shoulder-tap": plank(hip_y=0.64, hand_x=0.16, tap=True),
+    "plank-walkout": pike(),                                           # hands walked back in
+}
+
 PROPS.update({
     # wall work — she faces a wall on her right
     "wall-push-up": [("wall", 0.88)], "wide-wall-push-up": [("wall", 0.88)],
@@ -466,23 +608,36 @@ if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     lib = json.load(open(os.path.join(ROOT, "data", "movements.json")))
     ids = [m["id"] for m in lib["movements"]]
-    missing = [i for i in ids if i not in POSES]
-    extra = [k for k in POSES if k not in ids]
+    missing = [i for i in ids if i not in POSES or i not in POSES_B]
+    extra = [k for k in set(POSES) | set(POSES_B) if k not in ids]
+    if missing:
+        raise SystemExit(f"every movement needs both keyframes; missing: {missing}")
     for mid in ids:
         render(POSES[mid], mid).save(os.path.join(OUT, f"{mid}.png"))
+        render(POSES_B[mid], mid).save(os.path.join(OUT, f"{mid}-b.png"))
     # React Native needs STATIC require() calls, so the map is generated
     # alongside the art — it can never drift from what exists on disk.
     lines = [
         "// GENERATED by scripts/generate-movement-figures.py — do not edit.",
-        "// One line figure per movement (ADR-0013). Rendered as white",
-        "// silhouettes so the UI tints them to the theme's accent.",
+        "// Two line-figure keyframes per movement (ADR-0013, ADR-0019).",
+        "// Rendered as white silhouettes so the UI tints them to the",
+        "// theme's accent; the pair crossfades where the figure is the hero.",
         "",
         "import type { ImageSourcePropType } from \"react-native\";",
         "",
+        "/** Frame A: the pose every surface has always shown. */",
         "export const movementFigures: Record<string, ImageSourcePropType> = {",
     ]
     for mid in ids:
         lines.append(f'  "{mid}": require("../../assets/movements/{mid}.png"),')
+    lines += [
+        "};",
+        "",
+        "/** Frame B: the other end of the movement's range of motion. */",
+        "const secondFrames: Record<string, ImageSourcePropType> = {",
+    ]
+    for mid in ids:
+        lines.append(f'  "{mid}": require("../../assets/movements/{mid}-b.png"),')
     lines += [
         "};",
         "",
@@ -494,11 +649,22 @@ if __name__ == "__main__":
         "  return movementFigures[movementId] ?? null;",
         "}",
         "",
+        "/** Both keyframes, A then B, or null when either is missing — the",
+        " *  caller then shows frame A alone (or nothing) rather than a loop",
+        " *  with a hole in it. */",
+        "export function movementFigureFrames(",
+        "  movementId: string,",
+        "): [ImageSourcePropType, ImageSourcePropType] | null {",
+        "  const a = movementFigures[movementId];",
+        "  const b = secondFrames[movementId];",
+        "  return a !== undefined && b !== undefined ? [a, b] : null;",
+        "}",
+        "",
     ]
     map_path = os.path.join(ROOT, "app", "src", "session", "movement-figures.ts")
     with open(map_path, "w") as f:
         f.write("\n".join(lines))
-    print(f"rendered {len(ids)} figures -> app/assets/movements/")
+    print(f"rendered {len(ids)} figure pairs ({2 * len(ids)} files) -> app/assets/movements/")
     print("wrote app/src/session/movement-figures.ts")
     if missing: print("MISSING POSES:", missing)
     if extra: print("STALE POSES:", extra)

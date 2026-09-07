@@ -9,6 +9,7 @@ import { SectionCaption } from "../../design/primitives/section-caption";
 import { SettingsRow } from "../../design/primitives/settings-row";
 import { useTheme } from "../../design/theme";
 import { minTouchTarget, spacing } from "../../design/tokens";
+import { feedbackAvailable } from "../../feedback/feedback";
 import { eraseEverything } from "../../state/erase-all";
 import { useIdentityStore } from "../../state/identity-store";
 import { SettingsGroup } from "./settings-group";
@@ -92,6 +93,16 @@ export function AccountSection({ order, reduceMotion }: AccountSectionProps) {
         </SettingsGroup>
       ) : (
         <SettingsGroup order={order} reduceMotion={reduceMotion} testID="settings-account">
+          {/* Her words to the owner (owner decision 2026-09-07). The row
+              exists only where an endpoint will read them. */}
+          {feedbackAvailable() && (
+            <SettingsRow
+              testID="settings-feedback"
+              label={strings.feedback.row}
+              chevron
+              onPress={() => router.push("/settings/feedback")}
+            />
+          )}
           <SettingsRow
             testID="settings-sign-out"
             label={copy.signOut}
