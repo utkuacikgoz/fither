@@ -7,7 +7,8 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "sim": "pnpm --filter @fither/engine sim",
-    "ios": "pnpm --filter fither-app ios"
+    "ios": "pnpm --filter fither-app ios",
+    "web:test": "node --test web/test/*.test.mjs"
   },
   "packageManager": "pnpm@10.33.0",
   "pnpm": {
