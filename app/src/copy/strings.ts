@@ -177,6 +177,25 @@ export const strings = {
       lineSome: "You trained today. It counts.",
       action: "Another session",
     },
+    // COPY-WRITER (2026-09-07, owner feedback): the no-session screen
+    // recommends, it does not describe. The engine reports which of the
+    // avoided areas would, set aside for today only, let a session build.
+    // Order on screen: `headline` (the situation, count is always 3 or
+    // more), `instruction`, one `setAside` row per unblocking area (the
+    // caller passes the area label lowercased), `settingsNote` only when
+    // at least one avoided area came from Always work around, then
+    // preview.changeAnswers. Setting aside is today only; the Settings
+    // list is never touched, and settingsNote says so in the list's own
+    // name. `none` replaces the rows when no single area unblocks;
+    // errors.noSession stays the fallback below it. No blame: the areas
+    // are named as a count, never as her choices, and nothing is wrong.
+    noSession: {
+      headline: (count: number) => `No session fits around ${count} areas.`,
+      instruction: "Set one aside for today and your session builds.",
+      settingsNote: "Today only. Always work around in Settings stays as it is.",
+      setAside: (area: string) => `Set aside ${area} today`,
+      none: "Set two aside today, from your answers or from Always work around in Settings.",
+    },
   },
   player: {
     sessionProgress: "Session progress",
