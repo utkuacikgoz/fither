@@ -206,6 +206,10 @@ is what gets built.
   blocks her recommends the way out as tappable actions (the engine
   names which areas unblock; one row each, today only), never a
   description plus a generic button. Applies to every dead end.
+- 2026-09-07, growth waves 2 to 4 approved as mocked: Home around today
+  and this week, the finish receipt, the intention ask, the weekly
+  recap, share from a receipt as three rows, the recipient page, Where
+  I train, the floor-distance work phase.
 - 2026-09-07, share screen: four context pills in one row did not fit.
   → Rule: never more than three pills in a row; four or more options go
   in a two-column grid of full-width pills (the area grid's shape).

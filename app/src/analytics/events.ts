@@ -38,6 +38,12 @@ export interface AnalyticsEvents {
     /** The day streak after this session committed (ADR-0018); 0 when nothing completed. */
     streak: number;
   };
+  /** She set a weekly intention (wave 2); none = no target. */
+  weekly_intention_set: { target: "two" | "three" | "none" };
+  /** A share was offered on a surface (wave 3). */
+  share_eligible: { source: "finish" | "receipt" | "recap" };
+  /** She opened the share sheet; iOS reports nothing after this. */
+  share_start: { source: "finish" | "receipt" | "recap"; context: "home" | "hotel" | "meetings" | "none" };
   /** The paywall was shown: the gated day, the expired state, or Settings. */
   paywall_view: { surface: "gate" | "expired" | "settings" };
   /** The app opened from a shared scenario link (ADR-0024 §3); the allowlisted id only. */
@@ -69,6 +75,9 @@ export const ANALYTICS_EVENT_NAMES: readonly AnalyticsEventName[] = [
   "session_preview",
   "workout_start",
   "workout_complete",
+  "weekly_intention_set",
+  "share_eligible",
+  "share_start",
   "paywall_view",
   "scenario_entry",
   "experiment_exposure",
