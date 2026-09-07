@@ -418,6 +418,12 @@ POSES = {
     "pike-push-up": pike(),
     "decline-push-up": plank(hip_y=0.58, incline=-0.10),
     "archer-push-up": plank(hip_y=0.64, hand_x=0.12),
+    # wrist-neutral push (movement-author, 2026-09-07): same silhouettes as
+    # their palm cousins, the wrist choice is invisible at figure scale
+    "forearm-wall-push": standing(lean=0.11, arm=("wall", 0)),
+    "fist-wall-push-up": standing(lean=0.13, arm=("wall", 0)),
+    "chair-grip-push-up": plank(hip_y=0.60, incline=0.16),
+    "fist-kneeling-push-up": plank(hip_y=0.62, knees=True),
     # pull
     "shoulder-blade-squeeze": standing(arm=("row", 0)),
     "wall-slide": standing(arm=("up", 0)),
@@ -490,6 +496,10 @@ POSES_B = {
     "full-push-up": plank(hip_y=0.64, bend=1.0),
     "pike-push-up": pike(bend=1.0),
     "decline-push-up": plank(hip_y=0.58, incline=-0.10, bend=1.0),
+    "forearm-wall-push": standing(lean=0.06, arm=("wall_top", 0)),
+    "fist-wall-push-up": standing(lean=0.07, arm=("wall_top", 0)),
+    "chair-grip-push-up": plank(hip_y=0.60, incline=0.16, bend=1.0),
+    "fist-kneeling-push-up": plank(hip_y=0.62, knees=True, bend=1.0),
     "archer-push-up": plank(hip_y=0.64, hand_x=0.12, bend=1.0),
     # pull — arms long vs drawn in
     "shoulder-blade-squeeze": standing(arm=("down", 0)),

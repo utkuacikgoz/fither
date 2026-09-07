@@ -76,7 +76,7 @@ Holds everywhere, before and after the change below: never over
 budget; never a block that loads an avoided area, needs missing
 equipment or is loud under quiet; never throws; tiers at or below the
 profile's; empty only when the pool is empty (first at three avoided
-areas, 44 of the 256 sets); `unblockingAreas` non-empty for every empty
+areas, 40 of the 256 sets since the wrist-neutral push variants, 44 before); `unblockingAreas` non-empty for every empty
 case.
 
 Two findings went to the owner and were decided the same day (ADR-0021):
@@ -112,7 +112,7 @@ every tier removes the whole pattern.
 
 | pattern | areas loaded by every tier | removed entirely by one area |
 |---|---|---|
-| push | shoulders, wrists, elbows (core from tier 5) | shoulders, wrists, elbows |
+| push | shoulders, elbows (wrists except the four wrist-neutral variants at tiers 1 to 3; core from tier 5) | shoulders, elbows |
 | pull | shoulders, back (wrists, elbows from tier 5) | shoulders, back |
 | squat | hips, knees (ankles from tier 3) | hips, knees |
 | hinge | hips (core at tiers 5 and 6) | hips |
@@ -120,5 +120,6 @@ every tier removes the whole pattern.
 
 So hips removes squat and hinge together; shoulders removes push, pull
 and core tiers 3 and up. That is why shoulders+hips leaves core alone and
-why the 44 emptying sets all contain hips and core plus shoulders or a
-push-side area.
+why the 40 emptying sets all contain hips and core plus shoulders or
+elbows. Since the wrist-neutral push variants (2026-09-07) wrists alone
+removes nothing: a wrist avoider trains push at tiers 1 to 3.
