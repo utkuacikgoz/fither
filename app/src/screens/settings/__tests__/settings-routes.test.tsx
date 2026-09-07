@@ -5,8 +5,10 @@ import { router } from "expo-router";
 import AvoidRoute from "../../../../app/settings/avoid";
 import EquipmentRoute from "../../../../app/settings/equipment";
 import FeedbackRoute from "../../../../app/settings/feedback";
+import IntentionRoute from "../../../../app/settings/intention";
 import InvitationRoute from "../../../../app/settings/invitation";
 import NotesRoute from "../../../../app/settings/notes";
+import PlaceRoute from "../../../../app/settings/place";
 import PlanRoute from "../../../../app/settings/plan";
 import VoiceRoute from "../../../../app/settings/voice";
 import { strings } from "../../../copy/strings";
@@ -21,10 +23,12 @@ beforeEach(async () => {
 });
 
 it.each([
+  ["/settings/place", PlaceRoute, strings.place.title],
   ["/settings/avoid", AvoidRoute, strings.settings.avoid.title],
   ["/settings/equipment", EquipmentRoute, strings.settings.rows.equipment],
   ["/settings/voice", VoiceRoute, strings.settings.voice.title],
   ["/settings/invitation", InvitationRoute, strings.settings.reminders.title],
+  ["/settings/intention", IntentionRoute, strings.intention.question],
   ["/settings/notes", NotesRoute, strings.settings.careNotes.title],
   ["/settings/plan", PlanRoute, strings.settings.restore.title],
   ["/settings/feedback", FeedbackRoute, strings.feedback.title],

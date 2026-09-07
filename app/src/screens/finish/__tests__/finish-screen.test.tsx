@@ -1,15 +1,19 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { router } from "expo-router";
 import React from "react";
 import { Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
+import { darkColors } from "../../../design/tokens";
 import { applyResult } from "../../../session/apply-result";
-import { createPlayer, reduce, type PlayerBlock } from "../../../session/player-machine";
+import { createPlayer, reduce } from "../../../session/player-machine";
 import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
+import { useIntentionStore } from "../../../state/intention-store";
 import { useLedgerStore } from "../../../state/ledger-store";
-import { createInitialProfile, type BlockOutcome } from "@fither/engine";
+import { createInitialProfile, type ApplyResult, type BlockOutcome } from "@fither/engine";
 import { useProfileStore } from "../../../state/profile-store";
 import { movementFigure } from "../../../session/movement-figures";
 import { useSessionStore } from "../../../state/session-store";
@@ -49,6 +53,13 @@ function seedFinishedSession() {
 
 beforeEach(async () => {
   await AsyncStorage.removeItem(COMPLETION_STORAGE_KEY);
+  clearRecordedEvents();
+  useIntentionStore.setState({
+    target: null,
+    asked: false,
+    hydrated: true,
+    hydrationFailed: false,
+  });
   useLedgerStore.setState({ events: [], hydrated: true, hydrationFailed: false });
   useProfileStore.setState({
     profile: createInitialProfile(),
@@ -72,15 +83,44 @@ beforeEach(async () => {
   mockedApply.mockReturnValue({ ok: true, value: fixtureApplyResult() });
 });
 
-/** Two library movements that BOTH have figures — so a lost figure fails. */
-function figureBackedPlayer(outcomes: BlockOutcome[]) {
-  const done = useSessionStore.getState().player!;
-  const blocks: PlayerBlock[] = [
-    { ...fixturePlayerBlocks[0]!, movementId: "wall-push-up" },
-    { ...fixturePlayerBlocks[1]!, movementId: "knee-plank", name: "Knee Plank" },
-  ];
-  return { ...done, blocks, outcomes };
+/**
+ * The result the engine hands back for the given outcomes, over two
+ * library movements that BOTH have figures — so a lost figure fails. The
+ * receipt reads the history entry the commit wrote, so the outcomes live
+ * there; a completed block also earns the fixture's session event, as
+ * the engine's would.
+ */
+function figureBackedResult(outcomes: readonly BlockOutcome[]): ApplyResult {
+  const base = fixtureApplyResultOutcomes(outcomes);
+  const entry = base.history.entries[0]!;
+  const ids = ["wall-push-up", "knee-plank"] as const;
+  const completed = outcomes.some((outcome) => outcome === "completed");
+  return {
+    ...base,
+    history: {
+      entries: [
+        {
+          ...entry,
+          blocks: entry.blocks.map((block, index) => ({
+            ...block,
+            movementId: ids[index] ?? block.movementId,
+          })),
+        },
+      ],
+    },
+    ledgerEvents: completed ? [{ type: "session", points: 10, date: entry.date }] : [],
+  };
 }
+
+/** The figure's drawn tint, read off its image. */
+function figureTint(node: ReturnType<typeof render>["getByTestId"] extends (...args: never[]) => infer R ? R : never): string {
+  const style = Object.assign({}, ...[node.findByType(Image).props.style].flat(Infinity)) as {
+    tintColor: string;
+  };
+  return style.tintColor;
+}
+
+const hidden = { includeHiddenElements: true } as const;
 
 describe("FinishScreen", () => {
   it("one point reads '+1 point' — a unit that agrees with its number", async () => {
@@ -99,63 +139,174 @@ describe("FinishScreen", () => {
     expect(strings.finish.pointsUnit(1)).not.toBe(strings.finish.pointsUnit(2));
   });
 
-  it("shows the faces of what she did — both completed blocks, in block order", async () => {
-    useSessionStore.setState({ player: figureBackedPlayer(["completed", "completed"]) });
+  it("shows the faces of what she did — both completed blocks, in block order, in ink", async () => {
+    mockedApply.mockReturnValue({ ok: true, value: figureBackedResult(["completed", "completed"]) });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
-    await screen.findByText("+35");
-    const hidden = { includeHiddenElements: true } as const;
-    const sources = screen
-      .getAllByTestId(/^finish-figure-\d+$/, hidden)
-      .map((node) => node.findByType(Image).props.source);
+    await screen.findByText("+10");
+    const figures = screen.getAllByTestId(/^finish-figure-\d+$/, hidden);
+    const sources = figures.map((node) => node.findByType(Image).props.source);
     // Expected from the ids, not from the map the screen reads: a
     // missing asset fails here instead of passing with zero figures.
     expect(sources).toEqual([movementFigure("wall-push-up"), movementFigure("knee-plank")]);
     expect(sources.every((source) => source !== null)).toBe(true);
+    expect(figures.map(figureTint)).toEqual([darkColors.ink, darkColors.ink]);
   });
 
-  it("draws every attempted block: struggled has a face, skipped does not (owner decision 2026-09-07)", async () => {
-    useSessionStore.setState({ player: figureBackedPlayer(["struggled", "skipped"]) });
+  it("draws every attempted block: struggled has a face in the soft ink, skipped has none (ADR-0023)", async () => {
+    mockedApply.mockReturnValue({ ok: true, value: figureBackedResult(["struggled", "skipped"]) });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText(strings.finish.headline);
-    const hidden = { includeHiddenElements: true } as const;
-    const sources = screen
-      .getAllByTestId(/^finish-figure-\d+$/, hidden)
-      .map((node) => node.findByType(Image).props.source);
-    expect(sources).toEqual([movementFigure("wall-push-up")]);
+    const figures = screen.getAllByTestId(/^finish-figure-\d+$/, hidden);
+    expect(figures.map((node) => node.findByType(Image).props.source)).toEqual([
+      movementFigure("wall-push-up"),
+    ]);
+    expect(figures.map(figureTint)).toEqual([darkColors.inkSoft]);
   });
 
-  it("a 'Hard today' session closes as a session, with no points row and no 'didn't fit'", async () => {
-    useSessionStore.setState({ player: figureBackedPlayer(["struggled", "struggled"]) });
+  it("a 'Hard today' session closes as a session: no points row, no 'didn't fit', the receipt says Hard today", async () => {
     mockedApply.mockReturnValue({
       ok: true,
-      value: fixtureApplyResultOutcomes(["struggled", "struggled"]),
+      value: figureBackedResult(["struggled", "struggled"]),
     });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
     expect(screen.queryByText(strings.finish.nothingDone.headline)).toBeNull();
     expect(screen.queryByTestId("finish-points")).toBeNull();
     expect(screen.queryByText("+0")).toBeNull();
+    expect(screen.getByTestId("finish-receipt-done-value").props.children).toBe(
+      strings.finish.receipt.done(0),
+    );
+    expect(screen.getByTestId("finish-receipt-hard-value").props.children).toBe(
+      strings.finish.receipt.hard(2),
+    );
   });
 
-  it("draws nothing until the close is known — figures under 'Saving' were a guess", async () => {
-    useSessionStore.setState({ player: figureBackedPlayer(["completed", "completed"]) });
+  it("draws nothing until the close is known — figures, receipt and share under 'Saving' were a guess", async () => {
+    mockedApply.mockReturnValue({ ok: true, value: figureBackedResult(["completed", "completed"]) });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(screen.getByText(strings.finish.savingHeadline)).toBeTruthy();
-    expect(screen.queryByTestId("finish-figures", { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId("finish-figures", hidden)).toBeNull();
+    expect(screen.queryByTestId("finish-receipt")).toBeNull();
+    expect(screen.queryByTestId("finish-share")).toBeNull();
     // Let the apply settle inside the test, so the update lands in act().
     await screen.findByTestId("finish-continue");
-    expect(screen.getByTestId("finish-figures", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId("finish-figures", hidden)).toBeTruthy();
+    expect(screen.getByTestId("finish-receipt")).toBeTruthy();
+    expect(screen.getByTestId("finish-share")).toBeTruthy();
   });
 
-  it("the honest nothing-done close shows nothing to show, and Continue waits for nothing", async () => {
-    // Default seed: both blocks skipped.
+  it("the honest nothing-done close shows nothing to show — no figures, no receipt, no share — and Continue waits for nothing", async () => {
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
+    });
     const onContinue = jest.fn();
     const screen = render(<FinishScreen onContinue={onContinue} />);
     await screen.findByTestId("finish-continue");
-    expect(screen.queryByTestId("finish-figures", { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId("finish-figures", hidden)).toBeNull();
+    expect(screen.queryByTestId("finish-receipt")).toBeNull();
+    expect(screen.queryByTestId("finish-share")).toBeNull();
+    expect(recordedEvents().some((event) => event.name === "share_eligible")).toBe(false);
     // No timers advanced: the button is outside the choreography.
     fireEvent.press(screen.getByTestId("finish-continue"));
     expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it("the receipt: Done, the planned length and the week — no Hard today row on a clean session", async () => {
+    // The fixture's session is a Monday (2026-08-31); the entry the
+    // commit wrote is the week's first trained day.
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByTestId("finish-receipt");
+    const value = (key: string) =>
+      screen.getByTestId(`finish-receipt-${key}-value`).props.children as string;
+    expect(screen.getByText(strings.finish.receipt.doneLabel)).toBeTruthy();
+    expect(value("done")).toBe(strings.finish.receipt.done(2));
+    expect(screen.queryByTestId("finish-receipt-hard")).toBeNull();
+    expect(screen.queryByText(strings.finish.receipt.hardLabel)).toBeNull();
+    expect(screen.getByText(strings.finish.receipt.lengthLabel)).toBeTruthy();
+    expect(value("length")).toBe(strings.finish.receipt.length(fixtureSession.minutes));
+    expect(screen.getByText(strings.finish.receipt.weekLabel)).toBeTruthy();
+    // No target: the plain count, its full stop trimmed for a column.
+    expect(strings.week.progressNoTarget(1)).toMatch(/\.$/);
+    expect(value("week")).toBe(strings.week.progressNoTarget(1).replace(/\.$/, ""));
+  });
+
+  it("the receipt's week reads against her target when she holds one", async () => {
+    useIntentionStore.setState({ target: 3, asked: true });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByTestId("finish-receipt");
+    expect(strings.week.progress(1, 3)).toMatch(/\.$/);
+    expect(screen.getByTestId("finish-receipt-week-value").props.children).toBe(
+      strings.week.progress(1, 3).replace(/\.$/, ""),
+    );
+  });
+
+  it("a partial session's receipt counts what she did and what was hard, in the entry's own order", async () => {
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: figureBackedResult(["completed", "struggled"]),
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByTestId("finish-receipt");
+    const rows = screen
+      .getAllByTestId(/^finish-receipt-(done|hard|length|week)$/)
+      .map((row) => row.props.testID as string);
+    expect(rows).toEqual([
+      "finish-receipt-done",
+      "finish-receipt-hard",
+      "finish-receipt-length",
+      "finish-receipt-week",
+    ]);
+    expect(screen.getByTestId("finish-receipt-done-value").props.children).toBe(
+      strings.finish.receipt.done(1),
+    );
+    expect(screen.getByTestId("finish-receipt-hard-value").props.children).toBe(
+      strings.finish.receipt.hard(1),
+    );
+  });
+
+  it("reads the receipt off the LAST entry dated the session's day — a second session on one date", async () => {
+    const base = fixtureApplyResult();
+    const today = base.history.entries[0]!;
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: {
+        ...base,
+        history: {
+          entries: [
+            // The morning's session, same date, three blocks done.
+            { ...today, blocks: [...today.blocks, today.blocks[0]!] },
+            // The one just committed: one done, one skipped.
+            {
+              ...today,
+              blocks: [
+                today.blocks[0]!,
+                { ...today.blocks[1]!, outcome: "skipped" },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByTestId("finish-receipt");
+    expect(screen.getByTestId("finish-receipt-done-value").props.children).toBe(
+      strings.finish.receipt.done(1),
+    );
+    // Two sessions, one trained day: the week counts days, not sessions.
+    expect(screen.getByTestId("finish-receipt-week-value").props.children).toBe(
+      strings.week.progressNoTarget(1).replace(/\.$/, ""),
+    );
+  });
+
+  it("offers the share once the receipt settles, and records that it was offered exactly once", async () => {
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    fireEvent.press(await screen.findByTestId("finish-share"));
+    expect(router.push).toHaveBeenCalledWith("/share?source=finish");
+    // A re-render (the points beat, a store tick) does not re-offer.
+    screen.rerender(<FinishScreen onContinue={jest.fn()} />);
+    const offered = recordedEvents().filter((event) => event.name === "share_eligible");
+    expect(offered).toEqual([{ name: "share_eligible", properties: { source: "finish" } }]);
   });
 
   it("applies the session once on arrival and shows the points earned", async () => {
@@ -252,15 +403,7 @@ describe("FinishScreen", () => {
     expect(screen.queryByText(strings.finish.pointsUnit(2))).toBeNull();
   });
 
-  it("names the streak the commit just made: day 1 on a first session, the run when there is one (ADR-0018)", async () => {
-    const screen = render(<FinishScreen onContinue={jest.fn()} />);
-    expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
-    // The fixture history holds exactly today: a start, not a run of one.
-    expect(screen.getByTestId("finish-streak")).toBeTruthy();
-    expect(screen.getByText(strings.streak.finish(1))).toBeTruthy();
-  });
-
-  it("counts yesterday into today's streak, read from the history the engine wrote", async () => {
+  it("carries no streak pill any more — the streak lives on Home and Progress (wave 2)", async () => {
     const base = fixtureApplyResult();
     const today = base.history.entries[0]!;
     mockedApply.mockReturnValue({
@@ -274,23 +417,9 @@ describe("FinishScreen", () => {
     });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
-    expect(screen.getByText(strings.streak.finish(2))).toBeTruthy();
-  });
-
-  it("the nothing-done close carries no streak line — there is no day to count", async () => {
-    let player = createPlayer(fixturePlayerBlocks);
-    player = reduce(player, { type: "skipBlock" });
-    player = reduce(player, { type: "skipBlock" });
-    useSessionStore.setState({ player });
-    mockedApply.mockReturnValue({
-      ok: true,
-      value: fixtureApplyResultOutcomes(["skipped", "skipped"]),
-    });
-    const screen = render(<FinishScreen onContinue={jest.fn()} />);
-    expect(
-      await screen.findByText(strings.finish.nothingDone.headline),
-    ).toBeTruthy();
     expect(screen.queryByTestId("finish-streak")).toBeNull();
+    expect(screen.queryByText(strings.streak.finish(1))).toBeNull();
+    expect(screen.queryByText(strings.streak.finish(2))).toBeNull();
   });
 
   it("every close state renders no user-facing text outside strings.ts", async () => {
@@ -300,14 +429,18 @@ describe("FinishScreen", () => {
     allowed.add(strings.finish.outOfTime.headline(fixtureSession.minutes));
     allowed.add("+35");
     allowed.add(strings.finish.pointsUnit(35));
-    // The streak pill names whatever run today's history makes.
-    for (let days = 1; days <= 60; days += 1) {
-      allowed.add(strings.streak.finish(days));
+    // The receipt's values, every shape this close can render.
+    for (let n = 0; n <= 2; n += 1) {
+      allowed.add(strings.finish.receipt.done(n));
+      allowed.add(strings.finish.receipt.hard(n));
     }
+    allowed.add(strings.finish.receipt.length(fixtureSession.minutes));
+    allowed.add(strings.week.progressNoTarget(1).replace(/\.$/, ""));
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText(
       strings.finish.outOfTime.headline(fixtureSession.minutes),
     );
+    await screen.findByTestId("finish-receipt");
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
       // On failure the message shows the offending leaf, not just false.
       expect(allowed.has(leaf) ? true : leaf).toBe(true);

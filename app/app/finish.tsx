@@ -1,9 +1,9 @@
 import { useRouter } from "expo-router";
 
+import { nextCloseAsk } from "../src/lib/close-flow";
 import { RouteGuard } from "../src/lib/route-guard";
 import { maybeRequestReview } from "../src/lib/rating";
 import { FinishScreen } from "../src/screens/finish/finish-screen";
-import { reminderAskDue } from "../src/state/reminder-store";
 import { ratingMomentReached, useRatingStore } from "../src/state/rating-store";
 import { useSessionStore } from "../src/state/session-store";
 
@@ -15,8 +15,9 @@ import { useSessionStore } from "../src/state/session-store";
 // checklist), in strict order of precedence:
 //   1. an unlocked skill → /unlock owns the exit (celebration first;
 //      any rating moment fires when SHE leaves that screen instead);
-//   2. the one-time notification ask, owed only after a close with
-//      completed work behind it (reminderAskDue guards once-ever);
+//   2. the one-time asks, owed only after a close with an attempted
+//      block behind it, in the order lib/close-flow.ts holds: the weekly
+//      intention, then the notification ask (each guards once-ever);
 //   3. the system rating prompt — only after a plain "completed" close,
 //      and only from her SECOND such session onward. Never her first,
 //      never mid-session, never over the ask (the ask only exists while
@@ -42,10 +43,11 @@ export default function FinishRoute() {
             router.replace("/unlock");
             return;
           }
-          if (finish?.completedAnything && reminderAskDue()) {
-            // The summary stays alive for /reminder-ask's guard; that
-            // route resets the session when she leaves it.
-            router.replace("/reminder-ask");
+          const ask = nextCloseAsk(finish);
+          if (ask) {
+            // The summary stays alive for the ask route's guard; the last
+            // ask on the way out resets the session when she leaves it.
+            router.replace(ask);
             return;
           }
           if (finish && closeReason === "completed" && ratingMomentReached()) {

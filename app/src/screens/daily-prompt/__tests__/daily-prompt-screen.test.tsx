@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { router } from "expo-router";
 import React from "react";
 
@@ -25,6 +25,11 @@ import {
 } from "../../dev-timing/first-movement-readout";
 import { useCareNoteStore } from "../../../state/care-note-store";
 import { useFirstMovementStore } from "../../../state/first-movement-store";
+import { usePlaceStore } from "../../../state/place-store";
+import {
+  FLOOR_ONLY_EQUIPMENT,
+  WITH_CHAIR_EQUIPMENT,
+} from "../../../state/settings-store";
 import { DailyPromptScreen } from "../daily-prompt-screen";
 
 jest.mock("../../../session/create-session", () => ({ createSession: jest.fn() }));
@@ -71,6 +76,12 @@ beforeEach(() => {
     hydrated: true,
     hydrationFailed: false,
     alwaysAvoid: [],
+    equipment: WITH_CHAIR_EQUIPMENT,
+  });
+  usePlaceStore.setState({
+    ...usePlaceStore.getInitialState(),
+    hydrated: true,
+    hydrationFailed: false,
   });
   useActiveSessionStore.setState({
     snapshot: null,
@@ -811,5 +822,95 @@ describe("DailyPromptScreen", () => {
     expect(screen.queryByText(strings.onboarding.handoff.eyebrow)).toBeNull();
     expect(screen.queryByText(strings.onboarding.handoff.line)).toBeNull();
     expect(screen.getByText(strings.prompt.dayLabel)).toBeTruthy();
+  });
+
+  describe("Where I train — the place preset (owner brief 2026-09-07, wave 4)", () => {
+    // The preset answers ONE question. Equipment reaches the engine the
+    // way it always has (the settings store, written by the switch of
+    // place); restrictions are never touched by a place.
+
+    it("hotel with quiet 'always' skips the quiet step: the rail counts three, the prompt carries quiet and the hotel's floor", () => {
+      useSettingsStore.setState({ alwaysAvoid: ["knees"] });
+      usePlaceStore.getState().setQuiet("hotel", "always");
+      usePlaceStore.getState().setPlace("hotel");
+      const onSessionReady = jest.fn();
+      const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+      const bar = () => screen.getByTestId("prompt-flow");
+      expect(bar().props.accessibilityValue).toEqual({ min: 0, max: 3, now: 1 });
+
+      fireEvent.press(screen.getByTestId("time-10"));
+      fireEvent.press(screen.getByTestId("energy-okay"));
+      // Straight to soreness: no quiet question, no tap, and the
+      // copy-writer's presetLine is not rendered either (the step is
+      // skipped, not preselected — one tap fewer).
+      expect(screen.getByText(strings.prompt.soreness.question)).toBeTruthy();
+      expect(screen.queryByText(strings.prompt.quiet.question)).toBeNull();
+      expect(screen.queryByTestId("quiet-yes")).toBeNull();
+      expect(screen.queryByText(strings.prompt.quiet.presetLine)).toBeNull();
+      expect(bar().props.accessibilityValue).toEqual({ min: 0, max: 3, now: 3 });
+
+      fireEvent.press(screen.getByTestId("soreness-all-good"));
+      expect(onSessionReady).toHaveBeenCalledTimes(1);
+      expect(mockedCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          minutes: 10,
+          energy: "okay",
+          quiet: true,
+          avoid: ["knees"],
+          equipment: FLOOR_ONLY_EQUIPMENT,
+        }),
+        expect.anything(),
+        expect.anything(),
+        expect.any(Number),
+      );
+
+      // Back home: the home equipment returns, the restriction never moved.
+      act(() => usePlaceStore.getState().setPlace("home"));
+      expect(useSettingsStore.getState().equipment).toEqual(WITH_CHAIR_EQUIPMENT);
+      expect(useSettingsStore.getState().alwaysAvoid).toEqual(["knees"]);
+    });
+
+    it("hotel with quiet 'ask' changes nothing: four questions, her own quiet answer", () => {
+      usePlaceStore.getState().setPlace("hotel");
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      expect(screen.getByTestId("prompt-flow").props.accessibilityValue.max).toBe(4);
+      fireEvent.press(screen.getByTestId("time-10"));
+      fireEvent.press(screen.getByTestId("energy-okay"));
+      expect(screen.getByText(strings.prompt.quiet.question)).toBeTruthy();
+      fireEvent.press(screen.getByTestId("quiet-no"));
+      fireEvent.press(screen.getByTestId("soreness-all-good"));
+      expect(mockedCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ quiet: false, equipment: FLOOR_ONLY_EQUIPMENT }),
+        expect.anything(),
+        expect.anything(),
+        expect.any(Number),
+      );
+    });
+
+    it("home with quiet 'always' skips the step too — the preset belongs to whichever place is active", () => {
+      usePlaceStore.getState().setQuiet("home", "always");
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("time-20"));
+      fireEvent.press(screen.getByTestId("energy-strong"));
+      expect(screen.getByText(strings.prompt.soreness.question)).toBeTruthy();
+      fireEvent.press(screen.getByTestId("soreness-all-good"));
+      expect(mockedCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ quiet: true, equipment: WITH_CHAIR_EQUIPMENT }),
+        expect.anything(),
+        expect.anything(),
+        expect.any(Number),
+      );
+    });
+
+    it("the hotel's 'always' does not leak into home: switching back asks again", () => {
+      usePlaceStore.getState().setQuiet("hotel", "always");
+      usePlaceStore.getState().setPlace("hotel");
+      usePlaceStore.getState().setPlace("home");
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      expect(screen.getByTestId("prompt-flow").props.accessibilityValue.max).toBe(4);
+      fireEvent.press(screen.getByTestId("time-10"));
+      fireEvent.press(screen.getByTestId("energy-okay"));
+      expect(screen.getByText(strings.prompt.quiet.question)).toBeTruthy();
+    });
   });
 });

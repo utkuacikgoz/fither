@@ -8,6 +8,8 @@ import { hasVoiceAudio } from "../../../session/voice-manifest";
 import { useCareNoteStore } from "../../../state/care-note-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useIdentityStore } from "../../../state/identity-store";
+import { useIntentionStore } from "../../../state/intention-store";
+import { usePlaceStore } from "../../../state/place-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { useReminderStore } from "../../../state/reminder-store";
 import { useSettingsStore } from "../../../state/settings-store";
@@ -63,11 +65,14 @@ describe("SettingsScreen — the grouped list", () => {
       strings.settings.title,
       strings.settings.account.status.guest,
       strings.settings.sections.training,
+      strings.place.row,
       strings.settings.avoid.title,
       strings.settings.rows.equipment,
       strings.settings.careNotes.title,
       strings.settings.reminders.title,
       strings.settings.rows.time,
+      strings.intention.settingsRow,
+      strings.recap.settingsRow,
       strings.settings.restore.title,
       strings.settings.rows.plan,
       strings.paywall.restore,
@@ -129,6 +134,24 @@ describe("SettingsScreen — the grouped list", () => {
     );
   });
 
+  it("the place and sessions-a-week rows state the place store's and the intention's facts", () => {
+    const home = render(<SettingsScreen />);
+    expect(home.getByTestId("settings-row-place-value")).toHaveTextContent(strings.place.value("home"));
+    expect(home.getByTestId("settings-row-intention-value")).toHaveTextContent(
+      strings.intention.settingsValue(null),
+    );
+    // The recap row is a door, not a setting: no value beside it.
+    expect(home.queryByTestId("settings-row-recap-value")).toBeNull();
+    home.unmount();
+    usePlaceStore.setState({ place: "hotel" });
+    useIntentionStore.setState({ target: 3 });
+    const hotel = render(<SettingsScreen />);
+    expect(hotel.getByTestId("settings-row-place-value")).toHaveTextContent(strings.place.value("hotel"));
+    expect(hotel.getByTestId("settings-row-intention-value")).toHaveTextContent(
+      strings.intention.settingsValue(3),
+    );
+  });
+
   it("the equipment, notes, time and plan rows state their stored facts flat", () => {
     useSettingsStore.setState({ equipment: ["none", "wall"] });
     useCareNoteStore.setState({
@@ -182,11 +205,14 @@ describe("SettingsScreen — the grouped list", () => {
     jest.mocked(hasVoiceAudio).mockReturnValue(true);
     const screen = render(<SettingsScreen />);
     const rows: Array<[string, string]> = [
+      ["settings-row-place", SETTINGS_ROUTES.place],
       ["settings-row-avoid", SETTINGS_ROUTES.avoid],
       ["settings-row-equipment", SETTINGS_ROUTES.equipment],
       ["settings-row-voice", SETTINGS_ROUTES.voice],
       ["settings-row-notes", SETTINGS_ROUTES.notes],
       ["settings-row-time", SETTINGS_ROUTES.invitation],
+      ["settings-row-intention", SETTINGS_ROUTES.intention],
+      ["settings-row-recap", SETTINGS_ROUTES.recap],
       ["settings-row-plan", SETTINGS_ROUTES.plan],
     ];
     for (const [testID, route] of rows) {

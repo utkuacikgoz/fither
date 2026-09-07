@@ -5,12 +5,14 @@ import { createInitialProfile } from "@fither/engine";
 import * as StoreReview from "expo-store-review";
 
 import FinishRoute from "../../../app/finish";
+import IntentionRoute from "../../../app/intention";
 import ReminderAskRoute from "../../../app/reminder-ask";
 import UnlockRoute from "../../../app/unlock";
 import { strings } from "../../copy/strings";
 import { useActiveSessionStore } from "../../state/active-session-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useIdentityStore } from "../../state/identity-store";
+import { useIntentionStore } from "../../state/intention-store";
 import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useRatingStore } from "../../state/rating-store";
@@ -18,11 +20,13 @@ import { useReminderStore } from "../../state/reminder-store";
 import { useSessionStore, type FinishClose } from "../../state/session-store";
 
 // The decided out-of-session moments, exercised through the REAL routes
-// (launch checklist): the one-time notification ask after the first
-// close with completed work, and the system rating prompt from the
-// second completed session onward — never the first, never over a
-// nothing-done close, never mid-session. The OS notification surface is
-// the jest-setup SDK mock (grant by default); store-review likewise.
+// (launch checklist, wave 2): the one-time weekly-intention ask and the
+// one-time notification ask after the first close with an attempted
+// block, in that order (lib/close-flow.ts), and the system rating prompt
+// from the second completed session onward — never the first, never
+// over a nothing-done close, never mid-session. The OS notification
+// surface is the jest-setup SDK mock (grant by default); store-review
+// likewise.
 
 const requestReview = jest.mocked(StoreReview.requestReview);
 const hasAction = jest.mocked(StoreReview.hasAction);
@@ -86,10 +90,145 @@ beforeEach(() => {
     hydrated: true,
     hydrationFailed: false,
   });
+  // The reminder-ask and rating cases below run with the intention
+  // already answered; its own cases seed it owed.
+  useIntentionStore.setState({
+    target: null,
+    asked: true,
+    hydrated: true,
+    hydrationFailed: false,
+  });
   useRatingStore.setState({
     completedCloses: 0,
     hydrated: true,
     hydrationFailed: false,
+  });
+});
+
+describe("the one-time intention ask (finish exit, wave 2)", () => {
+  beforeEach(() => {
+    useIntentionStore.setState({ asked: false });
+  });
+
+  it("comes FIRST after the first close with an attempted block — before the reminder ask", () => {
+    seedFinish({ reason: "completed" });
+    const screen = render(<FinishRoute />);
+    fireEvent.press(screen.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenCalledWith("/intention");
+    expect(router.replace).not.toHaveBeenCalledWith("/reminder-ask");
+    // Not reset: the asks downstream still need the summary.
+    expect(useSessionStore.getState().finish).not.toBeNull();
+  });
+
+  it("a 'Hard today' session (attempted, nothing completed) earns the ask too (ADR-0023)", () => {
+    seedFinish({ reason: "endedEarly" });
+    const screen = render(<FinishRoute />);
+    fireEvent.press(screen.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenCalledWith("/intention");
+  });
+
+  it("never over a nothing-done close — and never later because of it", () => {
+    seedFinish({ reason: "nothingDone" });
+    const screen = render(<FinishRoute />);
+    fireEvent.press(screen.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenCalledWith("/home");
+    expect(router.replace).not.toHaveBeenCalledWith("/intention");
+    // Still owed: the next attempted session asks.
+    expect(useIntentionStore.getState().asked).toBe(false);
+  });
+
+  it("never again once asked — the reminder ask (if owed) is next instead", () => {
+    useIntentionStore.setState({ asked: true, target: 2 });
+    seedFinish({ reason: "completed" });
+    const screen = render(<FinishRoute />);
+    fireEvent.press(screen.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenCalledWith("/reminder-ask");
+    expect(router.replace).not.toHaveBeenCalledWith("/intention");
+  });
+
+  it("fails safe while the intention store is unhydrated: skipped, the reminder ask runs", () => {
+    useIntentionStore.setState({ hydrated: false });
+    seedFinish({ reason: "completed" });
+    const screen = render(<FinishRoute />);
+    fireEvent.press(screen.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenCalledWith("/reminder-ask");
+    expect(router.replace).not.toHaveBeenCalledWith("/intention");
+  });
+
+  it("an unlock still owns the exit; the intention ask waits on the far side of it", () => {
+    seedFinish({ reason: "completed" }, true);
+    const finishScreen = render(<FinishRoute />);
+    fireEvent.press(finishScreen.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenCalledWith("/unlock");
+    expect(router.replace).not.toHaveBeenCalledWith("/intention");
+    finishScreen.unmount();
+
+    const unlockScreen = render(<UnlockRoute />);
+    fireEvent.press(unlockScreen.getByTestId("unlock-continue"));
+    expect(router.replace).toHaveBeenCalledWith("/intention");
+    expect(useSessionStore.getState().finish).not.toBeNull();
+  });
+
+  it("the whole order through the real routes: finish → intention → reminder ask → home, once", async () => {
+    seedFinish({ reason: "completed" });
+    const finishScreen = render(<FinishRoute />);
+    fireEvent.press(finishScreen.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenLastCalledWith("/intention");
+    finishScreen.unmount();
+
+    const intentionScreen = render(<IntentionRoute />);
+    expect(intentionScreen.getByText(strings.intention.question)).toBeTruthy();
+    fireEvent.press(intentionScreen.getByTestId("intention-three"));
+    expect(useIntentionStore.getState().target).toBe(3);
+    expect(router.replace).toHaveBeenLastCalledWith("/reminder-ask");
+    // The summary survives for the reminder ask's guard.
+    expect(useSessionStore.getState().finish).not.toBeNull();
+    intentionScreen.unmount();
+
+    const reminderScreen = render(<ReminderAskRoute />);
+    expect(reminderScreen.getByText(strings.notifications.rationale.line)).toBeTruthy();
+    fireEvent.press(reminderScreen.getByTestId("reminder-ask-decline"));
+    expect(router.replace).toHaveBeenLastCalledWith("/home");
+    expect(useSessionStore.getState().finish).toBeNull();
+    reminderScreen.unmount();
+
+    // A second attempted close: neither ask runs again (ended early, so
+    // the rating gate — a separate rule, pinned below — stays out of it).
+    seedFinish({ reason: "endedEarly" });
+    const again = render(<FinishRoute />);
+    fireEvent.press(again.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenLastCalledWith("/home");
+    await flushAsync();
+    expect(requestReview).not.toHaveBeenCalled();
+  });
+});
+
+describe("/intention route", () => {
+  it("with the reminder already asked, answering goes straight home and resets the session", () => {
+    useIntentionStore.setState({ asked: false });
+    useReminderStore.setState({ asked: true });
+    seedFinish({ reason: "completed" });
+    const screen = render(<IntentionRoute />);
+    fireEvent.press(screen.getByTestId("intention-none"));
+    expect(useIntentionStore.getState().asked).toBe(true);
+    expect(useSessionStore.getState().finish).toBeNull();
+    expect(router.replace).toHaveBeenCalledWith("/home");
+    expect(router.replace).not.toHaveBeenCalledWith("/reminder-ask");
+  });
+
+  it("cold-opened after the ask already ran, it redirects — never a second ask", async () => {
+    seedFinish({ reason: "completed" });
+    const screen = render(<IntentionRoute />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    expect(screen.queryByText(strings.intention.question)).toBeNull();
+  });
+
+  it("cold-opened over a nothing-done close, it redirects — there is nothing to plan from", async () => {
+    useIntentionStore.setState({ asked: false });
+    seedFinish({ reason: "nothingDone" });
+    const screen = render(<IntentionRoute />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    expect(screen.queryByText(strings.intention.question)).toBeNull();
   });
 });
 

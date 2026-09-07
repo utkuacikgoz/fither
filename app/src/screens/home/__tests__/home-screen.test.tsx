@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import React from "react";
 import {
   createInitialProfile,
-  MAX_TIER,
   milestoneMovement,
   type Pattern,
   type Profile,
@@ -19,6 +18,7 @@ import {
   finishEarly,
   reduce,
 } from "../../../session/player-machine";
+import { useIntentionStore } from "../../../state/intention-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { useSessionStore } from "../../../state/session-store";
 import {
@@ -33,9 +33,17 @@ import {
 import { todayIso } from "../../../lib/dates";
 import { HomeScreen } from "../home-screen";
 
-// The hub in its three states, plus the two glances. Every value on this
-// screen comes from a store or the engine — the tests seed stores and
-// assert what the screen reads back, never a literal the screen invented.
+// The hub in its three states, plus the week and the skill glance. Every
+// value on this screen comes from a store or the engine — the tests seed
+// stores and assert what the screen reads back, never a literal the
+// screen invented.
+
+// The hub's reactive today, pinned per test: the week tests need a known
+// weekday (2026-09-07 is a Monday); everything else runs on the real date.
+const mockToday = { iso: "" };
+jest.mock("../../../lib/use-today", () => ({
+  useTodayIso: () => mockToday.iso,
+}));
 
 const library = loadLibrary();
 if (!library) throw new Error("bundled movement library missing in test env");
@@ -79,9 +87,16 @@ function seedHistory(entries: Array<ReturnType<typeof todayEntry>>) {
 }
 
 beforeEach(() => {
+  mockToday.iso = todayIso();
   useProfileStore.setState({
     profile: createInitialProfile(),
     history: { entries: [] },
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  useIntentionStore.setState({
+    target: null,
+    asked: false,
     hydrated: true,
     hydrationFailed: false,
   });
@@ -256,8 +271,119 @@ describe("the day's card", () => {
   });
 });
 
+describe("this week", () => {
+  // 2026-09-07 is a Monday; the week runs to Sunday the 13th.
+  const MON = "2026-09-07";
+  const WED = "2026-09-09";
+  const FRI = "2026-09-11";
+  const SUN = "2026-09-13";
+
+  /**
+   * The day's drawn state, as the shared WeekRow marks it: a filled disc
+   * for a trained day, the ring for today, a hairline for the rest.
+   */
+  function dot(screen: ReturnType<typeof render>, index: number) {
+    const id = `home-week-day-${index}`;
+    const filled = screen.queryByTestId(`${id}-trained`) !== null;
+    const today = screen.queryByTestId(`${id}-today`) !== null;
+    return { filled, ringed: filled || today };
+  }
+
+  it("a Mon/Wed/Fri user against three sees the week met on Friday, and still on Sunday", () => {
+    useIntentionStore.setState({ target: 3, asked: true });
+    seedHistory([
+      todayEntry(10, ["completed"], MON),
+      todayEntry(10, ["completed"], WED),
+      todayEntry(10, ["completed"], FRI),
+    ]);
+    for (const today of [FRI, SUN]) {
+      mockToday.iso = today;
+      const screen = render(<HomeScreen />);
+      expect(screen.getByText(strings.week.title)).toBeTruthy();
+      expect(screen.getByTestId("home-week-line").props.children).toBe(strings.week.met(3));
+      // Three filled dots — Monday, Wednesday, Friday — and no others.
+      expect([0, 1, 2, 3, 4, 5, 6].map((i) => dot(screen, i).filled)).toEqual([
+        true, false, true, false, true, false, false,
+      ]);
+      // Days she did not train are not named anywhere.
+      expect(screen.queryByText(new RegExp(strings.week.nextLine("Saturday")))).toBeNull();
+      screen.unmount();
+    }
+  });
+
+  it("mid-week with a target remaining: the count, the next day's name, today ringed", () => {
+    useIntentionStore.setState({ target: 3, asked: true });
+    seedHistory([todayEntry(10, ["completed"], MON)]);
+    mockToday.iso = WED;
+    const screen = render(<HomeScreen />);
+    expect(screen.getByTestId("home-week-line").props.children).toBe(
+      `${strings.week.progress(1, 3)} ${strings.week.nextLine("Wednesday")}`,
+    );
+    expect(dot(screen, 0)).toEqual({ filled: true, ringed: true });
+    expect(dot(screen, 2)).toEqual({ filled: false, ringed: true });
+    expect(dot(screen, 3)).toEqual({ filled: false, ringed: false });
+  });
+
+  it("a no-target user reads the plain count, never 'of'", () => {
+    seedHistory([todayEntry(10, ["completed"], MON), todayEntry(10, ["struggled"], WED)]);
+    mockToday.iso = WED;
+    const screen = render(<HomeScreen />);
+    expect(screen.getByTestId("home-week-line").props.children).toBe(
+      strings.week.progressNoTarget(2),
+    );
+    expect(screen.queryByText(strings.week.progress(2, 2))).toBeNull();
+    expect(screen.queryByText(strings.week.progress(2, 3))).toBeNull();
+    expect(dot(screen, 0).filled).toBe(true);
+    expect(dot(screen, 2).filled).toBe(true);
+  });
+
+  it("two sessions on one date fill one dot and count once", () => {
+    useIntentionStore.setState({ target: 2, asked: true });
+    seedHistory([todayEntry(10, ["completed"], MON), todayEntry(20, ["completed"], MON)]);
+    mockToday.iso = MON;
+    const screen = render(<HomeScreen />);
+    expect(screen.getByTestId("home-week-line").props.children).toBe(
+      `${strings.week.progress(1, 2)} ${strings.week.nextLine("Tuesday")}`,
+    );
+    expect([0, 1, 2, 3, 4, 5, 6].filter((i) => dot(screen, i).filled)).toEqual([0]);
+  });
+
+  it("an all-skipped day is not a trained day: no dot, nothing counted", () => {
+    seedHistory([todayEntry(10, ["skipped", "skipped"], MON)]);
+    mockToday.iso = MON;
+    const screen = render(<HomeScreen />);
+    expect(screen.getByTestId("home-week-line").props.children).toBe(
+      strings.week.progressNoTarget(0),
+    );
+    expect(dot(screen, 0)).toEqual({ filled: false, ringed: true });
+  });
+
+  it("speaks each day by its name, trained days selected", () => {
+    seedHistory([todayEntry(10, ["completed"], MON), todayEntry(10, ["completed"], FRI)]);
+    mockToday.iso = FRI;
+    const screen = render(<HomeScreen />);
+    const day = (index: number) => screen.getByTestId(`home-week-day-${index}`).props;
+    expect(day(0).accessibilityLabel).toBe(strings.week.dayNames[0]);
+    expect(day(0).accessibilityState).toEqual({ selected: true });
+    expect(day(2).accessibilityLabel).toBe(strings.week.dayNames[2]);
+    expect(day(2).accessibilityState).toEqual({ selected: false });
+    expect(day(4).accessibilityState).toEqual({ selected: true });
+  });
+
+  it("the tile is information, not a door: a press goes nowhere", () => {
+    seedHistory([todayEntry(10, ["completed"], MON)]);
+    mockToday.iso = MON;
+    const screen = render(<HomeScreen />);
+    fireEvent.press(screen.getByTestId("home-week-tile"));
+    fireEvent.press(screen.getByTestId("home-week"));
+    fireEvent.press(screen.getByTestId("home-week-day-0"));
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
 describe("the glances", () => {
-  it("the tier row renders the profile's tiers, not invented ones", () => {
+  it("the patterns tile is not on Home any more — the five ladders live on Progress", () => {
     const profile = createInitialProfile();
     profile.patterns.push = {
       tier: 4,
@@ -267,41 +393,14 @@ describe("the glances", () => {
     };
     seedProfile(profile);
     const screen = render(<HomeScreen />);
-
-    // Four filled steps for push (its stored tier), one for a pattern
-    // still at tier 1 — the track length itself is the engine's MAX_TIER.
-    // The glance draws the shared Track, which is decorative and hidden
-    // from accessibility (the card's label speaks), so queries opt in.
-    const hidden = { includeHiddenElements: true } as const;
-    for (let step = 1; step <= 4; step += 1) {
-      expect(screen.getByTestId(`home-pattern-push-filled-${step}`, hidden)).toBeTruthy();
-    }
-    expect(screen.queryByTestId("home-pattern-push-filled-5", hidden)).toBeNull();
-    expect(screen.getByTestId("home-pattern-pull-filled-1", hidden)).toBeTruthy();
-    expect(screen.queryByTestId("home-pattern-pull-filled-2", hidden)).toBeNull();
+    expect(screen.queryByTestId("home-patterns")).toBeNull();
     expect(
-      screen.queryByTestId(`home-pattern-push-filled-${MAX_TIER + 1}`, hidden),
+      screen.queryByTestId("home-pattern-push-filled-1", { includeHiddenElements: true }),
     ).toBeNull();
-
-    fireEvent.press(screen.getByTestId("home-patterns"));
+    expect(screen.queryByText(strings.profile.patterns.title)).toBeNull();
+    // The skill tile is still the one door to Progress.
+    fireEvent.press(screen.getByTestId("home-skills"));
     expect(router.push).toHaveBeenCalledWith("/progress");
-  });
-
-  it("the tier row speaks its ladders and tiers to VoiceOver", () => {
-    const profile = createInitialProfile();
-    profile.patterns.push = {
-      tier: 3,
-      cleanCount: 0,
-      struggleCount: 0,
-      volumeReduced: false,
-    };
-    seedProfile(profile);
-    const screen = render(<HomeScreen />);
-
-    const label = screen.getByTestId("home-patterns").props.accessibilityLabel;
-    expect(label).toContain(strings.profile.patterns.names.push);
-    expect(label).toContain(strings.profile.tier(3, MAX_TIER));
-    expect(label).toContain(strings.profile.tier(1, MAX_TIER));
   });
 
   it("names the NEXT skill from the library, with how far ahead it is", () => {
@@ -386,6 +485,18 @@ describe("copy", () => {
       allowed.add(strings.streak.label(n));
       allowed.add(strings.streak.best(n));
     }
+    // The week tile's one line, every shape it can take.
+    for (let n = 0; n <= 7; n += 1) {
+      allowed.add(strings.week.progressNoTarget(n));
+      for (const target of [2, 3] as const) {
+        allowed.add(strings.week.progress(n, target));
+        for (const day of strings.week.dayNames) {
+          allowed.add(`${strings.week.progress(n, target)} ${strings.week.nextLine(day)}`);
+        }
+      }
+    }
+    allowed.add(strings.week.met(2));
+    allowed.add(strings.week.met(3));
     const screen = render(<HomeScreen />);
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
       // Name the offender on failure instead of just `false`.

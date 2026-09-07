@@ -6,6 +6,9 @@ import { useCareNoteStore } from "../../../state/care-note-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useFirstMovementStore } from "../../../state/first-movement-store";
 import { useIdentityStore } from "../../../state/identity-store";
+import { useIntentionStore } from "../../../state/intention-store";
+import { useLedgerStore } from "../../../state/ledger-store";
+import { usePlaceStore } from "../../../state/place-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { useReminderStore } from "../../../state/reminder-store";
 import { useSessionStore } from "../../../state/session-store";
@@ -52,6 +55,17 @@ export async function resetSettingsStores(): Promise<void> {
   useCareNoteStore.setState({ entries: [], hydrated: true, hydrationFailed: false });
   useIdentityStore.setState({ identity: null, hydrated: true, hydrationFailed: false });
   useProfileStore.setState({ history: { entries: [] }, hydrated: true, hydrationFailed: false });
+  useLedgerStore.setState({ events: [], hydrated: true, hydrationFailed: false });
+  useIntentionStore.setState({ target: null, asked: false, hydrated: true, hydrationFailed: false });
+  usePlaceStore.setState({
+    place: "home",
+    presets: {
+      home: { equipment: ["none", "chair", "wall"], quiet: "ask" },
+      hotel: { equipment: ["none", "wall"], quiet: "ask" },
+    },
+    hydrated: true,
+    hydrationFailed: false,
+  });
   useReminderStore.setState({
     asked: false,
     slot: null,

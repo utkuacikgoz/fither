@@ -53,11 +53,12 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const reconcileTimer = useSessionStore((s) => s.reconcileTimer);
   const rebaseCountdown = useSessionStore((s) => s.rebaseCountdown);
   const reduceMotion = useReducedMotion();
+  // The voice setting ALONE decides whether the cue is spoken. Quiet
+  // movements and the coaching voice are separate (owner brief
+  // 2026-09-07, wave 4): a quiet day changes which movements the engine
+  // picks, never whether she hears her coach. No headphone detection,
+  // nothing platform-specific — she chose the voice, she gets it.
   const voiceOn = useSettingsStore((s) => s.voice);
-  // "Do you need to be quiet right now?" — a yes silences the voice for
-  // the whole session, whatever Settings says. Read from the prompt the
-  // engine was handed; absent (a resumed legacy snapshot) means not quiet.
-  const quietDay = useSessionStore((s) => s.prompt?.quiet ?? false);
 
   const counting = player !== null && isCountingDown(player);
   const finished = player !== null && isFinished(player);
@@ -137,18 +138,16 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     }
     // The spoken voice says the cue she is looking at, once per work set
     // (the same transition, the same key — never per tick). Whether it
-    // speaks at all is decided HERE, where both facts are: her Settings
-    // choice, and never on a day she answered "quiet" (the prompt the
-    // engine already saw — no rule re-derived, just read). The silent
-    // switch wins on top of that, inside the port.
+    // speaks at all is her Settings choice and nothing else; the phone's
+    // silent switch wins on top of that, inside the port.
     const cue = player === null ? null : workCue(player);
-    if (cue !== null && voiceOn && !quietDay) {
+    if (cue !== null && voiceOn) {
       void speakCue(cue);
     }
     // player is intentionally read, not depended on: ticks change it
     // without changing the position the key names.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmingSkip, phaseKey, voiceOn, quietDay]);
+  }, [confirmingSkip, phaseKey, voiceOn]);
 
   if (!player || player.phase.kind === "done") {
     return <Screen>{null}</Screen>;
@@ -185,10 +184,15 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       )}
 
       {/* The one line of chrome inside a session (ADR-0017): which
-          movement, and where she is in it — never a header, never a bar. */}
+          movement, and where she is in it — never a header, never a bar.
+          At floor distance (the work phase, mockup player-work-floor) the
+          row is set at body size, the name in ink and the counter soft;
+          every other phase keeps the caption. */}
       <View style={styles.captionRow} testID="player-caption-row">
-        <AppText variant="caption">{block.name}</AppText>
-        <AppText variant="caption">
+        <AppText variant={phase.kind === "work" ? "body" : "caption"}>
+          {block.name}
+        </AppText>
+        <AppText variant={phase.kind === "work" ? "bodySoft" : "caption"}>
           {phase.kind === "work" || phase.kind === "rest"
             ? strings.player.setCounter(phase.setIndex + 1, block.sets)
             : strings.player.blockCounter(phase.blockIndex + 1, player.blocks.length)}
@@ -268,8 +272,12 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
                 {strings.player.sides[phase.side]}
               </AppText>
             )}
+            {/* Read from the floor a body-length away (owner-approved
+                2026-09-07): the number is the largest thing in the
+                product, the unit under it at body size, the cue set
+                larger and heavier than the intro's reading. */}
             <AppText
-              variant="count"
+              variant="countFloor"
               testID="player-numeral"
               accessibilityLabel={
                 block.timingType === "seconds"
@@ -279,13 +287,13 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             >
               {phase.remainingSeconds ?? block.amount}
             </AppText>
-            <AppText variant="caption">
+            <AppText variant="bodySoft" testID="player-unit">
               {block.timingType === "seconds"
                 ? strings.player.holdLabel
                 : strings.player.repsLabel}
             </AppText>
             {currentCue !== null && (
-              <AppText variant="body" style={styles.subline}>
+              <AppText variant="bodyLarge" style={styles.workCue}>
                 {currentCue}
               </AppText>
             )}
@@ -367,6 +375,10 @@ const styles = StyleSheet.create({
   },
   subline: {
     marginTop: spacing.sm,
+    textAlign: "center",
+  },
+  workCue: {
+    marginTop: spacing.md,
     textAlign: "center",
   },
   cues: {

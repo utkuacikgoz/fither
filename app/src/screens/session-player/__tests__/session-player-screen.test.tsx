@@ -1,8 +1,15 @@
 import { act, fireEvent, render, within } from "@testing-library/react-native";
 import React from "react";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, StyleSheet, type StyleProp, type TextStyle } from "react-native";
 
 import { strings } from "../../../copy/strings";
+import {
+  countFloorMaxFontScale,
+  darkColors,
+  fontFamily,
+  tracking,
+  typeScale,
+} from "../../../design/tokens";
 import { createPlayer } from "../../../session/player-machine";
 import { useSessionStore } from "../../../state/session-store";
 import {
@@ -103,7 +110,22 @@ describe("SessionPlayerScreen", () => {
       expect(stopVoice).toHaveBeenCalled();
     });
 
-    it("stays silent for the whole session on a day she answered quiet", () => {
+    it("speaks on a quiet day too: quiet movements and the voice are separate", () => {
+      // Owner brief 2026-09-07, wave 4. The quiet answer shapes which
+      // movements the engine picks; the voice setting alone decides
+      // whether her coach speaks. No headphone check, nothing platform-
+      // specific: she turned the voice on, she hears it.
+      useSessionStore.setState({
+        prompt: { minutes: 10, energy: "okay", quiet: true, avoid: [], date: "2026-09-04", equipment: ["none", "chair", "wall"] },
+      });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(speakCue).toHaveBeenCalledTimes(1);
+      expect(speakCue).toHaveBeenCalledWith("Push through your palms.");
+    });
+
+    it("a quiet day with the voice off is silent — the setting, not the day, decides", () => {
+      useSettingsStore.setState({ voice: false });
       useSessionStore.setState({
         prompt: { minutes: 10, energy: "okay", quiet: true, avoid: [], date: "2026-09-04", equipment: ["none", "chair", "wall"] },
       });
@@ -137,6 +159,68 @@ describe("SessionPlayerScreen", () => {
     expect(screen.getByText("Push through your palms.")).toBeTruthy();
     expect(screen.getByText(strings.player.setCounter(1, 2))).toBeTruthy();
     expect(screen.getByTestId("player-set-done")).toBeTruthy();
+  });
+
+  describe("the work phase at floor distance (owner-approved 2026-09-07, mockup player-work-floor)", () => {
+    const flat = (element: { props: { style?: unknown } }) =>
+      StyleSheet.flatten(element.props.style as StyleProp<TextStyle>) ?? {};
+
+    it("sets the count on its own floor scale, tighter and semibold, capped for Dynamic Type", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      const numeral = screen.getByTestId("player-numeral");
+      expect(flat(numeral)).toMatchObject({
+        fontSize: typeScale.countFloor,
+        fontFamily: fontFamily.semibold,
+        letterSpacing: tracking.countFloor,
+      });
+      expect(typeScale.countFloor).toBe(132);
+      expect(numeral.props.maxFontSizeMultiplier).toBe(countFloorMaxFontScale);
+    });
+
+    it("the unit at body size in soft ink, the cue at bodyLarge semibold", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(flat(screen.getByTestId("player-unit"))).toMatchObject({
+        fontSize: typeScale.body,
+        color: darkColors.inkSoft,
+      });
+      expect(flat(screen.getByText("Push through your palms."))).toMatchObject({
+        fontSize: typeScale.bodyLarge,
+        fontFamily: fontFamily.semibold,
+      });
+    });
+
+    it("the caption row at body size: the name in ink, the set counter soft", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      const row = within(screen.getByTestId("player-caption-row"));
+      expect(flat(row.getByText("Wall Push-Up"))).toMatchObject({
+        fontSize: typeScale.body,
+        color: darkColors.ink,
+      });
+      expect(flat(row.getByText(strings.player.setCounter(1, 2)))).toMatchObject({
+        fontSize: typeScale.body,
+        color: darkColors.inkSoft,
+      });
+    });
+
+    it("only the work phase changes: the intro and the rest keep the caption row as captions", () => {
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      const row = () => within(screen.getByTestId("player-caption-row"));
+      expect(flat(row().getByText("Wall Push-Up"))).toMatchObject({
+        fontSize: typeScale.caption,
+      });
+      fireEvent.press(screen.getByTestId("player-begin"));
+      fireEvent.press(screen.getByTestId("player-set-done"));
+      expect(screen.getByText(strings.player.rest)).toBeTruthy();
+      expect(flat(row().getByText("Wall Push-Up"))).toMatchObject({
+        fontSize: typeScale.caption,
+      });
+      expect(flat(row().getByText(strings.player.setCounter(1, 2)))).toMatchObject({
+        fontSize: typeScale.caption,
+      });
+    });
   });
 
   it("the rest is the calmest screen: no figure, the count in green, the name kept in the caption", () => {

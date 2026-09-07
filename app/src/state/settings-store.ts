@@ -6,7 +6,11 @@ import { createJSONStorage, persist } from "zustand/middleware";
 interface SettingsState {
   hydrated: boolean;
   hydrationFailed: boolean;
-  /** Equipment available to the user. Feeds the daily prompt as-is. */
+  /**
+   * Equipment available to the user. Feeds the daily prompt as-is — the
+   * one source the engine reads. The place preset (place-store.ts)
+   * writes it on a switch of place; it never becomes a second input.
+   */
   equipment: Equipment[];
   /**
    * Onboarding ran to the end once (ADR-0009 §1). Persisted so relaunch
@@ -44,8 +48,10 @@ interface SettingsState {
   /**
    * Spoken cues during a session. OFF by default: audio she did not ask
    * for, on a first session at 6am next to a sleeping child, is the
-   * wrong surprise — she turns it on in Settings. The quiet answer in
-   * the daily prompt silences it regardless (player rule).
+   * wrong surprise — she turns it on in Settings. This setting ALONE
+   * decides whether the player speaks: quiet movements and the voice
+   * are separate (owner brief 2026-09-07, wave 4), so a quiet day never
+   * mutes it. Headphones are hers to choose; the app assumes nothing.
    */
   voice: boolean;
   setVoice: (voice: boolean) => void;

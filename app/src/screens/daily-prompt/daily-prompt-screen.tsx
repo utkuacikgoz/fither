@@ -25,6 +25,7 @@ import { todayIso } from "../../lib/dates";
 import { useStoreHydration } from "../../lib/route-guard";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useCareNoteStore } from "../../state/care-note-store";
+import { activeQuietMode, usePlaceStore } from "../../state/place-store";
 import { useProfileStore } from "../../state/profile-store";
 import { unblockingAreasFor } from "../../session/unblocking";
 import { useSessionStore } from "../../state/session-store";
@@ -69,6 +70,18 @@ export function DailyPromptScreen({
   const alwaysAvoid = useSettingsStore((s) => s.alwaysAvoid);
   const setAlwaysAvoid = useSettingsStore((s) => s.setAlwaysAvoid);
   const sessionSalt = useSettingsStore((s) => s.sessionSalt);
+  // Where I train (owner brief 2026-09-07, wave 4): a place whose quiet
+  // default is "always" answers the quiet question for her, and the step
+  // is not shown — one tap fewer, the rail one segment shorter. "ask"
+  // changes nothing. The preset sets ONE answer and nothing more: the
+  // engine still receives an ordinary prompt with quiet: true, and the
+  // equipment is still the settings store's (the switch of place wrote
+  // it there). Before the place store hydrates this reads "ask" — the
+  // question is merely asked once more, never answered for her.
+  const presetQuiet = usePlaceStore((s) => activeQuietMode(s) === "always");
+  const questions = presetQuiet
+    ? QUESTIONS.filter((question) => question !== "quiet")
+    : QUESTIONS;
   // Restrictions are asked once (owner brief 2026-09-07, wave 1):
   // onboarding no longer has an avoid step, so on the FIRST session —
   // nothing remembered yet and nothing trained yet, both read from the
@@ -134,7 +147,8 @@ export function DailyPromptScreen({
   );
 
   const finish = (avoidAreas: BodyArea[], setAside: BodyArea[] = setAsideToday) => {
-    if (minutes === null || energy === null || quiet === null) return;
+    const quietAnswer = presetQuiet ? true : quiet;
+    if (minutes === null || energy === null || quietAnswer === null) return;
     // The persistent avoid-list (onboarding) joins today's soreness picks
     // before the prompt reaches the engine — input assembly, not policy:
     // what "avoid" means to the session is decided entirely engine-side.
@@ -147,7 +161,7 @@ export function DailyPromptScreen({
     const prompt: DailyPrompt = {
       minutes,
       energy,
-      quiet,
+      quiet: quietAnswer,
       avoid: mergedAvoid,
       date: todayIso(),
       equipment,
@@ -261,7 +275,7 @@ export function DailyPromptScreen({
   // Where she is in the four questions. Rendered only while a question
   // is on screen — the can't-build and error states are not steps of the
   // flow, and a bar that kept counting through them would lie.
-  const questionIndex = QUESTIONS.indexOf(step);
+  const questionIndex = questions.indexOf(step);
 
   return (
     <Screen>
@@ -276,7 +290,7 @@ export function DailyPromptScreen({
         <View style={styles.flow}>
           <FlowProgress
             testID="prompt-flow"
-            total={QUESTIONS.length}
+            total={questions.length}
             current={questionIndex + 1}
             reduceMotion={reduceMotion}
           />
@@ -333,7 +347,7 @@ export function DailyPromptScreen({
                 selected={energy === e}
                 onPress={() => {
                   setEnergy(e);
-                  setStep("quiet");
+                  setStep(presetQuiet ? "soreness" : "quiet");
                 }}
               />
             </AnswerRow>
