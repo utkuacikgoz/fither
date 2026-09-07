@@ -201,3 +201,8 @@ is what gets built.
   those chevrons open is a screen and goes to the owner for approval
   before it is built. Nothing reaches main without the owner's approval
   of every screen it contains.
+- 2026-09-07, final batch approved except the no-session outcome: "No
+  session fits" described the problem. → Rule: an outcome screen that
+  blocks her recommends the way out as tappable actions (the engine
+  names which areas unblock; one row each, today only), never a
+  description plus a generic button. Applies to every dead end.
