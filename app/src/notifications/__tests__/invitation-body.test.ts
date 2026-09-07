@@ -1,56 +1,96 @@
-import type { StreakState } from "@fither/engine";
+import { weekParticipation, type HistoryEntry, type WeeklyTarget } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { invitationBody } from "../invitation-body";
 
-// Pure wording from two given facts: the engine's streak state and the
-// app's one "trained today" reading. Nothing here derives either.
+// Pure wording from the week view's facts: the engine's participation
+// and the intention. Nothing here derives either.
 
-function streak(current: number, atRisk = false): StreakState {
-  return { current, best: Math.max(current, 3), graceUsed: false, atRisk };
+// 2026-09-07 is a Monday; the week runs to Sunday the 13th.
+const MON = "2026-09-07";
+const TUE = "2026-09-08";
+const WED = "2026-09-09";
+const THU = "2026-09-10";
+
+function trainedOn(date: string): HistoryEntry {
+  return {
+    date,
+    minutes: 10,
+    blocks: [{ movementId: "wall-push-up", pattern: "push", outcome: "completed" }],
+  };
 }
 
+function facts(entries: HistoryEntry[], today: string, target: WeeklyTarget) {
+  return {
+    participation: weekParticipation(entries, today),
+    target,
+    hasHistory: entries.length > 0,
+  };
+}
+
+const GENERIC = Object.values(strings.notifications.daily);
+
 describe("invitationBody", () => {
-  it("trained today with a run alive: what tomorrow's session would make it", () => {
-    expect(invitationBody(streak(1), true)).toBe(
-      strings.streak.notification.nextDay(2),
+  it("on track: the count so far and what today's session would make it", () => {
+    expect(invitationBody(facts([trainedOn(MON)], TUE, 3))).toBe(
+      strings.notifications.weekly.onTrack(1, 3),
     );
-    expect(invitationBody(streak(6), true)).toBe(
-      strings.streak.notification.nextDay(7),
+    expect(invitationBody(facts([trainedOn(MON), trainedOn(TUE)], WED, 3))).toBe(
+      strings.notifications.weekly.onTrack(2, 3),
     );
   });
 
-  it("untrained today with a run alive: the run is still going at today's count", () => {
-    expect(invitationBody(streak(3, true), false)).toBe(
-      strings.streak.notification.keepsGoing(3),
+  it("on track at zero this week with history from an earlier week: the first of the target", () => {
+    // Last week's sessions are history; this week has none yet.
+    expect(invitationBody(facts([trainedOn("2026-09-02")], MON, 2))).toBe(
+      strings.notifications.weekly.onTrack(0, 2),
     );
-    // The day after a rest day reads the same way — the grace is the
-    // engine's business, the wording only sees the count.
+  });
+
+  it("met: the target is reached, and a further session counts just as much", () => {
+    expect(invitationBody(facts([trainedOn(MON), trainedOn(TUE)], WED, 2))).toBe(
+      strings.notifications.weekly.met,
+    );
+    // Past the target reads the same.
     expect(
-      invitationBody({ current: 4, best: 4, graceUsed: true, atRisk: true }, false),
-    ).toBe(strings.streak.notification.keepsGoing(4));
+      invitationBody(facts([trainedOn(MON), trainedOn(TUE), trainedOn(WED)], THU, 2)),
+    ).toBe(strings.notifications.weekly.met);
   });
 
-  it("no run alive: one of the four generic bodies, whatever today holds", () => {
-    const generic = Object.values(strings.notifications.daily);
-    expect(generic).toContain(invitationBody(streak(0), false));
-    expect(generic).toContain(invitationBody(streak(0), true));
+  it("no target: the no-target body, whatever the count", () => {
+    expect(invitationBody(facts([trainedOn(MON)], TUE, null))).toBe(
+      strings.notifications.weekly.noTarget,
+    );
+    expect(invitationBody(facts([trainedOn("2026-09-02")], MON, null))).toBe(
+      strings.notifications.weekly.noTarget,
+    );
   });
 
-  it("the streak day count is always 2 or more, as the copy assumes", () => {
-    // current > 0 and trained today is the only path to nextDay.
-    expect(invitationBody(streak(1), true)).toContain("2");
-    expect(invitationBody(streak(1), true)).not.toContain(" 1 ");
+  it("no history at all: one of the four generic bodies, target or not", () => {
+    expect(GENERIC).toContain(invitationBody(facts([], MON, 3)));
+    expect(GENERIC).toContain(invitationBody(facts([], MON, null)));
   });
 
-  it("never names a miss, a loss or a break — a rest day is a rest day", () => {
+  it("an all-skipped session is history but not a trained day (the engine's rule, read not re-derived)", () => {
+    const skipped: HistoryEntry = {
+      date: MON,
+      minutes: 10,
+      blocks: [{ movementId: "wall-push-up", pattern: "push", outcome: "skipped" }],
+    };
+    expect(invitationBody(facts([skipped], TUE, 2))).toBe(
+      strings.notifications.weekly.onTrack(0, 2),
+    );
+  });
+
+  it("never names a miss, a loss, a break or a streak — today is an invitation", () => {
     const bodies = [
-      invitationBody(streak(1), true),
-      invitationBody(streak(5, true), false),
-      invitationBody(streak(0), false),
+      invitationBody(facts([trainedOn(MON)], TUE, 3)),
+      invitationBody(facts([trainedOn(MON), trainedOn(TUE)], WED, 2)),
+      invitationBody(facts([trainedOn(MON)], TUE, null)),
+      invitationBody(facts([], MON, 3)),
     ];
     for (const body of bodies) {
-      expect(body).not.toMatch(/break|lose|lost|miss|don't/i);
+      expect(body).not.toMatch(/break|lose|lost|miss|don't|streak/i);
     }
   });
 });

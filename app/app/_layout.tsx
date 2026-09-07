@@ -30,8 +30,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsReady) void SplashScreen.hideAsync().catch(() => undefined);
   }, [fontsReady]);
-  // The daily invitation's body names the streak (ADR-0018). Weekly
-  // triggers repeat, so a week away would replay a stale count: every
+  // The daily invitation's body names her week (ADR-0018 as amended by
+  // wave 2). Weekly triggers repeat, so a week away would replay a stale count: every
   // return to the foreground reschedules from today's history. Best
   // effort by contract; a no-op without a chosen slot or permission.
   // Feedback written offline goes on the next foreground the same way.

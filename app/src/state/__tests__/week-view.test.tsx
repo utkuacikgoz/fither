@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react-native";
+import { act, renderHook } from "@testing-library/react-native";
 import { createInitialProfile, weeksParticipation, type HistoryEntry } from "@fither/engine";
 
 import { todayIso } from "../../lib/dates";
@@ -139,7 +139,10 @@ describe("useWeekView", () => {
     const { result, rerender } = renderHook(() => useWeekView());
     expect(result.current.remaining).toBe(2);
 
-    useIntentionStore.getState().setTarget(null);
+    // The store update re-renders the mounted hook: wrap it in act.
+    act(() => {
+      useIntentionStore.getState().setTarget(null);
+    });
     rerender(undefined);
     expect(result.current.met).toBeNull();
     expect(result.current.participation.trainedDates).toEqual([today]);

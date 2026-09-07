@@ -9,6 +9,7 @@ import {
   SLOT_TIMES,
   type NotificationsPort,
 } from "../../notifications/notifications";
+import { useIntentionStore } from "../intention-store";
 import { useProfileStore } from "../profile-store";
 import {
   reminderAskDue,
@@ -31,7 +32,7 @@ jest.mock("../../notifications/notifications", () => {
 });
 
 // The calendar is pinned so history dates mean something: "today" is
-// 2026-09-07 throughout, and the streak body reads from it.
+// Monday 2026-09-07 throughout, and the week body reads from it.
 jest.mock("../../lib/dates", () => ({ todayIso: () => "2026-09-07" }));
 
 const port = getNotifications() as jest.Mocked<NotificationsPort>;
@@ -69,10 +70,17 @@ beforeEach(async () => {
   useReminderStore.setState({
     asked: false,
     slot: null,
+    permissionDenied: false,
     hydrated: true,
     hydrationFailed: false,
   });
   seedHistory([]);
+  useIntentionStore.setState({
+    target: null,
+    asked: false,
+    hydrated: true,
+    hydrationFailed: false,
+  });
 });
 
 describe("reminder store", () => {
@@ -175,46 +183,78 @@ describe("reminder store", () => {
   });
 });
 
-describe("the invitation names the streak (ADR-0018)", () => {
-  it("chooseSlot with no run alive passes a generic body", async () => {
+describe("the invitation names the week (wave 2)", () => {
+  // "today" is Monday 2026-09-07 (pinned above): the week runs to the 13th.
+
+  it("chooseSlot with no history at all passes a generic body", async () => {
+    useIntentionStore.setState({ target: 3 });
     await useReminderStore.getState().chooseSlot("morning");
     const [, body] = port.scheduleDaily.mock.calls[0] ?? [];
     expect(GENERIC_BODIES).toContain(body);
   });
 
-  it("chooseSlot after today's session: tomorrow would make it current + 1", async () => {
-    seedHistory([trainedOn("2026-09-06"), trainedOn("2026-09-07")]);
+  it("on track: the week's count against her target, what today would make it", async () => {
+    useIntentionStore.setState({ target: 3 });
+    // Last week's session is history; this week holds today only.
+    seedHistory([trainedOn("2026-09-02"), trainedOn("2026-09-07")]);
     await useReminderStore.getState().chooseSlot("evening");
     expect(port.scheduleDaily).toHaveBeenCalledWith(
       "evening",
-      strings.streak.notification.nextDay(3),
+      strings.notifications.weekly.onTrack(1, 3),
     );
   });
 
-  it("chooseSlot on an untrained day with a run alive: still going at today's count", async () => {
+  it("on track at zero: history from an earlier week, nothing yet this week", async () => {
+    useIntentionStore.setState({ target: 2 });
     seedHistory([trainedOn("2026-09-05"), trainedOn("2026-09-06")]);
     await useReminderStore.getState().chooseSlot("midday");
     expect(port.scheduleDaily).toHaveBeenCalledWith(
       "midday",
-      strings.streak.notification.keepsGoing(2),
+      strings.notifications.weekly.onTrack(0, 2),
     );
   });
 
-  it("the day after a rest day still reads 'still going' — the run survived", async () => {
-    // Trained the 4th and 5th, nothing the 6th (the forgiven day), today open.
-    seedHistory([trainedOn("2026-09-04"), trainedOn("2026-09-05")]);
-    await useReminderStore.getState().chooseSlot("midday");
-    expect(port.scheduleDaily).toHaveBeenCalledWith(
-      "midday",
-      strings.streak.notification.keepsGoing(2),
-    );
-  });
-
-  it("two clear days: no run alive, generic again — nothing about what ended", async () => {
-    seedHistory([trainedOn("2026-09-01"), trainedOn("2026-09-02")]);
+  it("met: the target reached — never 'enough', a further session counts", async () => {
+    useIntentionStore.setState({ target: 2 });
+    // Two distinct dates in the week containing the pinned Monday (the
+    // engine matches entries by their own date; two sessions on one
+    // date would count once).
+    seedHistory([trainedOn("2026-09-07"), trainedOn("2026-09-08")]);
     await useReminderStore.getState().chooseSlot("morning");
+    expect(port.scheduleDaily).toHaveBeenCalledWith(
+      "morning",
+      strings.notifications.weekly.met,
+    );
+  });
+
+  it("no target: the no-target body, whatever the count", async () => {
+    useIntentionStore.setState({ target: null });
+    seedHistory([trainedOn("2026-09-06"), trainedOn("2026-09-07")]);
+    await useReminderStore.getState().chooseSlot("morning");
+    expect(port.scheduleDaily).toHaveBeenCalledWith(
+      "morning",
+      strings.notifications.weekly.noTarget,
+    );
+  });
+
+  it("a permission decline still schedules nothing, whatever the week holds", async () => {
+    useIntentionStore.setState({ target: 3 });
+    seedHistory([trainedOn("2026-09-07")]);
+    port.requestPermission.mockResolvedValue("denied");
+    await expect(
+      useReminderStore.getState().chooseSlotWithPermission("morning"),
+    ).resolves.toBe(false);
+    await expect(useReminderStore.getState().allow()).resolves.toBe(false);
+    expect(port.scheduleDaily).not.toHaveBeenCalled();
+    expect(useReminderStore.getState().slot).toBeNull();
+  });
+
+  it("the streak wording is gone from the invitation", async () => {
+    useIntentionStore.setState({ target: 3 });
+    seedHistory([trainedOn("2026-09-06"), trainedOn("2026-09-07")]);
+    await useReminderStore.getState().chooseSlot("evening");
     const [, body] = port.scheduleDaily.mock.calls[0] ?? [];
-    expect(GENERIC_BODIES).toContain(body);
+    expect(body).not.toMatch(/streak|in a row/i);
   });
 
   describe("rescheduleInvitation", () => {
@@ -233,15 +273,16 @@ describe("the invitation names the streak (ADR-0018)", () => {
       expect(port.scheduleDaily).not.toHaveBeenCalled();
     });
 
-    it("re-schedules the chosen slot with today's streak body when granted", async () => {
+    it("re-schedules the chosen slot with today's week body when granted", async () => {
       useReminderStore.setState({ slot: "evening" });
+      useIntentionStore.setState({ target: 2 });
       port.getPermission.mockResolvedValue("granted");
       seedHistory([trainedOn("2026-09-07")]);
       await rescheduleInvitation();
       expect(port.scheduleDaily).toHaveBeenCalledTimes(1);
       expect(port.scheduleDaily).toHaveBeenCalledWith(
         "evening",
-        strings.streak.notification.nextDay(2),
+        strings.notifications.weekly.onTrack(1, 2),
       );
       // The slot she chose is untouched.
       expect(useReminderStore.getState().slot).toBe("evening");

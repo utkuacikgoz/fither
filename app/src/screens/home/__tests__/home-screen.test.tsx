@@ -204,7 +204,7 @@ describe("the day's card", () => {
     ).toBeNull();
   });
 
-  it("names the run she is on under the open day, and what today does for it (ADR-0018)", () => {
+  it("names the run she is on under the open day — the count alone, nothing about what today does for it (wave 2)", () => {
     seedHistory([
       todayEntry(10, ["completed"], shiftDays(-2)),
       todayEntry(10, ["completed"], shiftDays(-1)),
@@ -213,7 +213,8 @@ describe("the day's card", () => {
 
     expect(screen.getByTestId("home-streak")).toBeTruthy();
     expect(screen.getByText(strings.streak.label(2))).toBeTruthy();
-    expect(screen.getByText(strings.streak.atRiskToday)).toBeTruthy();
+    // Streak pressure is out of Home: no "keeps it going" caption.
+    expect(screen.queryByText(strings.streak.atRiskToday)).toBeNull();
     expect(screen.queryByText(strings.streak.best(2))).toBeNull();
   });
 
@@ -229,7 +230,7 @@ describe("the day's card", () => {
 
     expect(screen.getByText(strings.streak.label(2))).toBeTruthy();
     expect(screen.getByText(strings.streak.best(3))).toBeTruthy();
-    // Trained: nothing is at stake today, so nothing says so.
+    // Nothing about what today does for the run, trained or not.
     expect(screen.queryByText(strings.streak.atRiskToday)).toBeNull();
   });
 

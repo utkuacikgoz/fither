@@ -19,6 +19,7 @@ import { useFirstMovementStore } from "../first-movement-store";
 import { totalPoints, useLedgerStore } from "../ledger-store";
 import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
+import { useIntentionStore } from "../intention-store";
 import { useReminderStore } from "../reminder-store";
 import { useSessionStore } from "../session-store";
 import * as journal from "../completion-journal";
@@ -1210,8 +1211,9 @@ describe("the daily invitation after a commit (ADR-0018)", () => {
     useReminderStore.setState({ slot: null });
   });
 
-  it("re-schedules her slot with the streak body once the commit has landed", async () => {
+  it("re-schedules her slot with the week body once the commit has landed", async () => {
     useReminderStore.setState({ slot: "evening" });
+    useIntentionStore.setState({ target: 2, asked: true, hydrated: true });
     granted();
     // The history the scheduler read from: captured at the moment of the
     // first schedule call, to prove the profile store was written first.
@@ -1232,9 +1234,11 @@ describe("the daily invitation after a commit (ADR-0018)", () => {
     expect(cancelAsync).toHaveBeenCalledTimes(1);
     expect(scheduleAsync).toHaveBeenCalledTimes(7);
     expect(entriesSeen).toBe(1);
-    // Trained today, a 1-day run: tomorrow's session would make it 2.
+    // Trained today, 1 of 2 this week: the body carries the count the
+    // commit just wrote, never a streak line.
     const bodies = scheduleAsync.mock.calls.map(([r]) => r.content.body);
-    expect(bodies).toContain(strings.streak.notification.nextDay(2));
+    expect(bodies).toContain(strings.notifications.weekly.onTrack(1, 2));
+    expect(bodies).not.toContain(strings.streak.notification.nextDay(2));
     for (const [request] of scheduleAsync.mock.calls) {
       expect(request.trigger).toMatchObject({ hour: 18, minute: 30 });
     }
