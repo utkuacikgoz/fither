@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_TEAM_ID.com.fither.app"],
+        "components": [
+          { "/": "/s/*", "comment": "Recipient page scenarios. The app reads the path segment only." }
+        ]
+      }
+    ]
+  }
+}

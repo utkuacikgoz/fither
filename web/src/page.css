@@ -1,0 +1,92 @@
+/* Recipient page. Tokens mirror docs/design/mockups/tokens.css and
+   app/src/design/tokens.ts (ADR-0017). One look, dark ground; the page
+   commits to it rather than following the viewer's theme. Fonts are
+   self-hosted from /assets/fonts; nothing loads from another host. */
+
+@font-face { font-family: "Manrope"; font-weight: 400; font-display: swap; src: url("/assets/fonts/Manrope_400Regular.ttf") format("truetype"); }
+@font-face { font-family: "Manrope"; font-weight: 500; font-display: swap; src: url("/assets/fonts/Manrope_500Medium.ttf") format("truetype"); }
+@font-face { font-family: "Manrope"; font-weight: 600; font-display: swap; src: url("/assets/fonts/Manrope_600SemiBold.ttf") format("truetype"); }
+@font-face { font-family: "Manrope"; font-weight: 700; font-display: swap; src: url("/assets/fonts/Manrope_700Bold.ttf") format("truetype"); }
+
+:root {
+  --bg: #0B0F0C;
+  --surface: #151B17;
+  --ink: #F5F7F5;
+  --ink-soft: #A3AFA7;
+  --accent: #3DBE7A;
+  --on-accent: #0B0F0C;
+  --line: #26302A;
+  --xs: 4px; --sm: 8px; --md: 16px; --lg: 24px; --xl: 32px; --xxl: 48px;
+  --r-pill: 999px;
+  --column: 390px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: var(--bg); color-scheme: dark; }
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+#page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: var(--column);
+  margin: 0 auto;
+  padding: calc(var(--md) + env(safe-area-inset-top)) var(--lg) calc(var(--md) + env(safe-area-inset-bottom));
+}
+
+.brand { display: flex; align-items: center; gap: var(--sm); padding-top: 18px; }
+.brand .mark {
+  width: 22px; height: 22px; background: var(--accent);
+  -webkit-mask: url("/assets/mark.png") center / contain no-repeat;
+  mask: url("/assets/mark.png") center / contain no-repeat;
+}
+.brand .wm { font-size: 13px; letter-spacing: 3px; font-weight: 700; }
+
+.scene { margin-top: 28px; }
+.caption { font-size: 13px; font-weight: 500; letter-spacing: 0.4px; line-height: 1.4; color: var(--ink-soft); }
+.display { margin-top: var(--sm); font-size: 44px; font-weight: 700; letter-spacing: -1px; line-height: 1.1; }
+
+/* The figure: accent paint under a mask of the movement's alpha shape. */
+.fig {
+  width: 150px; height: 150px; margin: 20px 0 var(--xs);
+  background: var(--accent);
+  -webkit-mask: center / contain no-repeat;
+  mask: center / contain no-repeat;
+}
+.fig-sit-to-stand { -webkit-mask-image: url("/assets/figures/sit-to-stand.png"); mask-image: url("/assets/figures/sit-to-stand.png"); }
+.fig-wall-push-up { -webkit-mask-image: url("/assets/figures/wall-push-up.png"); mask-image: url("/assets/figures/wall-push-up.png"); }
+.fig-glute-bridge { -webkit-mask-image: url("/assets/figures/glute-bridge.png"); mask-image: url("/assets/figures/glute-bridge.png"); }
+.fig-air-squat { -webkit-mask-image: url("/assets/figures/air-squat.png"); mask-image: url("/assets/figures/air-squat.png"); }
+.fig-kneeling-push-up { -webkit-mask-image: url("/assets/figures/kneeling-push-up.png"); mask-image: url("/assets/figures/kneeling-push-up.png"); }
+.fig-split-squat { -webkit-mask-image: url("/assets/figures/split-squat.png"); mask-image: url("/assets/figures/split-squat.png"); }
+.fig-standing-hip-hinge { -webkit-mask-image: url("/assets/figures/standing-hip-hinge.png"); mask-image: url("/assets/figures/standing-hip-hinge.png"); }
+
+.line { font-size: 17px; font-weight: 400; line-height: 1.45; color: var(--ink-soft); }
+
+.facts { list-style: none; margin-top: var(--lg); border-top: 1px solid var(--line); }
+.facts li { padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 17px; line-height: 1.45; }
+
+.bottom { margin-top: auto; padding-top: var(--lg); padding-bottom: var(--sm); }
+.btn {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60px; padding: 0 var(--xl);
+  border-radius: var(--r-pill);
+  background: var(--accent); color: var(--on-accent);
+  font-size: 20px; font-weight: 600; text-decoration: none;
+}
+.btn:active { opacity: 0.85; }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.fine { margin-top: 12px; text-align: center; font-size: 13px; font-weight: 500; letter-spacing: 0.4px; line-height: 1.4; color: var(--ink-soft); }
+.consent { margin-top: 14px; }
+.coming { text-align: center; font-size: 17px; line-height: 1.45; color: var(--ink-soft); padding: 12px 0; }
