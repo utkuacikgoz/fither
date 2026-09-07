@@ -1,38 +1,35 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
-import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 
 import { strings } from "../../../copy/strings";
-import { glyph } from "../../../design/tokens";
-import { todayIso } from "../../../lib/dates";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
-import { entitlementStatus } from "../../../monetization/entitlement";
+import { hasVoiceAudio } from "../../../session/voice-manifest";
 import { useCareNoteStore } from "../../../state/care-note-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
-import { useFirstMovementStore } from "../../../state/first-movement-store";
+import { useIdentityStore } from "../../../state/identity-store";
+import { useProfileStore } from "../../../state/profile-store";
 import { useReminderStore } from "../../../state/reminder-store";
-import { useSessionStore } from "../../../state/session-store";
 import { useSettingsStore } from "../../../state/settings-store";
 import {
   collectStringValues,
   renderedTextLeaves,
 } from "../../../test-utils/copy-audit";
-import { hasVoiceAudio } from "../../../session/voice-manifest";
 import { DEV_TIMING_TITLE } from "../../dev-timing/first-movement-readout";
+import { formatNoteDate } from "../care-journal";
+import {
+  DEV_ENTITLEMENT_RESET_LABEL,
+  DEV_PREVIEW_LABELS,
+  SETTINGS_ROUTES,
+  SettingsScreen,
+} from "../settings-screen";
+import { resetSettingsStores } from "./settings-test-setup";
 
 jest.mock("../../../session/voice-manifest", () => ({
   voiceCues: {},
   voiceCue: () => null,
   hasVoiceAudio: jest.fn(() => false),
 }));
-import { formatNoteDate } from "../care-journal";
-import {
-  DEV_ENTITLEMENT_RESET_LABEL,
-  DEV_PREVIEW_LABELS,
-  SettingsScreen,
-} from "../settings-screen";
 
 // Deterministic version for the footer line, regardless of what the test
 // environment's expo-constants mock carries.
@@ -43,102 +40,40 @@ jest.mock("expo-constants", () => ({
 
 const VERSION_LINE = strings.settings.version("1.2.3");
 
-async function flushPersistence() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-/** A minimal OS permission response in the shape the adapter reads. */
-function permissionResponse(
-  status: "undetermined" | "granted" | "denied",
-): Notifications.NotificationPermissionsStatus {
-  return {
-    status,
-    granted: status === "granted",
-    canAskAgain: status !== "denied",
-    expires: "never",
-  } as unknown as Notifications.NotificationPermissionsStatus;
-}
-
 beforeEach(async () => {
-  await AsyncStorage.clear();
-  useSettingsStore.setState({
-    alwaysAvoid: [],
-    hydrated: true,
-    hydrationFailed: false,
-  });
-  useEntitlementStore.setState({
-    trialStartDate: null,
-    purchase: null,
-    hydrated: true,
-    hydrationFailed: false,
-  });
-  useDevReceiptStore.setState({
-    receipt: null,
-    hydrated: true,
-    hydrationFailed: false,
-  });
-  useFirstMovementStore.setState({
-    runs: [],
-    hydrated: true,
-    hydrationFailed: false,
-  });
-  useCareNoteStore.setState({
-    entries: [],
-    hydrated: true,
-    hydrationFailed: false,
-  });
-  useReminderStore.setState({
-    asked: false,
-    slot: null,
-    hydrated: true,
-    hydrationFailed: false,
-  });
-  // OS notification permission: undetermined, granting on request (the
-  // jest-setup defaults, restated so overrides in one test can't leak).
-  jest
-    .mocked(Notifications.getPermissionsAsync)
-    .mockResolvedValue(permissionResponse("undetermined"));
-  jest
-    .mocked(Notifications.requestPermissionsAsync)
-    .mockResolvedValue(permissionResponse("granted"));
-  useSessionStore.setState({
-    prompt: null,
-    sessionId: null,
-    session: null,
-    player: null,
-    countdownEndsAt: null,
-    activeMs: 0,
-    workResumedAt: null,
-    pendingClose: null,
-    finish: null,
-    saveFailed: false,
-    saving: false,
-  });
+  await resetSettingsStores();
 });
 
-describe("SettingsScreen", () => {
-  it("renders every section in order: avoid, subscription, invitation, notes, dev tools, version", () => {
+describe("SettingsScreen — the grouped list", () => {
+  it("renders the title, profile header, four captioned groups, dev tools and the version, in order", () => {
     const screen = render(<SettingsScreen />);
     expect(screen.getByText(strings.settings.title)).toBeTruthy();
-    expect(screen.getByText(strings.settings.avoid.title)).toBeTruthy();
-    expect(screen.getByText(strings.settings.avoid.body)).toBeTruthy();
-    for (const label of Object.values(strings.prompt.soreness.areas)) {
-      expect(screen.getByText(label)).toBeTruthy();
+    for (const testID of [
+      "settings-profile",
+      "settings-training",
+      "settings-invitation",
+      "settings-subscription",
+      "settings-account",
+      "settings-dev",
+    ]) {
+      expect(screen.getByTestId(testID)).toBeTruthy();
     }
-    expect(screen.getByText(strings.settings.restore.title)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.restore)).toBeTruthy();
-    expect(screen.getByText(strings.settings.reminders.title)).toBeTruthy();
-    expect(screen.getByText(strings.settings.careNotes.title)).toBeTruthy();
-    expect(screen.getByText(strings.settings.dev.title)).toBeTruthy();
-    expect(screen.getByText(VERSION_LINE)).toBeTruthy();
-
-    // Order as specified: each section heading above the next.
     const leaves = renderedTextLeaves(screen.toJSON());
     const order = [
+      strings.settings.title,
+      strings.settings.account.status.guest,
+      strings.settings.sections.training,
       strings.settings.avoid.title,
-      strings.settings.restore.title,
-      strings.settings.reminders.title,
+      strings.settings.rows.equipment,
       strings.settings.careNotes.title,
+      strings.settings.reminders.title,
+      strings.settings.rows.time,
+      strings.settings.restore.title,
+      strings.settings.rows.plan,
+      strings.paywall.restore,
+      strings.settings.account.title,
+      strings.settings.account.signOut,
+      strings.settings.account.erase,
       strings.settings.dev.title,
       VERSION_LINE,
     ].map((text) => leaves.indexOf(text));
@@ -146,88 +81,174 @@ describe("SettingsScreen", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
-  it("toggling an avoid area shows the check and persists to the settings store", async () => {
-    const screen = render(<SettingsScreen />);
+  it("the profile header names how she continues and the day her record began", () => {
+    const guest = render(<SettingsScreen />);
+    expect(guest.getByTestId("settings-account-status")).toHaveTextContent(
+      strings.settings.account.status.guest,
+    );
+    // No history: the since-line is omitted rather than faked.
+    expect(guest.queryByTestId("settings-profile-since")).toBeNull();
+    guest.unmount();
 
-    expect(screen.queryByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeNull();
-    fireEvent.press(screen.getByTestId("avoid-knees"));
-    expect(screen.getByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeTruthy();
-    expect(useSettingsStore.getState().alwaysAvoid).toEqual(["knees"]);
-
-    // Persisted immediately via the store layer (offline-safe disk write).
-    await flushPersistence();
-    const persisted = await AsyncStorage.getItem("fither/settings-v1");
-    expect(persisted).toContain("knees");
-
-    // Toggling off removes it — from the screen, the store and disk.
-    fireEvent.press(screen.getByTestId("avoid-knees"));
-    expect(screen.queryByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeNull();
-    expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
-    await flushPersistence();
-    const cleared = await AsyncStorage.getItem("fither/settings-v1");
-    expect(cleared).not.toContain("knees");
-  });
-
-  it("shows areas already on the persistent list as selected", () => {
-    useSettingsStore.setState({ alwaysAvoid: ["wrists", "back"] });
-    const screen = render(<SettingsScreen />);
-    expect(screen.getByTestId("avoid-wrists-check", { includeHiddenElements: true })).toBeTruthy();
-    expect(screen.getByTestId("avoid-back-check", { includeHiddenElements: true })).toBeTruthy();
-    expect(screen.queryByTestId("avoid-knees-check", { includeHiddenElements: true })).toBeNull();
-  });
-
-  it("equipment is editable (audit S6): onboarding's answer, changeable any day", async () => {
-    useSettingsStore.setState({ equipment: ["none", "chair", "wall"] });
-    const screen = render(<SettingsScreen />);
-    // Current choice shown as selected.
-    expect(screen.getByText(strings.onboarding.equipment.question)).toBeTruthy();
-    fireEvent.press(screen.getByTestId("equipment-floor-only"));
-    // The exact onboarding sets — wall always available on both paths.
-    expect(useSettingsStore.getState().equipment).toEqual(["none", "wall"]);
-    await flushPersistence();
-    const persisted = await AsyncStorage.getItem("fither/settings-v1");
-    expect(persisted).not.toContain("chair");
-    fireEvent.press(screen.getByTestId("equipment-chair"));
-    expect(useSettingsStore.getState().equipment).toEqual([
-      "none",
-      "chair",
-      "wall",
-    ]);
-  });
-
-  it("restore succeeds when the (dev) store account has a receipt — no notice", async () => {
-    useDevReceiptStore.setState({
-      receipt: { plan: "annual", date: "2026-08-20" },
+    useIdentityStore.setState({ identity: { kind: "apple", date: "2026-09-01" } });
+    useProfileStore.setState({
+      history: {
+        entries: [
+          { date: "2026-09-02", minutes: 10, blocks: [] },
+          { date: "2026-09-05", minutes: 20, blocks: [] },
+        ],
+      },
     });
+    const apple = render(<SettingsScreen />);
+    expect(apple.getByTestId("settings-account-status")).toHaveTextContent(
+      strings.settings.account.status.apple,
+    );
+    expect(apple.getByTestId("settings-profile-since")).toHaveTextContent(
+      strings.settings.profile.since(formatNoteDate("2026-09-02")),
+    );
+  });
+
+  it("the work-around row states none, the one area's label, or a count", () => {
+    const none = render(<SettingsScreen />);
+    expect(none.getByTestId("settings-row-avoid-value")).toHaveTextContent(
+      strings.settings.rows.avoidValue.none,
+    );
+    none.unmount();
+    useSettingsStore.setState({ alwaysAvoid: ["wrists"] });
+    const one = render(<SettingsScreen />);
+    expect(one.getByTestId("settings-row-avoid-value")).toHaveTextContent(
+      strings.prompt.soreness.areas.wrists,
+    );
+    one.unmount();
+    useSettingsStore.setState({ alwaysAvoid: ["wrists", "knees", "back"] });
+    const many = render(<SettingsScreen />);
+    expect(many.getByTestId("settings-row-avoid-value")).toHaveTextContent(
+      strings.settings.rows.avoidValue.many(3),
+    );
+  });
+
+  it("the equipment, notes, time and plan rows state their stored facts flat", () => {
+    useSettingsStore.setState({ equipment: ["none", "wall"] });
+    useCareNoteStore.setState({
+      entries: [
+        { id: "a", date: "2026-08-20", text: "one" },
+        { id: "b", date: "2026-09-01", text: "two" },
+      ],
+    });
+    useReminderStore.setState({ slot: "morning" });
+    useEntitlementStore.setState({ purchase: { plan: "annual", date: "2026-09-01" } });
     const screen = render(<SettingsScreen />);
+    expect(screen.getByTestId("settings-row-equipment-value")).toHaveTextContent(
+      strings.settings.rows.equipmentValue.floorOnly,
+    );
+    expect(screen.getByTestId("settings-row-notes-value")).toHaveTextContent(
+      strings.settings.rows.notesValue(2),
+    );
+    expect(screen.getByTestId("settings-row-time-value")).toHaveTextContent(
+      strings.notifications.time.morning,
+    );
+    expect(screen.getByTestId("settings-row-plan-value")).toHaveTextContent(
+      strings.paywall.plans.annual.label,
+    );
+  });
+
+  it("with nothing set, the rows say chair, no notes, off and none yet; a store trial says free week", () => {
+    const screen = render(<SettingsScreen />);
+    expect(screen.getByTestId("settings-row-equipment-value")).toHaveTextContent(
+      strings.settings.rows.equipmentValue.chair,
+    );
+    expect(screen.getByTestId("settings-row-notes-value")).toHaveTextContent(
+      strings.settings.rows.notesValue(0),
+    );
+    expect(screen.getByTestId("settings-row-time-value")).toHaveTextContent(
+      strings.settings.rows.timeOff,
+    );
+    expect(screen.getByTestId("settings-row-plan-value")).toHaveTextContent(
+      strings.settings.plan.none,
+    );
+    screen.unmount();
+    useEntitlementStore.setState({
+      purchase: { plan: "annual", date: "2026-09-01", trial: true },
+    });
+    const trial = render(<SettingsScreen />);
+    expect(trial.getByTestId("settings-row-plan-value")).toHaveTextContent(
+      strings.settings.plan.trial,
+    );
+  });
+
+  it("each chevron row pushes its subpage route", () => {
+    jest.mocked(hasVoiceAudio).mockReturnValue(true);
+    const screen = render(<SettingsScreen />);
+    const rows: Array<[string, string]> = [
+      ["settings-row-avoid", SETTINGS_ROUTES.avoid],
+      ["settings-row-equipment", SETTINGS_ROUTES.equipment],
+      ["settings-row-voice", SETTINGS_ROUTES.voice],
+      ["settings-row-notes", SETTINGS_ROUTES.notes],
+      ["settings-row-time", SETTINGS_ROUTES.invitation],
+      ["settings-row-plan", SETTINGS_ROUTES.plan],
+    ];
+    for (const [testID, route] of rows) {
+      expect(screen.getByTestId(`${testID}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+      fireEvent.press(screen.getByTestId(testID));
+      expect(router.push).toHaveBeenLastCalledWith(route);
+    }
+    expect(router.push).toHaveBeenCalledTimes(rows.length);
+    jest.mocked(hasVoiceAudio).mockReturnValue(false);
+  });
+
+  it("offers the voice row only when spoken cues are actually bundled, with its state as the value", () => {
+    // Constraints: a switch for silence would be a lie. The generated
+    // manifest is empty until the owner runs the generator.
+    const screen = render(<SettingsScreen />);
+    expect(screen.queryByTestId("settings-row-voice")).toBeNull();
+    screen.unmount();
+
+    jest.mocked(hasVoiceAudio).mockReturnValue(true);
+    const withAudio = render(<SettingsScreen />);
+    expect(withAudio.getByTestId("settings-row-voice-value")).toHaveTextContent(
+      strings.settings.voice.off,
+    );
+    withAudio.unmount();
+    useSettingsStore.setState({ voice: true });
+    const spoken = render(<SettingsScreen />);
+    expect(spoken.getByTestId("settings-row-voice-value")).toHaveTextContent(
+      strings.settings.voice.on,
+    );
+    jest.mocked(hasVoiceAudio).mockReturnValue(false);
+  });
+
+  it("restore is a plain row — no chevron — and a found receipt grants quietly", async () => {
+    useDevReceiptStore.setState({ receipt: { plan: "annual", date: "2026-08-20" } });
+    const screen = render(<SettingsScreen />);
+    expect(
+      screen.queryByTestId("settings-restore-chevron", { includeHiddenElements: true }),
+    ).toBeNull();
     fireEvent.press(screen.getByTestId("settings-restore"));
     await waitFor(() =>
-      expect(useEntitlementStore.getState().purchase).toMatchObject({
-        plan: "annual",
-      }),
+      expect(useEntitlementStore.getState().purchase).toMatchObject({ plan: "annual" }),
     );
     expect(screen.queryByTestId("settings-restore-error")).toBeNull();
     expect(screen.queryByTestId("settings-restore-empty")).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
   });
 
-  it("restore with nothing to restore says so calmly — not the error — and grants nothing", async () => {
+  it("restore with nothing to restore says so calmly — under the row — and grants nothing", async () => {
     const screen = render(<SettingsScreen />);
     fireEvent.press(screen.getByTestId("settings-restore"));
-    await waitFor(() =>
-      expect(screen.getByText(strings.paywall.restoreEmpty)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(strings.paywall.restoreEmpty)).toBeTruthy());
     expect(screen.queryByText(strings.paywall.restoreError)).toBeNull();
     expect(useEntitlementStore.getState().purchase).toBeNull();
+    // Mapping: the notice lives in the group whose row it answers.
+    expect(
+      screen.getByTestId("settings-subscription").findByProps({ testID: "settings-restore-empty" }),
+    ).toBeTruthy();
   });
 
   it("an actual restore failure shows the retry error, not the empty notice", async () => {
-    // The dev port's failure path: the receipt store's hydration failed.
     useDevReceiptStore.setState({ hydrated: false, hydrationFailed: true });
     const screen = render(<SettingsScreen />);
     fireEvent.press(screen.getByTestId("settings-restore"));
-    await waitFor(() =>
-      expect(screen.getByText(strings.paywall.restoreError)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(strings.paywall.restoreError)).toBeTruthy());
     expect(screen.queryByText(strings.paywall.restoreEmpty)).toBeNull();
     expect(useEntitlementStore.getState().purchase).toBeNull();
   });
@@ -235,11 +256,8 @@ describe("SettingsScreen", () => {
   it("dev tools: opens the timing readout as an overlay and comes back", () => {
     const screen = render(<SettingsScreen />);
     fireEvent.press(screen.getByTestId("settings-dev-timing"));
-    // The readout replaces the screen wholesale (its title also names the
-    // settings link, so presence is asserted structurally).
     expect(screen.getByTestId("dev-timing-close")).toBeTruthy();
     expect(screen.queryByText(strings.settings.title)).toBeNull();
-
     fireEvent.press(screen.getByTestId("dev-timing-close"));
     expect(screen.queryByTestId("dev-timing-close")).toBeNull();
     expect(screen.getByText(strings.settings.title)).toBeTruthy();
@@ -257,107 +275,35 @@ describe("SettingsScreen", () => {
   });
 
   it("renders no dev section at all in the release shape", () => {
-    // Jest runs with __DEV__ true; the prop covers the release value.
     const screen = render(<SettingsScreen devToolsEnabled={false} />);
     expect(screen.queryByText(strings.settings.dev.title)).toBeNull();
     expect(screen.queryByTestId("settings-dev-timing")).toBeNull();
     expect(screen.queryByTestId("settings-dev-reset")).toBeNull();
-    // The flow previewer leaks into release builds exactly as little.
     for (const label of Object.values(DEV_PREVIEW_LABELS)) {
       expect(screen.queryByText(label)).toBeNull();
     }
-    expect(screen.queryByTestId("settings-dev-paywall-expired")).toBeNull();
-    expect(screen.queryByTestId("settings-dev-preview-unlock")).toBeNull();
-    expect(screen.queryByTestId("settings-dev-finish-completed")).toBeNull();
-    // The user-facing sections are untouched by the flag.
-    expect(screen.getByText(strings.settings.avoid.title)).toBeTruthy();
-    expect(screen.getByText(strings.settings.restore.title)).toBeTruthy();
-    expect(screen.getByText(strings.settings.careNotes.title)).toBeTruthy();
+    // The user-facing groups are untouched by the flag.
+    expect(screen.getByTestId("settings-training")).toBeTruthy();
+    expect(screen.getByTestId("settings-subscription")).toBeTruthy();
+    expect(screen.getByTestId("settings-account")).toBeTruthy();
     expect(screen.getByText(VERSION_LINE)).toBeTruthy();
-  });
-
-  it("groups every section into a card, so preferences read as groups", () => {
-    const screen = render(<SettingsScreen />);
-    // ADR-0013: the same card the hub and progress use. The old shape
-    // stacked bordered prompt rows straight onto the page.
-    for (const section of [
-      "settings-avoid",
-      "settings-equipment",
-      "settings-subscription",
-      "settings-reminders",
-      "settings-journal",
-      "settings-account",
-    ]) {
-      expect(screen.getByTestId(section)).toBeTruthy();
-    }
-  });
-
-  it("shows a visible check on every persistent choice, not just the multi-select ones", () => {
-    useSettingsStore.setState({ equipment: ["none", "chair", "wall"] });
-    useReminderStore.setState({ slot: "evening", hydrated: true });
-    const screen = render(<SettingsScreen />);
-    const hidden = { includeHiddenElements: true } as const;
-
-    // Signifiers: a single-select settings row never auto-advances away,
-    // so the state she set months ago has to be readable at a glance —
-    // where the daily prompt's rows could rely on leaving the screen.
-    expect(screen.getByTestId("equipment-chair-check", hidden)).toBeTruthy();
-    expect(
-      screen.queryByTestId("equipment-floor-only-check", hidden),
-    ).toBeNull();
-    expect(screen.getByTestId("reminder-evening-check", hidden)).toBeTruthy();
-    expect(screen.queryByTestId("reminder-off-check", hidden)).toBeNull();
-  });
-
-  it("offers the voice only when spoken cues are actually bundled", () => {
-    // Constraints: a switch for silence would be a lie. The generated
-    // manifest is empty until the owner runs the generator.
-    const screen = render(<SettingsScreen />);
-    expect(screen.queryByTestId("settings-voice")).toBeNull();
-
-    jest.mocked(hasVoiceAudio).mockReturnValue(true);
-    const withAudio = render(<SettingsScreen />);
-    expect(withAudio.getByTestId("settings-voice")).toBeTruthy();
-    // Off by default, and the choice is hers.
-    expect(withAudio.getByTestId("voice-off-check", { includeHiddenElements: true })).toBeTruthy();
-    fireEvent.press(withAudio.getByTestId("voice-on"));
-    expect(useSettingsStore.getState().voice).toBe(true);
-    expect(withAudio.getByTestId("voice-on-check", { includeHiddenElements: true })).toBeTruthy();
-    jest.mocked(hasVoiceAudio).mockReturnValue(false);
-  });
-
-  it("offers 'Manage subscription' beside Restore — never a dead end", async () => {
-    const { manageSubscription } = jest.requireActual<
-      typeof import("../../../monetization/manage-subscription")
-    >("../../../monetization/manage-subscription");
-    const Linking = jest.requireActual<typeof import("react-native")>("react-native").Linking;
-    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
-    const screen = render(<SettingsScreen />);
-    expect(screen.getByText(strings.settings.restore.manage)).toBeTruthy();
-    // Without the store key the row opens Apple's own subscriptions page.
-    await manageSubscription();
-    expect(open).toHaveBeenCalledWith("https://apps.apple.com/account/subscriptions");
-    open.mockRestore();
   });
 
   it("renders no user-facing text outside strings.ts", async () => {
     const allowed = collectStringValues(strings);
-    // Parameterised and dev-only values are allowed explicitly.
     allowed.add(VERSION_LINE);
     allowed.add(DEV_TIMING_TITLE); // __DEV__-only, never shipped to users
     allowed.add(DEV_ENTITLEMENT_RESET_LABEL); // __DEV__-only
-    for (const label of Object.values(DEV_PREVIEW_LABELS)) {
-      allowed.add(label); // __DEV__-only flow previewer
-    }
-    // Her own note content and its locale-formatted date are data, not copy.
-    useCareNoteStore.setState({
-      entries: [{ id: "n1", date: "2026-09-01", text: "her own words" }],
+    for (const label of Object.values(DEV_PREVIEW_LABELS)) allowed.add(label);
+    // Parameterised values are copy-writer functions over her own data.
+    allowed.add(strings.settings.rows.notesValue(1));
+    allowed.add(strings.settings.rows.avoidValue.many(2));
+    allowed.add(strings.settings.profile.since(formatNoteDate("2026-09-02")));
+    useCareNoteStore.setState({ entries: [{ id: "n1", date: "2026-09-01", text: "hers" }] });
+    useSettingsStore.setState({ alwaysAvoid: ["wrists", "knees"] });
+    useProfileStore.setState({
+      history: { entries: [{ date: "2026-09-02", minutes: 10, blocks: [] }] },
     });
-    allowed.add("her own words");
-    allowed.add(formatNoteDate("2026-09-01"));
-    // Decorative selection glyph on a chosen OptionRow (hidden from
-    // accessibility, which reads the selected state instead) — not copy.
-    allowed.add(glyph.check);
 
     jest.mocked(hasVoiceAudio).mockReturnValue(true);
     const screen = render(<SettingsScreen />);
@@ -366,406 +312,11 @@ describe("SettingsScreen", () => {
     }
     jest.mocked(hasVoiceAudio).mockReturnValue(false);
 
-    // The restore notices are strings.ts copy too.
     fireEvent.press(screen.getByTestId("settings-restore"));
-    await waitFor(() =>
-      expect(screen.getByText(strings.paywall.restoreEmpty)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(strings.paywall.restoreEmpty)).toBeTruthy());
+    fireEvent.press(screen.getByTestId("settings-erase"));
     for (const leaf of renderedTextLeaves(screen.toJSON())) {
       expect(allowed.has(leaf)).toBe(true);
     }
-
-    // The delete confirm's copy is strings.ts too.
-    fireEvent.press(screen.getByTestId("care-journal-delete-n1"));
-    for (const leaf of renderedTextLeaves(screen.toJSON())) {
-      expect(allowed.has(leaf)).toBe(true);
-    }
-  });
-});
-
-describe("SettingsScreen care journal (ADR-0012 §4)", () => {
-  it("shows the empty state and the privacy fact when there are no notes", () => {
-    const screen = render(<SettingsScreen />);
-    expect(screen.getByTestId("care-journal-empty")).toBeTruthy();
-    expect(screen.getByText(strings.settings.careNotes.empty)).toBeTruthy();
-    expect(screen.getByText(strings.care.notePrivacy)).toBeTruthy();
-  });
-
-  it("lists her notes newest first, dated, with the full text unclipped", () => {
-    const longText =
-      "A long note about a hard week that runs on well past a single line and must render in full, never truncated behind an ellipsis.";
-    useCareNoteStore.setState({
-      entries: [
-        { id: "a", date: "2026-08-20", text: "older note" },
-        { id: "b", date: "2026-09-01", text: longText },
-      ],
-    });
-    const screen = render(<SettingsScreen />);
-    expect(screen.queryByTestId("care-journal-empty")).toBeNull();
-    expect(screen.getByText("older note")).toBeTruthy();
-    expect(screen.getByText(longText)).toBeTruthy();
-    expect(screen.getByText(formatNoteDate("2026-08-20"))).toBeTruthy();
-    expect(screen.getByText(formatNoteDate("2026-09-01"))).toBeTruthy();
-
-    // Newest first: the September note's text renders above August's.
-    const leaves = renderedTextLeaves(screen.toJSON());
-    expect(leaves.indexOf(longText)).toBeLessThan(leaves.indexOf("older note"));
-  });
-
-  it("edits in place: her words back in the field, Save commits (audit S1)", () => {
-    useCareNoteStore.setState({
-      entries: [{ id: "n1", date: "2026-09-01", text: "first draft" }],
-    });
-    const screen = render(<SettingsScreen />);
-
-    fireEvent.press(screen.getByTestId("care-journal-edit-n1"));
-    const input = screen.getByTestId("care-journal-edit-input-n1");
-    fireEvent.changeText(input, "second thoughts");
-    fireEvent.press(screen.getByTestId("care-journal-save-n1"));
-
-    expect(useCareNoteStore.getState().entries).toMatchObject([
-      { id: "n1", text: "second thoughts" },
-    ]);
-    // Back to the plain note; edit mode closed.
-    expect(screen.getByText("second thoughts")).toBeTruthy();
-    expect(screen.queryByTestId("care-journal-save-n1")).toBeNull();
-  });
-
-  it("deletes only after the one calm confirm", () => {
-    useCareNoteStore.setState({
-      entries: [
-        { id: "a", date: "2026-08-20", text: "stays" },
-        { id: "b", date: "2026-09-01", text: "goes" },
-      ],
-    });
-    const screen = render(<SettingsScreen />);
-
-    // No confirm copy until she asks.
-    expect(
-      screen.queryByText(strings.settings.careNotes.deleteConfirmTitle),
-    ).toBeNull();
-
-    fireEvent.press(screen.getByTestId("care-journal-delete-b"));
-    expect(
-      screen.getByText(strings.settings.careNotes.deleteConfirmTitle),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(strings.settings.careNotes.deleteConfirmBody),
-    ).toBeTruthy();
-    // The note itself stays visible while she decides (mapping).
-    expect(screen.getByText("goes")).toBeTruthy();
-    // Nothing deleted yet.
-    expect(useCareNoteStore.getState().entries).toHaveLength(2);
-
-    fireEvent.press(screen.getByTestId("care-journal-confirm-delete-b"));
-    expect(useCareNoteStore.getState().entries).toMatchObject([
-      { id: "a", text: "stays" },
-    ]);
-    expect(screen.queryByText("goes")).toBeNull();
-    expect(screen.getByText("stays")).toBeTruthy();
-  });
-
-  it("keep it cancels: the confirm closes and nothing is deleted", () => {
-    useCareNoteStore.setState({
-      entries: [{ id: "a", date: "2026-09-01", text: "precious" }],
-    });
-    const screen = render(<SettingsScreen />);
-
-    fireEvent.press(screen.getByTestId("care-journal-delete-a"));
-    fireEvent.press(screen.getByTestId("care-journal-keep-a"));
-
-    expect(
-      screen.queryByText(strings.settings.careNotes.deleteConfirmTitle),
-    ).toBeNull();
-    expect(screen.getByText("precious")).toBeTruthy();
-    expect(useCareNoteStore.getState().entries).toHaveLength(1);
-  });
-
-  it("legacy notes without ids still render and delete", () => {
-    useCareNoteStore.setState({
-      entries: [{ date: "2026-08-01", text: "from before ids" }],
-    });
-    const screen = render(<SettingsScreen />);
-    expect(screen.getByText("from before ids")).toBeTruthy();
-
-    fireEvent.press(screen.getByTestId("care-journal-delete-legacy-0"));
-    fireEvent.press(screen.getByTestId("care-journal-confirm-delete-legacy-0"));
-    expect(useCareNoteStore.getState().entries).toEqual([]);
-    expect(screen.getByTestId("care-journal-empty")).toBeTruthy();
-  });
-});
-
-describe("SettingsScreen daily invitation", () => {
-  it("shows the three real hours plus 'No invitation', current state selected", () => {
-    const screen = render(<SettingsScreen />);
-    expect(screen.getByText(strings.settings.reminders.title)).toBeTruthy();
-    expect(screen.getByText(strings.notifications.time.morning)).toBeTruthy();
-    expect(screen.getByText(strings.notifications.time.midday)).toBeTruthy();
-    expect(screen.getByText(strings.notifications.time.evening)).toBeTruthy();
-    expect(screen.getByText(strings.settings.reminders.off)).toBeTruthy();
-    // No slot chosen: "No invitation" is the honest selected state.
-    expect(screen.getByTestId("reminder-off")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: true }),
-    );
-    expect(screen.getByTestId("reminder-morning")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: false }),
-    );
-  });
-
-  it("shows the scheduled slot as selected", () => {
-    useReminderStore.setState({ slot: "evening", asked: true });
-    const screen = render(<SettingsScreen />);
-    expect(screen.getByTestId("reminder-evening")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: true }),
-    );
-    expect(screen.getByTestId("reminder-off")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: false }),
-    );
-  });
-
-  it("picking a slot with permission never granted requests it then, in context", async () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("reminder-midday"));
-    await waitFor(() =>
-      expect(useReminderStore.getState().slot).toBe("midday"),
-    );
-    expect(Notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
-    // Scheduled for real through the port's adapter (one per weekday).
-    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(7);
-    // The selected state moves to her pick.
-    expect(screen.getByTestId("reminder-midday")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: true }),
-    );
-    expect(screen.getByTestId("reminder-off")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: false }),
-    );
-  });
-
-  it("changing the slot reschedules at the new hour", async () => {
-    useReminderStore.setState({ slot: "morning", asked: true });
-    jest
-      .mocked(Notifications.getPermissionsAsync)
-      .mockResolvedValue(permissionResponse("granted"));
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("reminder-evening"));
-    await waitFor(() =>
-      expect(useReminderStore.getState().slot).toBe("evening"),
-    );
-    // Already granted: no OS dialog, straight to the reschedule.
-    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
-    // Replace-not-stack: the old schedule is cancelled first.
-    expect(
-      Notifications.cancelAllScheduledNotificationsAsync,
-    ).toHaveBeenCalled();
-    const triggers = jest
-      .mocked(Notifications.scheduleNotificationAsync)
-      .mock.calls.map(([request]) => request.trigger);
-    for (const trigger of triggers) {
-      expect(trigger).toMatchObject({ hour: 18, minute: 30 });
-    }
-  });
-
-  it("after a hard OS denial, the card says where the switch is — and only then", async () => {
-    const Notifications = jest.requireMock("expo-notifications") as {
-      getPermissionsAsync: jest.Mock;
-      requestPermissionsAsync: jest.Mock;
-    };
-    const denied = permissionResponse("denied");
-    Notifications.getPermissionsAsync.mockResolvedValue(denied);
-    Notifications.requestPermissionsAsync.mockResolvedValue(denied);
-
-    const screen = render(<SettingsScreen />);
-    expect(screen.queryByTestId("reminder-denied")).toBeNull();
-
-    fireEvent.press(screen.getByTestId("reminder-morning"));
-    await waitFor(() =>
-      expect(screen.getByText(strings.settings.reminders.denied)).toBeTruthy(),
-    );
-    // Mapping: the line lives in the card whose rows it explains.
-    expect(
-      screen.getByTestId("settings-reminders").findByProps({ testID: "reminder-denied" }),
-    ).toBeTruthy();
-
-    // "No invitation" answers the section; the line has nothing left to say.
-    fireEvent.press(screen.getByTestId("reminder-off"));
-    await waitFor(() => expect(screen.queryByTestId("reminder-denied")).toBeNull());
-  });
-
-  it("an OS denial schedules nothing and 'No invitation' honestly stays selected", async () => {
-    jest
-      .mocked(Notifications.requestPermissionsAsync)
-      .mockResolvedValue(permissionResponse("denied"));
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("reminder-morning"));
-    await waitFor(() =>
-      expect(Notifications.requestPermissionsAsync).toHaveBeenCalled(),
-    );
-    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-    expect(useReminderStore.getState().slot).toBeNull();
-    expect(screen.getByTestId("reminder-off")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: true }),
-    );
-  });
-
-  it("'No invitation' cancels the schedule and clears the slot", async () => {
-    useReminderStore.setState({ slot: "midday", asked: true });
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("reminder-off"));
-    await waitFor(() => expect(useReminderStore.getState().slot).toBeNull());
-    expect(
-      Notifications.cancelAllScheduledNotificationsAsync,
-    ).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("reminder-off")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ selected: true }),
-    );
-  });
-});
-
-describe("SettingsScreen dev flow previewer", () => {
-  it("paywall (expired): seeds a lapsed store trial with nothing to restore, then goes home", () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-paywall-expired"));
-
-    const { trialStartDate, purchase, trialUsed } = useEntitlementStore.getState();
-    expect(trialStartDate).not.toBeNull();
-    expect(purchase).toBeNull();
-    expect(trialUsed).toBe(true);
-    expect(useDevReceiptStore.getState().receipt).toBeNull();
-    // The real gate will render: the seeded state IS trialExpired.
-    expect(
-      entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
-    ).toBe("trialExpired");
-    expect(router.replace).toHaveBeenCalledWith("/");
-  });
-
-  it("paywall (trial active): seeds a store trial in progress, then goes home", () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-paywall-trial-active"));
-
-    const { trialStartDate, purchase, trialUsed } = useEntitlementStore.getState();
-    expect(purchase).toEqual({ plan: "annual", date: todayIso(), trial: true });
-    expect(
-      entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
-    ).toBe("purchased");
-    expect(router.replace).toHaveBeenCalledWith("/");
-  });
-
-  it("reset (fresh): clears trial, purchase AND the dev receipt, then goes home", () => {
-    useEntitlementStore.setState({
-      trialStartDate: "2026-08-01",
-      purchase: { plan: "annual", date: "2026-08-01" },
-    });
-    useDevReceiptStore.setState({ receipt: { plan: "annual", date: "2026-08-01" } });
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-entitlement-fresh"));
-
-    expect(useEntitlementStore.getState().trialStartDate).toBeNull();
-    expect(useEntitlementStore.getState().purchase).toBeNull();
-    expect(useDevReceiptStore.getState().receipt).toBeNull();
-    expect(router.replace).toHaveBeenCalledWith("/");
-  });
-
-  it("preview unlock: seeds a finish summary with a real skill and pushes /unlock", () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-preview-unlock"));
-
-    const state = useSessionStore.getState();
-    expect(state.finish).toMatchObject({
-      completedAnything: true,
-      close: { reason: "completed" },
-      unlockedSkills: [
-        { pattern: "push", tier: 4, movementName: "Full Push-Up" },
-      ],
-    });
-    // /unlock's guard requires exactly this: a finish with a skill.
-    expect(state.finish?.unlockedSkills.length).toBeGreaterThan(0);
-    // No stale session left for the finish path to re-apply: the seeded
-    // player is finished and session-less, so completeSession is a no-op
-    // and the finish draws the figures users would see.
-    expect(state.session).toBeNull();
-    expect(state.player?.phase.kind).toBe("done");
-    expect(router.push).toHaveBeenCalledWith("/unlock");
-  });
-
-  it("the finish previews carry a finished player, so the owner previews the real screen", () => {
-    fireEvent.press(render(<SettingsScreen />).getByTestId("settings-dev-finish-completed"));
-    const { player, session } = useSessionStore.getState();
-    expect(session).toBeNull(); // completeSession on arrival stays a no-op
-    expect(player?.outcomes).toEqual(["completed", "completed"]);
-    expect(player?.blocks.map((b) => b.movementId)).toEqual(["wall-push-up", "knee-plank"]);
-  });
-
-  it("preview finish (complete): seeds a completed close and pushes /finish", () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-finish-completed"));
-
-    expect(useSessionStore.getState().finish).toMatchObject({
-      completedAnything: true,
-      close: { reason: "completed" },
-      unlockedSkills: [],
-    });
-    expect(useSessionStore.getState().finish?.pointsEarned).toBeGreaterThan(0);
-    expect(router.push).toHaveBeenCalledWith("/finish");
-  });
-
-  it("preview finish (ended early): seeds the finished-here close and pushes /finish", () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-finish-ended-early"));
-
-    expect(useSessionStore.getState().finish).toMatchObject({
-      completedAnything: true,
-      close: { reason: "endedEarly" },
-      unlockedSkills: [],
-    });
-    expect(router.push).toHaveBeenCalledWith("/finish");
-  });
-
-  it("preview finish (out of time): seeds the kept-time close with minutes and pushes /finish", () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-finish-out-of-time"));
-
-    expect(useSessionStore.getState().finish).toMatchObject({
-      completedAnything: true,
-      close: { reason: "outOfTime", minutes: 20 },
-      unlockedSkills: [],
-    });
-    expect(router.push).toHaveBeenCalledWith("/finish");
-  });
-
-  it("the crash-reporting test buttons go through the monitoring port", () => {
-    const monitoring = jest.requireActual<typeof import("../../../monitoring/monitoring")>(
-      "../../../monitoring/monitoring",
-    );
-    const port = monitoring.getMonitoring();
-    const jsError = jest.spyOn(port, "testJsError").mockImplementation(() => undefined);
-    const native = jest.spyOn(port, "testNativeCrash").mockImplementation(() => undefined);
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByText(DEV_PREVIEW_LABELS.testJsError));
-    fireEvent.press(screen.getByText(DEV_PREVIEW_LABELS.testNativeCrash));
-    expect(jsError).toHaveBeenCalledTimes(1);
-    expect(native).toHaveBeenCalledTimes(1);
-    jsError.mockRestore();
-    native.mockRestore();
-  });
-
-  it("preview finish (nothing done): seeds the zero-completion close and pushes /finish", () => {
-    const screen = render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId("settings-dev-finish-nothing-done"));
-
-    expect(useSessionStore.getState().finish).toMatchObject({
-      completedAnything: false,
-      close: { reason: "nothingDone" },
-      unlockedSkills: [],
-      pointsEarned: 0,
-    });
-    expect(router.push).toHaveBeenCalledWith("/finish");
   });
 });

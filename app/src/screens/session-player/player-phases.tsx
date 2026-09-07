@@ -9,7 +9,8 @@ import { MovementFigure } from "../../design/primitives/movement-figure";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
-import { motion, spacing } from "../../design/tokens";
+import { useTheme } from "../../design/theme";
+import { hairline, motion, radius, spacing } from "../../design/tokens";
 import type { PlayerBlock } from "../../session/player-machine";
 
 // The player's quiet phases — skip confirm, side switch, rest, feedback — split
@@ -23,19 +24,24 @@ interface SkipConfirmPhaseProps {
   onSkip: () => void;
 }
 
-/** One calm confirm; keeping going is the filled, safe default. */
+/**
+ * One calm confirm as a card at the bottom (ADR-0017): the question, the
+ * honest line, keeping going as the filled, safe default. The phase
+ * behind it is not drawn — the card is the whole decision.
+ */
 export function SkipConfirmPhase({ blockName, onKeepGoing, onSkip }: SkipConfirmPhaseProps) {
+  const colors = useTheme();
   return (
     <>
-      <View style={styles.center}>
-        <AppText variant="title" accessibilityRole="header">
+      <View style={styles.center} />
+      <View
+        style={[styles.confirmCard, { backgroundColor: colors.surface, borderColor: colors.line }]}
+        testID="player-skip-card"
+      >
+        <AppText variant="bodyLarge" accessibilityRole="header">
           {strings.player.skipConfirm.title(blockName)}
         </AppText>
-        <AppText variant="bodySoft" style={styles.subline}>
-          {strings.player.skipConfirm.body}
-        </AppText>
-      </View>
-      <View style={styles.bottom}>
+        <AppText variant="bodySoft">{strings.player.skipConfirm.body}</AppText>
         <PrimaryButton
           testID="player-skip-keep"
           label={strings.player.skipConfirm.keepGoing}
@@ -61,8 +67,8 @@ export function SideSwitchPhase({ block, reduceMotion, onAdvance, onSkip }: Side
           across the switch (every movement has a face — ADR-0013),
           and the phase enters as one quiet breath. */}
       <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance} style={styles.center}>
-        <MovementFigure movementId={block.movementId} testID="player-figure-side" />
-        <AppText variant="title" accessibilityRole="header">
+        <MovementFigure movementId={block.movementId} size="large" testID="player-figure-side" />
+        <AppText variant="display" accessibilityRole="header">
           {strings.player.sides.switchTitle}
         </AppText>
         <AppText variant="bodySoft" style={styles.subline}>
@@ -82,7 +88,6 @@ export function SideSwitchPhase({ block, reduceMotion, onAdvance, onSkip }: Side
 }
 
 interface RestPhaseProps {
-  block: PlayerBlock;
   remainingSeconds: number;
   reduceMotion: boolean;
   onAdvance: () => void;
@@ -90,12 +95,12 @@ interface RestPhaseProps {
 }
 
 export function RestPhase({
-  block,
   remainingSeconds,
   reduceMotion,
   onAdvance,
   onSkip,
 }: RestPhaseProps) {
+  const colors = useTheme();
   return (
     <>
       {/* The calmest screen in the app — a deliberate exhale. It enters
@@ -105,23 +110,28 @@ export function RestPhase({
           per tick: sixty tiny movements a minute is the opposite of
           calm. */}
       <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance} style={styles.center}>
-        <MovementFigure movementId={block.movementId} testID="player-figure-rest" />
         <AppText variant="title" accessibilityRole="header">
           {strings.player.rest}
         </AppText>
         <AppText
-          variant="numeral"
+          variant="count"
+          color={colors.accent}
           testID="player-numeral"
           style={styles.restNumeral}
           accessibilityLabel={`${remainingSeconds} ${strings.player.holdLabel}`}
         >
           {remainingSeconds}
         </AppText>
-        <AppText variant="caption">{strings.player.holdLabel}</AppText>
-        <AppText variant="caption">{strings.player.restNote}</AppText>
+        <AppText variant="bodySoft">{strings.player.restNote}</AppText>
       </FadeIn>
       <View style={styles.bottom}>
-        <PrimaryButton testID="player-end-rest" label={strings.player.restDone} onPress={onAdvance} />
+        {/* Outlined, not filled: the rest never nags her out of it. */}
+        <QuietButton
+          outlined
+          testID="player-end-rest"
+          label={strings.player.restDone}
+          onPress={onAdvance}
+        />
         <QuietButton testID="player-skip" label={strings.player.skipBlock} onPress={onSkip} />
       </View>
     </>
@@ -129,15 +139,17 @@ export function RestPhase({
 }
 
 interface FeedbackPhaseProps {
+  block: PlayerBlock;
   reduceMotion: boolean;
   onOutcome: (outcome: Exclude<BlockOutcome, "skipped">) => void;
 }
 
-export function FeedbackPhase({ reduceMotion, onOutcome }: FeedbackPhaseProps) {
+export function FeedbackPhase({ block, reduceMotion, onOutcome }: FeedbackPhaseProps) {
   return (
     <>
-      <View style={styles.top}>
-        <AppText variant="title" accessibilityRole="header">
+      <View style={styles.feedbackTop}>
+        <MovementFigure movementId={block.movementId} size="large" testID="player-figure-feedback" />
+        <AppText variant="title" accessibilityRole="header" style={styles.feedbackQuestion}>
           {strings.player.feedback.question}
         </AppText>
       </View>
@@ -182,6 +194,15 @@ const styles = StyleSheet.create({
   top: {
     marginTop: spacing.xl,
   },
+  feedbackTop: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  feedbackQuestion: {
+    textAlign: "center",
+  },
   center: {
     flex: 1,
     alignItems: "center",
@@ -197,6 +218,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   restNumeral: {
-    marginVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  confirmCard: {
+    borderWidth: hairline,
+    borderRadius: radius.card,
+    padding: spacing.lg,
+    gap: spacing.sm + spacing.xs,
+    marginBottom: spacing.md,
   },
 });

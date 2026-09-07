@@ -5,6 +5,7 @@ import React from "react";
 import { strings } from "../../../copy/strings";
 import { todayIso } from "../../../lib/dates";
 import { createSession } from "../../../session/create-session";
+import { unblockingAreasFor } from "../../../session/unblocking";
 import { useSessionStore } from "../../../state/session-store";
 import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
@@ -28,6 +29,12 @@ import { DailyPromptScreen } from "../daily-prompt-screen";
 
 jest.mock("../../../session/create-session", () => ({ createSession: jest.fn() }));
 const mockedCreate = jest.mocked(createSession);
+// The engine's "which area unblocks today" answer, asked through the
+// app-side helper; mocked so each test states the answer it renders.
+jest.mock("../../../session/unblocking", () => ({
+  unblockingAreasFor: jest.fn(() => []),
+}));
+const mockedUnblocking = jest.mocked(unblockingAreasFor);
 
 /**
  * An applied session recorded for today, with its engine-written per-block
@@ -279,7 +286,7 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("soreness-all-good"));
 
     expect(onSessionReady).not.toHaveBeenCalled();
-    expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
+    expect(screen.getByText(strings.prompt.noSession.headline(0))).toBeTruthy();
     expect(screen.getByTestId("prompt-adjust-answers")).toBeTruthy();
   });
 
@@ -292,6 +299,7 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("quiet-yes"));
     fireEvent.press(screen.getByTestId("soreness-back"));
     fireEvent.press(screen.getByTestId("soreness-confirm"));
+    fireEvent.press(screen.getByTestId("care-continue"));
 
     // The action names what it does — adjusting answers, not "trying again".
     expect(screen.getByText(strings.preview.changeAnswers)).toBeTruthy();
@@ -396,12 +404,16 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("soreness-back"));
     fireEvent.press(screen.getByTestId("soreness-confirm"));
 
-    // The acknowledgment leads; the plain line and the way out stay.
+    // The acknowledgment leads as its own beat (one headline per screen,
+    // ADR-0017); the recommendation and the way out come after it.
     expect(screen.getByTestId("care-acknowledgment")).toBeTruthy();
     expect(screen.getByText(strings.care.acknowledgment)).toBeTruthy();
-    expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
     expect(screen.getByText(strings.care.notePrompt)).toBeTruthy();
     expect(screen.getByText(strings.care.notePrivacy)).toBeTruthy();
+    expect(screen.queryByTestId("prompt-adjust-answers")).toBeNull();
+
+    fireEvent.press(screen.getByTestId("care-continue"));
+    expect(screen.getByText(strings.prompt.noSession.headline(1))).toBeTruthy();
     expect(screen.getByTestId("prompt-adjust-answers")).toBeTruthy();
   });
 
@@ -414,7 +426,7 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("quiet-yes"));
     fireEvent.press(screen.getByTestId("soreness-all-good"));
 
-    expect(screen.getByText(strings.errors.noSession)).toBeTruthy();
+    expect(screen.getByText(strings.prompt.noSession.headline(0))).toBeTruthy();
     expect(screen.queryByTestId("care-acknowledgment")).toBeNull();
     expect(screen.queryByTestId("care-note")).toBeNull();
   });
@@ -430,6 +442,7 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("soreness-confirm"));
 
     fireEvent.changeText(screen.getByTestId("care-note"), "  long day  ");
+    fireEvent.press(screen.getByTestId("care-continue"));
     fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
 
     // Shape-matched, not deep-equal: the care-note store (owned by the
@@ -450,8 +463,109 @@ describe("DailyPromptScreen", () => {
     fireEvent.press(screen.getByTestId("energy-low"));
     fireEvent.press(screen.getByTestId("quiet-yes"));
     fireEvent.press(screen.getByTestId("soreness-confirm"));
+    fireEvent.press(screen.getByTestId("care-skip"));
     fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
     expect(useCareNoteStore.getState().entries).toHaveLength(1);
+  });
+
+  it("recommends the way out: the engine's unblocking areas as rows, one tap builds the session", () => {
+    // Owner decision 2026-09-07: a dead end recommends what to do. The
+    // engine says which single area, set aside, lets today build.
+    mockedCreate.mockReturnValueOnce({ ok: false, reason: "noSession" });
+    mockedUnblocking.mockReturnValueOnce(["shoulders", "hips"]);
+    const onSessionReady = jest.fn();
+    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-shoulders"));
+    fireEvent.press(screen.getByTestId("soreness-hips"));
+    fireEvent.press(screen.getByTestId("soreness-core"));
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+    fireEvent.press(screen.getByTestId("care-continue"));
+
+    expect(screen.getByText(strings.prompt.noSession.headline(3))).toBeTruthy();
+    expect(screen.getByText(strings.prompt.noSession.instruction)).toBeTruthy();
+    expect(screen.getByText(strings.prompt.noSession.settingsNote)).toBeTruthy();
+    expect(screen.queryByText(strings.prompt.noSession.none)).toBeNull();
+    const shoulders = strings.prompt.soreness.areas.shoulders.toLowerCase();
+    expect(
+      screen.getByText(strings.prompt.noSession.setAside(shoulders)),
+    ).toBeTruthy();
+    expect(screen.getByTestId("no-session-set-aside-hips")).toBeTruthy();
+    // Core did not unblock alone, so it is not offered.
+    expect(screen.queryByTestId("no-session-set-aside-core")).toBeNull();
+    // The helper was asked with the exact prompt the engine refused.
+    expect(mockedUnblocking).toHaveBeenCalledWith(
+      expect.objectContaining({ avoid: ["shoulders", "hips", "core"] }),
+      expect.anything(),
+      expect.anything(),
+      expect.any(Number),
+    );
+
+    mockedCreate.mockReturnValueOnce({
+      ok: true,
+      value: { session: fixtureSession, playerBlocks: fixturePlayerBlocks },
+    });
+    fireEvent.press(screen.getByTestId("no-session-set-aside-shoulders"));
+    // The rebuilt prompt is the same day, minus the one area, today only.
+    expect(mockedCreate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ avoid: ["hips", "core"] }),
+      expect.anything(),
+      expect.anything(),
+      expect.any(Number),
+    );
+    expect(onSessionReady).toHaveBeenCalledTimes(1);
+    expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
+  });
+
+  it("sets aside an Always-work-around area for today without touching Settings", () => {
+    useSettingsStore.setState({ alwaysAvoid: ["shoulders", "back", "hips"] });
+    mockedCreate.mockReturnValueOnce({ ok: false, reason: "noSession" });
+    mockedUnblocking.mockReturnValueOnce(["back"]);
+    const onSessionReady = jest.fn();
+    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+    fireEvent.press(screen.getByTestId("care-continue"));
+    expect(screen.getByText(strings.prompt.noSession.headline(3))).toBeTruthy();
+
+    mockedCreate.mockReturnValueOnce({
+      ok: true,
+      value: { session: fixtureSession, playerBlocks: fixturePlayerBlocks },
+    });
+    fireEvent.press(screen.getByTestId("no-session-set-aside-back"));
+    expect(mockedCreate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ avoid: ["shoulders", "hips"] }),
+      expect.anything(),
+      expect.anything(),
+      expect.any(Number),
+    );
+    expect(onSessionReady).toHaveBeenCalledTimes(1);
+    expect(useSettingsStore.getState().alwaysAvoid).toEqual([
+      "shoulders",
+      "back",
+      "hips",
+    ]);
+  });
+
+  it("says so when no single area unblocks, and still offers the way back", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    mockedUnblocking.mockReturnValue([]);
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+
+    expect(screen.getByText(strings.prompt.noSession.none)).toBeTruthy();
+    expect(screen.queryByTestId("no-session-rows")).toBeNull();
+    expect(screen.getByTestId("prompt-adjust-answers")).toBeTruthy();
   });
 
   it("dev-only timing readout: long-press entry, prompt state survives", () => {

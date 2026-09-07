@@ -9,6 +9,7 @@ import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
+import { useTheme } from "../../design/theme";
 import { motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { REMINDER_SLOTS, type ReminderSlot } from "../../notifications/notifications";
@@ -35,6 +36,7 @@ export function ReminderAskScreen({ onDone }: ReminderAskScreenProps) {
   const chooseSlot = useReminderStore((s) => s.chooseSlot);
 
   const reduceMotion = useReducedMotion();
+  const colors = useTheme();
   const [step, setStep] = useState<"rationale" | "time">("rationale");
   const [busy, setBusy] = useState(false);
 
@@ -106,7 +108,21 @@ export function ReminderAskScreen({ onDone }: ReminderAskScreenProps) {
         rise={motion.riseDistance}
         style={styles.center}
       >
-        <AppText variant="bodyLarge" style={styles.rationale}>
+        {/* The ask (ADR-0017, owner-approved 2026-09-07): a drawn clock,
+            the question as the headline, the one-line promise beneath. */}
+        <View
+          style={[styles.clock, { borderColor: colors.accent }]}
+          importantForAccessibility="no"
+          accessibilityElementsHidden
+          testID="reminder-ask-glyph"
+        >
+          <View style={[styles.hourHand, { backgroundColor: colors.accent }]} />
+          <View style={[styles.minuteHand, { backgroundColor: colors.accent }]} />
+        </View>
+        <AppText variant="display" accessibilityRole="header" style={styles.headline}>
+          {strings.notifications.rationale.headline}
+        </AppText>
+        <AppText variant="bodySoft" style={styles.rationale}>
           {strings.notifications.rationale.line}
         </AppText>
       </FadeIn>
@@ -128,14 +144,40 @@ export function ReminderAskScreen({ onDone }: ReminderAskScreenProps) {
   );
 }
 
+/** The drawn clock: a hairline circle with two hands, in the accent. */
+const CLOCK_SIZE = spacing.xxl + spacing.sm;
+const CLOCK_STROKE = 2;
+
 const styles = StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: "center",
   },
-  rationale: {
-    textAlign: "center",
+  clock: {
+    width: CLOCK_SIZE,
+    height: CLOCK_SIZE,
+    borderRadius: CLOCK_SIZE / 2,
+    borderWidth: CLOCK_STROKE,
+    marginBottom: spacing.lg,
   },
+  hourHand: {
+    position: "absolute",
+    left: CLOCK_SIZE / 2 - CLOCK_STROKE * 1.5,
+    top: CLOCK_SIZE / 5,
+    width: CLOCK_STROKE,
+    height: CLOCK_SIZE / 3,
+  },
+  minuteHand: {
+    position: "absolute",
+    left: CLOCK_SIZE / 2 - CLOCK_STROKE * 1.5,
+    top: CLOCK_SIZE / 2 - CLOCK_STROKE * 1.5,
+    width: CLOCK_SIZE / 4,
+    height: CLOCK_STROKE,
+  },
+  headline: {
+    marginBottom: spacing.md,
+  },
+  rationale: {},
   body: {
     flex: 1,
     justifyContent: "center",

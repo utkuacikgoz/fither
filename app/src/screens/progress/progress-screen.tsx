@@ -1,54 +1,78 @@
 import { ScrollView, StyleSheet, View } from "react-native";
-import { MAX_TIER, PATTERNS } from "@fither/engine";
+import {
+  computeStreak,
+  nextMilestone,
+  PATTERNS,
+  tiersToMilestone,
+  type StreakState,
+} from "@fither/engine";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
-import { Card } from "../../design/primitives/card";
-import { MovementFigure } from "../../design/primitives/movement-figure";
 import { Screen } from "../../design/primitives/screen";
-import { useTheme } from "../../design/theme";
-import { glyph, motion, spacing } from "../../design/tokens";
+import { SectionCaption } from "../../design/primitives/section-caption";
+import { StatTile } from "../../design/primitives/stat-tile";
+import { Tile } from "../../design/primitives/tile";
+import { motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
+import { useTodayIso } from "../../lib/use-today";
 import { loadLibrary } from "../../session/load-library";
 import { skillFigureId, skillLabel } from "../../session/skill-name";
 import { totalPoints, useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
-import { TierTrack } from "./tier-track";
+import { NextSkillTile } from "./next-skill-tile";
+import { PatternRow } from "./pattern-row";
 
-// Her capability, made visible (ADR-0013 gives it the same card language
-// as the hub): the five pattern ladders drawing themselves in, the named
-// skills she has unlocked with the figure of each movement beside it, and
-// the points ledger's total set on the numeral scale.
+// Her capability, made visible (owner round 6, ADR-0017): one hero of two
+// numerals — the day streak in the green, the points total in ink — then
+// the skill she is climbing toward, then the five patterns as a grouped
+// list, each with the figure of the movement she is on now. Section
+// captions sit OUTSIDE the tile they name (ledger, round 5).
 //
-// Everything here is a read of what the stores/engine already carry —
-// tiers from the profile, names and ids from the movement library (via
-// the engine's milestoneMovement, the same resolution the unlock flow's
-// ApplyResult uses), points summed by the ledger module's own
-// totalPoints. No rule, threshold or derived value is computed on this
-// screen.
-//
-// Skill rows resolve their names through session/skill-name.ts (the
-// engine's milestoneMovement) — the same lookup the home hub uses, so
-// one skill is never named two ways. Ladder rows use
-// strings.profile.patterns.names.
+// Everything here is a read of what the stores and the engine already
+// carry: the streak from computeStreak over the history the engine
+// wrote, tiers from the profile, the next skill from nextMilestone and
+// tiersToMilestone, names and figures from the library through
+// session/skill-name.ts, points summed by the ledger module's own
+// totalPoints. No rule, threshold or derived value is computed here.
 
-/** Card entrance delay, so a card's contents animate after it lands. */
-function cardDelay(order: number): number {
+/** Tile entrance order → the delay its contents wait before drawing. */
+function tileDelay(order: number): number {
   return order * motion.staggerMs;
 }
 
+const ORDER = { streak: 0, points: 1, skills: 2, patterns: 3 } as const;
+
+/**
+ * The soft lines under the streak numeral, each an existing string: the
+ * run and her best while a run is alive (plus the spent rest day when
+ * it is), or how one begins when none is.
+ */
+function streakLines(streak: StreakState): string[] {
+  if (streak.current === 0) return [strings.streak.none];
+  const lines = [strings.streak.label(streak.current), strings.streak.best(streak.best)];
+  if (streak.graceUsed) lines.push(strings.streak.restDayUsed);
+  return lines;
+}
+
 export function ProgressScreen() {
-  const colors = useTheme();
   const reduceMotion = useReducedMotion();
+  // Reactive across midnight, like the hub: a tab left open overnight
+  // re-reads the date on the next foreground or focus.
+  const today = useTodayIso();
   const profile = useProfileStore((s) => s.profile);
+  const historyEntries = useProfileStore((s) => s.history.entries);
   const events = useLedgerStore((s) => s.events);
   const library = loadLibrary();
 
+  const streak = computeStreak(historyEntries, today);
+  const points = totalPoints(events);
   // Absence tolerated per the engine contract (types.ts): treated as an
   // empty list. Skills are never lost — this list only ever grows.
   const milestones = profile.unlockedMilestones ?? [];
-  const points = totalPoints(events);
-
+  const upcoming = nextMilestone(profile);
+  const tiersAway = upcoming ? tiersToMilestone(profile, upcoming) : 0;
+  const streakText = streakLines(streak);
 
   return (
     <Screen>
@@ -58,108 +82,70 @@ export function ProgressScreen() {
         // every hub surface; only the session player stays clean.
         showsVerticalScrollIndicator
       >
-        <AppText
-          variant="title"
-          style={styles.title}
-          accessibilityRole="header"
-        >
+        <AppText variant="title" style={styles.title} accessibilityRole="header">
           {strings.profile.title}
         </AppText>
 
-        <Card order={0} reduceMotion={reduceMotion} testID="progress-patterns">
-          <AppText variant="caption" style={styles.cardHeading}>
-            {strings.profile.patterns.title}
-          </AppText>
-          {PATTERNS.map((pattern, index) => {
-            const state = profile.patterns[pattern];
-            return (
-              <View
-                key={pattern}
-                // The last row sits flush with the card's own padding —
-                // a trailing margin reads as a lopsided card.
-                style={
-                  index === PATTERNS.length - 1 ? undefined : styles.patternRow
-                }
-                testID={`pattern-${pattern}`}
-              >
-                <View style={styles.patternLine}>
-                  <AppText variant="body" style={styles.patternName}>
-                    {strings.profile.patterns.names[pattern]}
-                  </AppText>
-                  <AppText variant="caption" testID={`pattern-${pattern}-tier`}>
-                    {strings.profile.tier(state.tier, MAX_TIER)}
-                  </AppText>
-                </View>
-                <TierTrack
-                  pattern={pattern}
-                  tier={state.tier}
-                  reduceMotion={reduceMotion}
-                  baseDelayMs={cardDelay(0)}
-                />
-              </View>
-            );
-          })}
-        </Card>
-
-        <Card order={1} reduceMotion={reduceMotion} testID="progress-skills">
-          <AppText variant="caption" style={styles.cardHeading}>
-            {strings.profile.skills.title}
-          </AppText>
-          {milestones.length === 0 ? (
-            <AppText variant="bodySoft" testID="skills-empty">
-              {strings.profile.skills.empty}
-            </AppText>
-          ) : (
-            milestones.map((m, index) => (
-              <View
-                key={`${m.pattern}-${m.tier}`}
-                style={[
-                  styles.skillRow,
-                  index === milestones.length - 1 && styles.skillRowLast,
-                ]}
-                testID={`skill-${m.pattern}-${m.tier}`}
-              >
-                {/* The movement she earned, drawn — the same figure she
-                    meets in the session (ADR-0013). */}
-                <MovementFigure movementId={skillFigureId(library, m.pattern, m.tier)} />
-                <AppText variant="body" style={styles.skillName}>
-                  {skillLabel(library, m.pattern, m.tier)}
-                </AppText>
-                {/* Gold marks the earned moment (design system: skill
-                    unlocks only), and sits on the row it marks
-                    (mapping). Decorative — the name carries the row. */}
-                <AppText
-                  variant="body"
-                  color={colors.accent}
-                  importantForAccessibility="no"
-                  accessibilityElementsHidden
-                >
-                  {glyph.check}
-                </AppText>
-              </View>
-            ))
-          )}
-        </Card>
-
-        {/* Points are a record of work done, never a balance
-            (gamification.md) — so they close the screen rather than open
-            it, and the card stays a plain surface: the sage wash belongs
-            to the day's action on the hub, not to a score. The numeral
-            is the finish screen's own treatment, so one number is set one
-            way everywhere. */}
-        <Card order={2} reduceMotion={reduceMotion} testID="progress-points">
-          <View
-            style={styles.points}
-            accessible
+        <View style={styles.stats}>
+          <StatTile
+            value={String(streak.current)}
+            lines={streakText}
+            tone="accent"
+            order={ORDER.streak}
+            reduceMotion={reduceMotion}
+            accessibilityLabel={[strings.streak.title, ...streakText].join(". ")}
+            testID="progress-streak"
+          />
+          {/* Points are a record of work done, never a balance
+              (gamification.md): the bare unit beneath the numeral, the
+              full sentence as the spoken reading. */}
+          <StatTile
+            value={String(points)}
+            lines={[strings.finish.pointsUnit(points)]}
+            order={ORDER.points}
+            reduceMotion={reduceMotion}
             accessibilityLabel={strings.profile.points.total(points)}
-            testID="progress-points-total"
+            testID="progress-points"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <SectionCaption label={strings.profile.skills.nextTitle} />
+          <NextSkillTile
+            library={library}
+            upcoming={upcoming}
+            tiersAway={tiersAway}
+            milestones={milestones}
+            order={ORDER.skills}
+            reduceMotion={reduceMotion}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <SectionCaption label={strings.profile.patterns.title} />
+          <Tile
+            inset="list"
+            order={ORDER.patterns}
+            reduceMotion={reduceMotion}
+            testID="progress-patterns"
           >
-            <AppText variant="numeral">{String(points)}</AppText>
-            <AppText variant="caption">
-              {strings.finish.pointsUnit(points)}
-            </AppText>
-          </View>
-        </Card>
+            {PATTERNS.map((pattern, index) => {
+              const tier = profile.patterns[pattern].tier;
+              return (
+                <PatternRow
+                  key={pattern}
+                  pattern={pattern}
+                  tier={tier}
+                  movementId={skillFigureId(library, pattern, tier)}
+                  movementName={skillLabel(library, pattern, tier)}
+                  first={index === 0}
+                  reduceMotion={reduceMotion}
+                  baseDelayMs={tileDelay(ORDER.patterns)}
+                />
+              );
+            })}
+          </Tile>
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -173,38 +159,14 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   title: {
-    marginBottom: spacing.lg,
-  },
-  cardHeading: {
-    marginBottom: spacing.md,
-  },
-  patternRow: {
+    marginTop: spacing.sm + spacing.xs,
     marginBottom: spacing.md + spacing.xs,
   },
-  patternLine: {
+  stats: {
     flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
+    gap: spacing.sm + spacing.xs,
   },
-  patternName: {
-    flexShrink: 1,
-    marginRight: spacing.md,
-  },
-  skillRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  skillRowLast: {
-    marginBottom: 0,
-  },
-  skillName: {
-    flex: 1,
-  },
-  points: {
-    alignItems: "center",
-    gap: spacing.xs,
+  section: {
+    marginTop: spacing.xl,
   },
 });

@@ -92,7 +92,8 @@ export const typeScale = {
   bodyLarge: 20,
   title: 30,
   display: 44,
-  numeral: 64, // timers, counts, points
+  numeral: 64, // points, rest counts
+  count: 96, // the live rep count / hold timer in the work phase (ADR-0017)
 } as const;
 
 /** Letter-spacing per role: tight at display sizes, open on eyebrows. */

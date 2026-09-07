@@ -1,14 +1,13 @@
 import { forwardRef } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { BrandMark } from "../../design/primitives/brand-mark";
+import { MovementFigure } from "../../design/primitives/movement-figure";
 import { WORDMARK } from "../../design/primitives/wordmark";
 import {
-  darkColors,
-  hairline,
-  minTouchTarget,
+  lightColors,
   onUnlock,
   radius,
   spacing,
@@ -24,37 +23,41 @@ export { WORDMARK };
 
 interface SkillShareCardProps {
   skillName: string;
-  onShare: () => void;
+  /** The movement drawn on the card; "" draws nothing (library absent). */
+  movementId: string;
   testID?: string;
 }
 
 /**
- * The shareable skill card, rendered in-app on the unlock moment. It is
- * deliberately theme-fixed (light tokens): the card is the artifact she
- * shares, and it looks the same wherever it lands. Gold appears as the
- * accent rule — text stays ink/inkSoft so contrast holds AA on surface.
- * The ref is the capturable artifact (share-skill.ts): the body only —
- * the share row beneath it is a control, not part of what she sends.
- * The drawn mark sits with the wordmark, tinted to the light accent
- * explicitly because this card ignores the theme on purpose.
+ * The shareable skill card (ADR-0017, owner-approved 2026-09-07): a white
+ * card on the black unlock, the green as a rule, the movement drawn in
+ * black above its name. Deliberately theme-fixed: the card is the
+ * artifact she shares, and it looks the same wherever it lands. The ref
+ * is the capturable artifact (share-skill.ts); the share action lives on
+ * the screen beneath it, never on the image.
  */
 export const SkillShareCard = forwardRef<View, SkillShareCardProps>(
-  function SkillShareCard({ skillName, onShare, testID }, ref) {
-  return (
-    <View style={styles.card} testID={testID}>
+  function SkillShareCard({ skillName, movementId, testID }, ref) {
+    return (
       <View
         ref={ref}
         collapsable={false}
-        style={[styles.body, { backgroundColor: unlockBg }]}
-        testID={testID ? `${testID}-artifact` : undefined}
+        style={[styles.body, { backgroundColor: onUnlock }]}
+        testID={testID}
       >
         <View style={styles.rule} />
-        <AppText variant="title" color={onUnlock} style={styles.centered}>
+        <MovementFigure
+          movementId={movementId}
+          size="large"
+          tint={unlockBg}
+          {...(testID ? { testID: `${testID}-figure` } : {})}
+        />
+        <AppText variant="title" color={unlockBg} style={styles.centered}>
           {skillName}
         </AppText>
         <AppText
           variant="bodySoft"
-          color={darkColors.inkSoft}
+          color={lightColors.inkSoft}
           style={styles.centered}
         >
           {strings.share.card.line}
@@ -63,44 +66,26 @@ export const SkillShareCard = forwardRef<View, SkillShareCardProps>(
           <BrandMark size="small" tint={unlockAccent} />
           <AppText
             variant="caption"
-            color={darkColors.inkSoft}
+            color={lightColors.inkSoft}
             style={styles.wordmark}
           >
             {WORDMARK}
           </AppText>
         </View>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        testID={testID ? `${testID}-share` : undefined}
-        onPress={onShare}
-        style={({ pressed }) => [styles.shareRow, { opacity: pressed ? 0.6 : 1 }]}
-      >
-        <AppText variant="body" color={unlockAccent}>
-          {strings.share.action}
-        </AppText>
-      </Pressable>
-    </View>
-  );
+    );
   },
 );
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: unlockBg,
-    borderRadius: radius.card,
-    alignSelf: "stretch",
-  },
   body: {
+    alignSelf: "stretch",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.xl,
     gap: spacing.sm,
     // The captured image IS the card she saw: all four corners rounded,
-    // clipped, on the card's own surface — not a "tab" with square
-    // bottom corners (reviewer should-fix). The share row beneath sits
-    // outside the capture and keeps the outer card's rounding.
+    // clipped, on the card's own surface.
     borderRadius: radius.card,
     overflow: "hidden",
   },
@@ -114,18 +99,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   brand: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.xs,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   wordmark: {
     letterSpacing: trackingWide,
-  },
-  shareRow: {
-    minHeight: minTouchTarget,
-    alignItems: "center",
-    justifyContent: "center",
-    borderTopWidth: hairline,
-    borderTopColor: darkColors.line,
   },
 });

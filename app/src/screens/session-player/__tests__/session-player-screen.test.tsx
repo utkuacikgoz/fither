@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, within } from "@testing-library/react-native";
 import React from "react";
 import { AccessibilityInfo } from "react-native";
 
@@ -122,7 +122,7 @@ describe("SessionPlayerScreen", () => {
 
   it("shows the block intro: movement name and plan, one call to action", () => {
     const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
-    expect(screen.getByText("Wall Push-Up")).toBeTruthy();
+    expect(screen.getAllByText("Wall Push-Up")[0]).toBeTruthy();
     expect(screen.getByText(strings.player.blockPlan(2, 8, false))).toBeTruthy();
     expect(screen.getByText("Push through your palms.")).toBeTruthy();
     expect(screen.getByText("Keep your body in one line.")).toBeTruthy();
@@ -139,14 +139,20 @@ describe("SessionPlayerScreen", () => {
     expect(screen.getByTestId("player-set-done")).toBeTruthy();
   });
 
-  it("keeps the movement's face through the rest — the exhale is never a blank", () => {
+  it("the rest is the calmest screen: no figure, the count in green, the name kept in the caption", () => {
+    // Owner-approved 2026-09-06 (ADR-0017): the rest carries only the
+    // word, the count and the exhale line; the movement stays named in
+    // the caption row so the exhale is never a blank between screens.
     const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
     fireEvent.press(screen.getByTestId("player-begin"));
     fireEvent.press(screen.getByTestId("player-set-done"));
     expect(screen.getByText(strings.player.rest)).toBeTruthy();
-    // Decorative, like every figure: the name and count carry the facts.
+    expect(screen.getByText(strings.player.restNote)).toBeTruthy();
     expect(
-      screen.getByTestId("player-figure-rest", { includeHiddenElements: true }),
+      screen.queryByTestId("player-figure-rest", { includeHiddenElements: true }),
+    ).toBeNull();
+    expect(
+      within(screen.getByTestId("player-caption-row")).getByText("Wall Push-Up"),
     ).toBeTruthy();
   });
 
@@ -279,7 +285,7 @@ describe("SessionPlayerScreen", () => {
       fireEvent.press(screen.getByTestId("feedback-hard"));
       expect(useSessionStore.getState().player?.outcomes).toEqual(["struggled"]);
       // Next block intro (the hold block).
-      expect(screen.getByText("Plank")).toBeTruthy();
+      expect(screen.getAllByText("Plank")[0]).toBeTruthy();
     });
   });
 
@@ -304,7 +310,7 @@ describe("SessionPlayerScreen", () => {
       skipCurrentBlockFromIntro(screen);
 
       // Second block intro: the movement gets its 8 seconds too.
-      expect(screen.getByText("Plank")).toBeTruthy();
+      expect(screen.getAllByText("Plank")[0]).toBeTruthy();
       expect(screen.queryByTestId("player-skip")).toBeNull();
       revealIntroSkip();
       expect(screen.getByTestId("player-skip")).toBeTruthy();
@@ -332,7 +338,7 @@ describe("SessionPlayerScreen", () => {
       fireEvent.press(screen.getByTestId("player-skip-confirm"));
 
       expect(useSessionStore.getState().player?.outcomes).toEqual(["skipped"]);
-      expect(screen.getByText("Plank")).toBeTruthy();
+      expect(screen.getAllByText("Plank")[0]).toBeTruthy();
       // No trace of the skip on the next intro.
       expect(
         screen.queryByText(strings.player.skipConfirm.title("Wall Push-Up")),
@@ -364,7 +370,7 @@ describe("SessionPlayerScreen", () => {
       ).toBeTruthy();
       fireEvent.press(screen.getByTestId("player-skip-confirm"));
       expect(useSessionStore.getState().player?.outcomes).toEqual(["skipped"]);
-      expect(screen.getByText("Plank")).toBeTruthy();
+      expect(screen.getAllByText("Plank")[0]).toBeTruthy();
     });
 
     it("announces nothing while the confirm is open, and never re-announces on Keep going", () => {
