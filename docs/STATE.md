@@ -277,6 +277,11 @@ ones.
    audio she did not ask for, next to a sleeping child, is the wrong
    first surprise.
 
+7. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
+   Not before launch. Order: schema and RLS, auth adapter and account
+   deletion, append-only sync behind the ports, feedback onto the same
+   project, owner dashboard. The engine never moves server-side.
+
 ## Deferred, recorded
 
 - **DECIDE (owner): does "Hard today" count as done?** The finish draws
