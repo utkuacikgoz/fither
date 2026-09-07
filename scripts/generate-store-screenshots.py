@@ -30,7 +30,10 @@ SHOTS = [
     ("player-work", "Quiet enough for nap time."),
     ("unlock", "Your first full push-up. It counts."),
 ]
-SIZES = {"6.9": (1290, 2796), "6.5": (1284, 2778)}
+# App Store Connect accepts these exactly. The 6.9 inch slot takes
+# 1290x2796; the 6.5 inch slot takes 1284x2778 or 1242x2688 and rejects
+# anything else, so both of its sizes are produced.
+SIZES = {"6.9": (1290, 2796), "6.5": (1284, 2778), "6.5-alt": (1242, 2688)}
 SCALE = 3.3  # 390 css px * 3.3 = 1287 px wide phone render
 
 
