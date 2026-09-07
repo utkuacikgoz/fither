@@ -41,7 +41,7 @@ async function seedHer() {
     events: [{ type: "session", points: 20, date: "2026-08-01" }],
   });
   await useEntitlementStore.getState().purchasePlan("annual");
-  useEntitlementStore.getState().markSessionCompleted("2026-08-01");
+  useEntitlementStore.getState().recordQualifyingSession("her:1", "2026-08-01");
   useReminderStore.setState({ slot: "morning", asked: true });
   await flushPersistence();
 }

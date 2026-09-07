@@ -26,7 +26,8 @@ function flatStyle(node: { props: Record<string, unknown> }): Record<string, unk
 }
 
 describe("account section", () => {
-  it("is three rows under the Account caption: feedback opens its page, sign out plain, erase in the danger colour", () => {
+  it("for a guest: feedback opens its page, Sign in with Apple opens the pushed sign-in route, erase in the danger colour — and no sign-out", () => {
+    useIdentityStore.setState({ identity: { kind: "guest", date: "2026-09-01" } });
     const view = renderSection();
     expect(view.getByText(copy.title)).toBeTruthy();
     // Dev builds always carry the feedback row (in-memory adapter).
@@ -34,10 +35,40 @@ describe("account section", () => {
     expect(view.getByTestId("settings-feedback-chevron", { includeHiddenElements: true })).toBeTruthy();
     fireEvent.press(view.getByTestId("settings-feedback"));
     expect(router.push).toHaveBeenCalledWith("/settings/feedback");
-    expect(view.getByTestId("settings-sign-out")).toBeTruthy();
+
+    // The door in: a row that navigates, so it wears a chevron.
+    expect(view.getByText(copy.signIn)).toBeTruthy();
+    expect(view.getByTestId("settings-sign-in-chevron", { includeHiddenElements: true })).toBeTruthy();
+    expect(flatStyle(view.getByText(copy.signIn)).color).toBe(darkColors.ink);
+    fireEvent.press(view.getByTestId("settings-sign-in"));
+    expect(router.push).toHaveBeenCalledWith("/sign-in");
+
+    // A guest has nothing to sign out of.
+    expect(view.queryByTestId("settings-sign-out")).toBeNull();
+    expect(view.queryByText(copy.signOut)).toBeNull();
+    // No lead line: the group has no slot for one (signInLead unused).
+    expect(view.queryByText(copy.signInLead)).toBeNull();
+
     expect(flatStyle(view.getByText(copy.erase)).color).toBe(darkColors.danger);
+    expect(view.queryByTestId("settings-erase-chevron", { includeHiddenElements: true })).toBeNull();
+  });
+
+  it("with no identity yet (a fresh guest still landing) the door in is offered, never sign-out", () => {
+    // resetSettingsStores leaves identity null.
+    const view = renderSection();
+    expect(view.getByTestId("settings-sign-in")).toBeTruthy();
+    expect(view.queryByTestId("settings-sign-out")).toBeNull();
+  });
+
+  it("signed in with Apple: sign out plain, no sign-in row, erase in the danger colour", () => {
+    useIdentityStore.setState({ identity: { kind: "apple", date: "2026-09-01" } });
+    const view = renderSection();
+    expect(view.getByTestId("settings-sign-out")).toBeTruthy();
     expect(flatStyle(view.getByText(copy.signOut)).color).toBe(darkColors.ink);
-    // Neither row navigates: no chevrons.
+    expect(view.queryByTestId("settings-sign-in")).toBeNull();
+    expect(view.queryByText(copy.signIn)).toBeNull();
+    expect(flatStyle(view.getByText(copy.erase)).color).toBe(darkColors.danger);
+    // Neither action row navigates: no chevrons.
     expect(view.queryByTestId("settings-sign-out-chevron", { includeHiddenElements: true })).toBeNull();
     expect(view.queryByTestId("settings-erase-chevron", { includeHiddenElements: true })).toBeNull();
   });
@@ -67,11 +98,11 @@ describe("account section", () => {
     expect(flatStyle(view.getByText(copy.eraseAction)).color).toBe(darkColors.danger);
     expect(view.getByTestId("settings-erase-keep")).toBeTruthy();
     // The rows are out of the way while the question is open.
-    expect(view.queryByTestId("settings-sign-out")).toBeNull();
+    expect(view.queryByTestId("settings-sign-in")).toBeNull();
     expect(view.queryByTestId("settings-erase")).toBeNull();
     fireEvent.press(view.getByTestId("settings-erase-keep"));
     expect(view.queryByTestId("settings-erase-confirm")).toBeNull();
-    expect(view.getByTestId("settings-sign-out")).toBeTruthy();
+    expect(view.getByTestId("settings-sign-in")).toBeTruthy();
     expect(useIdentityStore.getState().identity).not.toBeNull();
     expect(router.replace).not.toHaveBeenCalled();
   });

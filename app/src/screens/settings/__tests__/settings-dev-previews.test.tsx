@@ -5,7 +5,9 @@ import { router } from "expo-router";
 import { todayIso } from "../../../lib/dates";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
 import { entitlementStatus } from "../../../monetization/entitlement";
+import { experimentAssignment, freeSessionsAllowance } from "../../../monetization/experiment";
 import { useEntitlementStore } from "../../../state/entitlement-store";
+import { useExperimentStore } from "../../../state/experiment-store";
 import { useSessionStore } from "../../../state/session-store";
 import { DEV_PREVIEW_LABELS, SettingsScreen } from "../settings-screen";
 import { resetSettingsStores } from "./settings-test-setup";
@@ -16,7 +18,27 @@ import { resetSettingsStores } from "./settings-test-setup";
 
 beforeEach(async () => {
   await resetSettingsStores();
+  useExperimentStore.setState({
+    seed: null,
+    assignments: {},
+    forceVariant: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
 });
+
+/** The seeded entitlement through the policy, under her current allowance. */
+function seededStatus() {
+  const { trialStartDate, purchase, trialUsed, qualifyingSessions } =
+    useEntitlementStore.getState();
+  return entitlementStatus({
+    firstCompletedDate: trialStartDate,
+    purchase,
+    trialUsed,
+    qualifyingSessions,
+    freeSessions: freeSessionsAllowance(),
+  });
+}
 
 it("paywall (expired): seeds a lapsed store trial with nothing to restore, then goes home", () => {
   const screen = render(<SettingsScreen />);
@@ -26,20 +48,16 @@ it("paywall (expired): seeds a lapsed store trial with nothing to restore, then 
   expect(purchase).toBeNull();
   expect(trialUsed).toBe(true);
   expect(useDevReceiptStore.getState().receipt).toBeNull();
-  expect(
-    entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
-  ).toBe("trialExpired");
+  expect(seededStatus()).toBe("trialExpired");
   expect(router.replace).toHaveBeenCalledWith("/");
 });
 
 it("paywall (trial active): seeds a store trial in progress, then goes home", () => {
   const screen = render(<SettingsScreen />);
   fireEvent.press(screen.getByTestId("settings-dev-paywall-trial-active"));
-  const { trialStartDate, purchase, trialUsed } = useEntitlementStore.getState();
+  const { purchase } = useEntitlementStore.getState();
   expect(purchase).toEqual({ plan: "annual", date: todayIso(), trial: true });
-  expect(
-    entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
-  ).toBe("purchased");
+  expect(seededStatus()).toBe("purchased");
   expect(router.replace).toHaveBeenCalledWith("/");
 });
 
@@ -50,10 +68,34 @@ it("reset (fresh): clears trial, purchase AND the dev receipt, then goes home", 
   });
   useDevReceiptStore.setState({ receipt: { plan: "annual", date: "2026-08-01" } });
   const screen = render(<SettingsScreen />);
+  useExperimentStore.getState().setForceVariantForDev("three");
   fireEvent.press(screen.getByTestId("settings-dev-entitlement-fresh"));
   expect(useEntitlementStore.getState().trialStartDate).toBeNull();
   expect(useEntitlementStore.getState().purchase).toBeNull();
+  expect(useEntitlementStore.getState().qualifyingSessions).toBe(0);
   expect(useDevReceiptStore.getState().receipt).toBeNull();
+  // The experiment's dev override is cleared with it.
+  expect(useExperimentStore.getState().forceVariant).toBeNull();
+  expect(router.replace).toHaveBeenCalledWith("/");
+});
+
+it.each([
+  ["settings-dev-free-sessions-control", "control", "gated"],
+  ["settings-dev-free-sessions-three", "three", "beforeTrial"],
+])("%s: forces the %s variant over one qualifying session, then goes home (%s)", (testID, variant, status) => {
+  const screen = render(<SettingsScreen />);
+  fireEvent.press(screen.getByTestId(testID));
+  expect(experimentAssignment()).toBe(variant);
+  const state = useEntitlementStore.getState();
+  expect(state.qualifyingSessions).toBe(1);
+  expect(state.trialStartDate).not.toBeNull();
+  expect(state.purchase).toBeNull();
+  expect(state.trialUsed).toBe(false);
+  expect(useDevReceiptStore.getState().receipt).toBeNull();
+  expect(seededStatus()).toBe(status);
+  // The override never touches the production record.
+  expect(useExperimentStore.getState().assignments).toEqual({});
+  expect(useExperimentStore.getState().seed).toBeNull();
   expect(router.replace).toHaveBeenCalledWith("/");
 });
 

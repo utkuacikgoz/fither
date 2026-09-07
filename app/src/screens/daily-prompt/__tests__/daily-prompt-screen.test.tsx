@@ -659,6 +659,146 @@ describe("DailyPromptScreen", () => {
     }
   });
 
+  describe("restrictions once — the first session's remember toggle (owner brief 2026-09-07)", () => {
+    // First session: nothing remembered, nothing trained. The beforeEach
+    // above already leaves alwaysAvoid empty and history empty.
+    const reachSoreness = (screen: ReturnType<typeof render>) => {
+      fireEvent.press(screen.getByTestId("time-10"));
+      fireEvent.press(screen.getByTestId("energy-okay"));
+      fireEvent.press(screen.getByTestId("quiet-no"));
+    };
+
+    it("offers the toggle only once an area is picked, OFF by default", () => {
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      reachSoreness(screen);
+      expect(screen.queryByTestId("soreness-remember")).toBeNull();
+
+      fireEvent.press(screen.getByTestId("soreness-knees"));
+      const toggle = screen.getByTestId("soreness-remember");
+      expect(toggle).toBeTruthy();
+      expect(screen.getByText(strings.prompt.soreness.remember)).toBeTruthy();
+      expect(toggle.props.accessibilityState).toEqual({ selected: false });
+      expect(
+        screen.queryByTestId("soreness-remember-check", { includeHiddenElements: true }),
+      ).toBeNull();
+
+      // Deselecting the last pick takes the offer away with it.
+      fireEvent.press(screen.getByTestId("soreness-knees"));
+      expect(screen.queryByTestId("soreness-remember")).toBeNull();
+    });
+
+    it("toggle ON persists the picks as the permanent list before the session is built", () => {
+      const onSessionReady = jest.fn();
+      const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+      reachSoreness(screen);
+      fireEvent.press(screen.getByTestId("soreness-knees"));
+      fireEvent.press(screen.getByTestId("soreness-back"));
+      fireEvent.press(screen.getByTestId("soreness-remember"));
+      expect(
+        screen.getByTestId("soreness-remember").props.accessibilityState,
+      ).toEqual({ selected: true });
+      expect(
+        screen.getByTestId("soreness-remember-check", { includeHiddenElements: true }),
+      ).toBeTruthy();
+
+      // The list lands before generation runs: what the engine saw is
+      // what Settings now holds.
+      mockedCreate.mockImplementationOnce((prompt, profile, history, salt) => {
+        expect(useSettingsStore.getState().alwaysAvoid).toEqual(["knees", "back"]);
+        void prompt; void profile; void history; void salt;
+        return { ok: true, value: { session: fixtureSession, playerBlocks: fixturePlayerBlocks } };
+      });
+      fireEvent.press(screen.getByTestId("soreness-confirm"));
+
+      expect(onSessionReady).toHaveBeenCalledTimes(1);
+      expect(useSettingsStore.getState().alwaysAvoid).toEqual(["knees", "back"]);
+      expect(mockedCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ avoid: ["back", "knees"] }),
+        expect.anything(),
+        expect.anything(),
+        expect.any(Number),
+      );
+    });
+
+    it("toggle OFF persists nothing — today's picks stay today's", () => {
+      const onSessionReady = jest.fn();
+      const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+      reachSoreness(screen);
+      fireEvent.press(screen.getByTestId("soreness-knees"));
+      expect(screen.getByTestId("soreness-remember")).toBeTruthy();
+      fireEvent.press(screen.getByTestId("soreness-confirm"));
+
+      expect(onSessionReady).toHaveBeenCalledTimes(1);
+      expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
+      expect(mockedCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ avoid: ["knees"] }),
+        expect.anything(),
+        expect.anything(),
+        expect.any(Number),
+      );
+    });
+
+    it("toggling twice is OFF again and persists nothing", () => {
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      reachSoreness(screen);
+      fireEvent.press(screen.getByTestId("soreness-wrists"));
+      fireEvent.press(screen.getByTestId("soreness-remember"));
+      fireEvent.press(screen.getByTestId("soreness-remember"));
+      fireEvent.press(screen.getByTestId("soreness-confirm"));
+      expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
+    });
+
+    it("builds the identical session either way — the merge logic is untouched", () => {
+      const walk = (remember: boolean) => {
+        const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+        reachSoreness(screen);
+        fireEvent.press(screen.getByTestId("soreness-shoulders"));
+        fireEvent.press(screen.getByTestId("soreness-hips"));
+        if (remember) fireEvent.press(screen.getByTestId("soreness-remember"));
+        fireEvent.press(screen.getByTestId("soreness-confirm"));
+        const [prompt] = mockedCreate.mock.calls[mockedCreate.mock.calls.length - 1] ?? [];
+        screen.unmount();
+        return prompt;
+      };
+      const off = walk(false);
+      // Reset to a first-session state for the second walk.
+      useSettingsStore.setState({ alwaysAvoid: [] });
+      useSessionStore.getState().resetSession();
+      const on = walk(true);
+      expect(on).toEqual(off);
+      expect(on).toMatchObject({ avoid: ["shoulders", "hips"] });
+      expect(useSettingsStore.getState().alwaysAvoid).toEqual(["shoulders", "hips"]);
+    });
+
+    it("is absent on a non-first session: a permanent list already exists", () => {
+      useSettingsStore.setState({ alwaysAvoid: ["wrists"] });
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      reachSoreness(screen);
+      fireEvent.press(screen.getByTestId("soreness-knees"));
+      expect(screen.queryByTestId("soreness-remember")).toBeNull();
+      expect(screen.queryByText(strings.prompt.soreness.remember)).toBeNull();
+    });
+
+    it("is absent on a non-first session: she has trained before", () => {
+      useProfileStore.setState({
+        history: { entries: [{ date: "2026-08-01", minutes: 10, blocks: [] }] },
+      });
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      reachSoreness(screen);
+      fireEvent.press(screen.getByTestId("soreness-knees"));
+      expect(screen.queryByTestId("soreness-remember")).toBeNull();
+      fireEvent.press(screen.getByTestId("soreness-confirm"));
+      expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
+    });
+
+    it("'All good' on a first session remembers nothing — there is nothing to remember", () => {
+      const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+      reachSoreness(screen);
+      fireEvent.press(screen.getByTestId("soreness-all-good"));
+      expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
+    });
+  });
+
   it("shows the onboarding handoff atop the first question only", () => {
     const screen = render(
       <DailyPromptScreen onSessionReady={jest.fn()} showHandoff />,

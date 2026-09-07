@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { Screen } from "../../design/primitives/screen";
@@ -8,6 +9,7 @@ import { todayIso } from "../../lib/dates";
 import { firstMovementTracker } from "../../lib/first-movement-timer";
 import { useStoreHydration } from "../../lib/route-guard";
 import { entitlementStatus, isEntitled } from "../../monetization/entitlement";
+import { useFreeSessionsAllowance } from "../../monetization/experiment";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useIdentityStore } from "../../state/identity-store";
@@ -17,7 +19,6 @@ import {
 } from "../../state/session-store";
 import { useSettingsStore } from "../../state/settings-store";
 import { OnboardingScreen } from "../onboarding/onboarding-screen";
-import { SignInScreen } from "../sign-in/sign-in-screen";
 import { GatedDailySurface } from "./gated-daily-surface";
 import { ResumeOffer } from "./resume-offer";
 
@@ -26,27 +27,27 @@ import { ResumeOffer } from "./resume-offer";
 // launch: a same-day in-progress session earns the one calm resume
 // decision, a finished-but-unsaved one goes straight to the finish
 // screen's retrying save path. The resume decision wins over EVERYTHING —
-// an already-generated session is never interrupted by sign-in,
-// onboarding or the paywall. After it, in order: no identity yet gets
-// the one sign-in screen (ADR-0011 — guest is one tap, Gate 3's only
-// extra cost); first-ever open (no history, onboarding
-// never completed) gets the three onboarding screens; an expired,
-// unpurchased trial gets the gated day — the paywall letter where the
-// prompt's questions would be, Progress and Settings doors intact
-// (ADR-0009 §3 — her history, points and skills stay hers regardless);
-// everyone else lands on the home hub with no comment (ADR-0013 §4 —
-// the destination changed, the order did not).
+// an already-generated session is never interrupted by onboarding or the
+// paywall. After it, in order: an install with no identity yet becomes a
+// guest on its own (owner brief 2026-09-07, wave 1: guest by default —
+// sign-in is never a launch screen; Sign in with Apple lives in
+// Settings → Account); first-ever open (no history, onboarding never
+// completed) gets the one onboarding screen; an expired, unpurchased
+// trial gets the gated day — the paywall letter where the prompt's
+// questions would be, Progress and Settings doors intact (ADR-0009 §3 —
+// her history, points and skills stay hers regardless); everyone else
+// lands on the home hub with no comment (ADR-0013 §4 — the destination
+// changed, the order did not).
 //
 // This surface renders the gates and hands off; it never renders the
 // hub or the four questions itself. That keeps "/" free of the tab bar
-// (sign-in and onboarding are full-screen moments) while the hub lives
-// inside the tab group at /home.
+// (onboarding is a full-screen moment) while the hub lives inside the
+// tab group at /home.
 
 /** The gating order as one value; "home"/"promptHandoff" are handoffs. */
 type LaunchStage =
   | "waiting"
   | "resume"
-  | "signIn"
   | "onboarding"
   | "gated"
   | "promptHandoff"
@@ -78,6 +79,7 @@ export function LaunchScreen({
   // shared, so a store added to the set can never be forgotten here.
   const { hydrated, failed: hydrationFailed } = useStoreHydration();
   const identity = useIdentityStore((s) => s.identity);
+  const continueAsGuest = useIdentityStore((s) => s.continueAsGuest);
   const restoreActiveSession = useSessionStore((s) => s.restoreActiveSession);
   const finishSessionEarly = useSessionStore((s) => s.finishSessionEarly);
 
@@ -85,6 +87,8 @@ export function LaunchScreen({
   const hasHistory = useProfileStore((s) => s.history.entries.length > 0);
   const trialStartDate = useEntitlementStore((s) => s.trialStartDate);
   const trialUsed = useEntitlementStore((s) => s.trialUsed);
+  const qualifyingSessions = useEntitlementStore((s) => s.qualifyingSessions);
+  const freeSessions = useFreeSessionsAllowance();
   const refreshFromStore = useEntitlementStore((s) => s.refreshFromStore);
   // The store's current word, fetched once per launch and adopted if it
   // has one (ADR-0014 §6) — fire-and-forget, so the launch decision below
@@ -108,6 +112,7 @@ export function LaunchScreen({
   const [handoff, setHandoff] = useState(false);
   const decided = useRef(false);
   const handedOff = useRef(false);
+  const guestRequested = useRef(false);
 
   // Gate 3 t0: the launch surface's first mount this JS lifetime. Marked
   // in a mount effect (first commit; native pre-JS launch time is not
@@ -125,6 +130,9 @@ export function LaunchScreen({
     // flag describes the state at launch — completing onboarding later in
     // this same launch keeps it a first run.
     firstMovementTracker.markFirstRun(!onboardingCompleted && !hasHistory);
+    // first_use_entry (ADR-0024): a fresh install reached its first
+    // decision screen. Same predicate, once per launch decision.
+    if (!onboardingCompleted && !hasHistory) track("first_use_entry", {});
     const result = restoreActiveSession(todayIso());
     setRestore(result);
     if (result === "completedUnsaved") {
@@ -138,6 +146,20 @@ export function LaunchScreen({
     hasHistory,
   ]);
 
+  // Guest by default. An install with no identity — a fresh one, one
+  // that trained before identity existed, or one whose Apple credential
+  // the provider revoked — becomes a guest here, silently, through the
+  // identity store and the auth port (local-only, never fails, works in
+  // airplane mode). Only ever on a null identity, read AFTER hydration:
+  // an existing identity, Apple or guest, is never touched, and an
+  // unhydrated null is not a missing identity. Latched so a re-render
+  // while the store is landing can never ask twice.
+  useEffect(() => {
+    if (!hydrated || identity !== null || guestRequested.current) return;
+    guestRequested.current = true;
+    void continueAsGuest();
+  }, [hydrated, identity, continueAsGuest]);
+
   // The gating order, as one value. Entitlement is app-layer policy
   // (never engine), evaluated offline from persisted state with the
   // daily prompt's local-date source.
@@ -147,11 +169,19 @@ export function LaunchScreen({
     // screen's retrying save path; nothing else is decided this launch.
     if (restore === "completedUnsaved") return "waiting";
     if (restore === "inProgress") return "resume";
-    if (!identity) return "signIn";
+    // The guest identity is on its way (effect above); every gate past
+    // here reads as if she has one, so nothing is decided until it lands.
+    if (!identity) return "waiting";
     if (!onboardingCompleted && !hasHistory) return "onboarding";
     if (
       !isEntitled(
-        entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
+        entitlementStatus({
+          firstCompletedDate: trialStartDate,
+          purchase,
+          trialUsed,
+          qualifyingSessions,
+          freeSessions,
+        }),
       )
     ) {
       return "gated";
@@ -183,13 +213,6 @@ export function LaunchScreen({
         }}
       />
     );
-  }
-
-  // Sign-in runs while no identity exists (ADR-0011): one screen, three
-  // options with equal dignity, guest is one tap. Continuing is
-  // store-driven — the identity landing re-renders this surface onward.
-  if (stage === "signIn") {
-    return <SignInScreen />;
   }
 
   // Onboarding runs once, ever: never completed AND no profile history

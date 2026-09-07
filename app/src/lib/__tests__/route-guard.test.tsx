@@ -145,9 +145,11 @@ describe("cold open with empty stores lands on a valid destination", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("/sign-in renders — always a valid destination", () => {
+  it("/sign-in renders — always a valid destination, the provider only (pushed from Settings)", () => {
     const screen = render(<SignInRoute />);
-    expect(screen.getByText(strings.auth.guest)).toBeTruthy();
+    expect(screen.getByText(strings.auth.apple)).toBeTruthy();
+    // She is already a guest wherever this route is reached from.
+    expect(screen.queryByText(strings.auth.guest)).toBeNull();
     expect(router.replace).not.toHaveBeenCalled();
   });
 });

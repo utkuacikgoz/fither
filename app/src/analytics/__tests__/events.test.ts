@@ -16,11 +16,16 @@ const { join } = jest.requireActual("node:path") as { join(...parts: string[]): 
 const FORBIDDEN = /weight|calorie|kcal|fat\b|slim|tone[ds]?\b|bikini|body[- ]?(shape|goal)/i;
 
 describe("analytics events", () => {
-  it("are exactly the four the retention thesis needs", () => {
+  it("are exactly the funnel the retention thesis needs (ADR-0015, ADR-0024)", () => {
     expect([...ANALYTICS_EVENT_NAMES]).toEqual([
       "deep_link_open",
+      "first_use_entry",
+      "onboarding_complete",
+      "session_preview",
       "workout_start",
       "workout_complete",
+      "paywall_view",
+      "experiment_exposure",
       "trial_start",
     ]);
   });

@@ -1,19 +1,15 @@
-import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import type { BodyArea, Equipment } from "@fither/engine";
+import type { Equipment } from "@fither/engine";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
-import { AreaGrid } from "../../design/primitives/area-grid";
-import { BrandMark } from "../../design/primitives/brand-mark";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { FlowProgress } from "../../design/primitives/flow-progress";
-import { PrimaryButton } from "../../design/primitives/primary-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { Screen } from "../../design/primitives/screen";
 import { motion, spacing } from "../../design/tokens";
-import { BODY_AREAS } from "../../lib/body-areas";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import {
   FLOOR_ONLY_EQUIPMENT,
@@ -21,18 +17,23 @@ import {
   WITH_CHAIR_EQUIPMENT,
 } from "../../state/settings-store";
 
-// Onboarding (ADR-0009 §1): the three drafted screens — welcome,
-// equipment, persistent avoid-list — one decision per screen,
-// auto-advance on tap, no Next buttons. Runs once; completing it persists
-// through the settings store and hands off to the daily prompt. Nothing
-// else may spend Gate 3 budget here: no account, no email, no paywall.
+// Onboarding (ADR-0009 §1; owner brief 2026-09-07, wave 1 "first use"):
+// one screen, one decision. The welcome-only screen is retired — the
+// brand promise (ADR-0006's tagline) now heads the equipment question,
+// so the first screen she reads is also the first decision she makes,
+// and the mockup (docs/design/mockups/onboarding-equipment-first.html)
+// carries no mark here. The persistent avoid-list step is retired for
+// first use too: restrictions are asked ONCE, on the first session's
+// soreness step, which offers to remember the picks (daily-prompt
+// screen). Auto-advance on tap, no Next button. Runs once; completing
+// it persists through the settings store and hands off to the daily
+// prompt. Nothing else may spend Gate 3 budget here: no account, no
+// email, no paywall.
 //
 // ADR-0013 gives it the same language as the rest of the app without
-// spending a tap: the welcome carries the drawn mark (it is the brand
-// moment — ADR-0006 gives the tagline to this headline), the two
-// questions count themselves, and the equipment options show what they
-// mean with the figure of a day-one movement each. Begin and every
-// answer row are tappable from the first frame.
+// spending a tap: the rail counts what remains, and the equipment
+// options show what they mean with the figure of a day-one movement
+// each. Every answer row is tappable from the first frame.
 
 // "Just me and the floor" vs "A sturdy chair too": the one thing the
 // engine must know before day one is chair availability (draft-strings
@@ -54,14 +55,15 @@ export const EQUIPMENT_FIGURES = {
   chair: "supported-sit-to-stand",
 } as const;
 
-type Step = "welcome" | "equipment" | "avoid";
+type Step = "equipment";
 
 /**
- * The three steps, in order. The welcome counts (ADR-0017, owner-approved
- * 2026-09-06): the rail runs from the first screen she sees, so the flow
- * has a visible length from its first frame.
+ * The steps that remain, in order. One today: the rail (ADR-0017) counts
+ * from this, so the flow's visible length is its real structure — a
+ * step added without reading the Gate 3 rule would have to be added
+ * HERE.
  */
-const STEPS: Step[] = ["welcome", "equipment", "avoid"];
+const STEPS: Step[] = ["equipment"];
 
 interface OnboardingScreenProps {
   /** Onboarding is complete and persisted — hand off to the daily prompt. */
@@ -71,112 +73,50 @@ interface OnboardingScreenProps {
 export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const completeOnboarding = useSettingsStore((s) => s.completeOnboarding);
   const reduceMotion = useReducedMotion();
+  const step: Step = "equipment";
 
-  const [step, setStep] = useState<Step>("welcome");
-  const [equipment, setEquipment] = useState<Equipment[]>(WITH_CHAIR_EQUIPMENT);
-  const [avoid, setAvoid] = useState<BodyArea[]>([]);
-
-  const finish = (alwaysAvoid: BodyArea[]) => {
-    completeOnboarding(equipment, alwaysAvoid);
+  // Equipment is the one answer; the permanent avoid-list starts empty
+  // and is offered on the first session's soreness step instead.
+  const finish = (equipment: Equipment[]) => {
+    completeOnboarding(equipment, []);
+    // onboarding_complete (ADR-0024): which room she chose, nothing else.
+    track("onboarding_complete", {
+      equipment: equipment.includes("chair") ? "chair" : "floor",
+    });
     onDone();
   };
 
-  const toggleArea = (area: BodyArea) => {
-    setAvoid((current) =>
-      current.includes(area)
-        ? current.filter((a) => a !== area)
-        : [...current, area],
-    );
-  };
-
-  const flow = (
-    <View style={styles.flow}>
-      <FlowProgress
-        testID="onboarding-flow"
-        total={STEPS.length}
-        current={STEPS.indexOf(step) + 1}
-        reduceMotion={reduceMotion}
-      />
-    </View>
-  );
-
-  if (step === "welcome") {
-    return (
-      <Screen>
-        {flow}
-        {/* The welcome is the one unbounded text stack before the
-            session (mark + title + body): at 2× Dynamic Type on a small
-            phone it overran Begin. Same treatment as the player's intro
-            — scrolls when it must, centres exactly as before when it
-            fits (reviewer should-fix). */}
-        <ScrollView
-          style={styles.welcomeScroll}
-          contentContainerStyle={styles.welcomeCenter}
-          showsVerticalScrollIndicator
-        >
-          {/* Three beats — mark, headline, body — in the unlock's own
-              rhythm. The button below is outside the choreography and
-              tappable throughout: the moment costs her nothing. */}
-          <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
-            <View style={styles.mark}>
-              <BrandMark testID="onboarding-mark" />
-            </View>
-          </FadeIn>
-          <FadeIn
-            reduceMotion={reduceMotion}
-            rise={motion.riseDistance}
-            delayMs={motion.staggerMs}
-          >
-            <AppText variant="display" accessibilityRole="header">
-              {strings.onboarding.welcome.headline}
-            </AppText>
-          </FadeIn>
-          <FadeIn
-            reduceMotion={reduceMotion}
-            rise={motion.riseDistance}
-            delayMs={motion.staggerMs * 2}
-          >
-            <AppText variant="bodySoft" style={styles.welcomeBody}>
-              {strings.onboarding.welcome.body}
-            </AppText>
-          </FadeIn>
-        </ScrollView>
-        <View style={styles.bottom}>
-          <PrimaryButton
-            testID="onboarding-begin"
-            label={strings.onboarding.welcome.cta}
-            onPress={() => setStep("equipment")}
-          />
-        </View>
-      </Screen>
-    );
-  }
-
-  if (step === "equipment") {
-    return (
-      <Screen>
-        {flow}
-        <FadeIn
+  return (
+    <Screen>
+      <View style={styles.flow}>
+        <FlowProgress
+          testID="onboarding-flow"
+          total={STEPS.length}
+          current={STEPS.indexOf(step) + 1}
           reduceMotion={reduceMotion}
-          rise={motion.riseDistance}
-          style={styles.question}
-        >
-          <AppText
-            variant="title"
-            style={styles.title}
-            accessibilityRole="header"
-          >
-            {strings.onboarding.equipment.question}
+        />
+      </View>
+      {/* Headline + lead + two rows is the one unbounded text stack
+          before the session: at 2× Dynamic Type on a small phone it
+          scrolls when it must and sits exactly as drawn when it fits. */}
+      <ScrollView
+        style={styles.question}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator
+      >
+        <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
+          <AppText variant="display" accessibilityRole="header">
+            {strings.onboarding.welcome.headline}
+          </AppText>
+          <AppText variant="bodySoft" style={styles.lead}>
+            {strings.onboarding.equipment.lead}
           </AppText>
           <AnswerRow index={0} reduceMotion={reduceMotion}>
             <RowButton
               testID="onboarding-floor-only"
               label={strings.onboarding.equipment.options.floorOnly}
               figure={EQUIPMENT_FIGURES.floorOnly}
-              onPress={() => {
-                setEquipment(FLOOR_ONLY_EQUIPMENT);
-                setStep("avoid");
-              }}
+              onPress={() => finish(FLOOR_ONLY_EQUIPMENT)}
             />
           </AnswerRow>
           <AnswerRow index={1} reduceMotion={reduceMotion}>
@@ -184,104 +124,25 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               testID="onboarding-chair"
               label={strings.onboarding.equipment.options.chair}
               figure={EQUIPMENT_FIGURES.chair}
-              onPress={() => {
-                setEquipment(WITH_CHAIR_EQUIPMENT);
-                setStep("avoid");
-              }}
+              onPress={() => finish(WITH_CHAIR_EQUIPMENT)}
             />
           </AnswerRow>
         </FadeIn>
-      </Screen>
-    );
-  }
-
-  return (
-    <Screen>
-      {flow}
-      <ScrollView
-        style={styles.question}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator
-      >
-        <FadeIn reduceMotion={reduceMotion} rise={motion.riseDistance}>
-          <AppText
-            variant="title"
-            style={styles.title}
-            accessibilityRole="header"
-          >
-            {strings.onboarding.avoid.question}
-          </AppText>
-          {/* The two-column grid (ADR-0017): the whole choice above the
-              fold, the same control the daily soreness step uses. */}
-          <AreaGrid
-            areas={BODY_AREAS}
-            selected={avoid}
-            onToggle={toggleArea}
-            testIDPrefix="onboarding-avoid"
-          />
-        </FadeIn>
       </ScrollView>
-      <View style={styles.bottom}>
-        {avoid.length > 0 ? (
-          <>
-            <AppText
-              variant="caption"
-              style={styles.countCue}
-              testID="onboarding-avoid-count"
-            >
-              {strings.prompt.soreness.areasNoted(avoid.length)}
-            </AppText>
-            <PrimaryButton
-              testID="onboarding-avoid-confirm"
-              label={strings.onboarding.avoid.confirm}
-              onPress={() => finish(avoid)}
-            />
-          </>
-        ) : (
-          // One button, one place: with nothing picked it is the one-tap
-          // "All good"; with picks it becomes the confirm. "All good" can
-          // never silently discard a pick (audit S5).
-          <PrimaryButton
-            testID="onboarding-avoid-nothing"
-            label={strings.prompt.soreness.allGood}
-            onPress={() => finish([])}
-          />
-        )}
-      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  welcomeScroll: {
-    flex: 1,
-  },
-  welcomeCenter: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  mark: {
-    alignItems: "flex-start",
-    marginBottom: spacing.lg,
-  },
-  welcomeBody: {
-    marginTop: spacing.md,
-  },
-  bottom: {
-    paddingBottom: spacing.md,
-  },
   flow: {
     marginTop: spacing.md,
   },
   question: {
     marginTop: spacing.xl,
   },
-  title: {
+  lead: {
+    marginTop: spacing.sm + spacing.xs,
     marginBottom: spacing.xl,
-  },
-  countCue: {
-    marginBottom: spacing.sm,
-    textAlign: "center",
   },
   scrollContent: {
     paddingBottom: spacing.xl,

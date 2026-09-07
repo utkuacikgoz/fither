@@ -12,22 +12,29 @@ import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useIdentityStore, type SignInResult } from "../../state/identity-store";
 import { AuthButton } from "./auth-button";
 
-// Sign-in (ADR-0011): the one first-run decision — how she continues.
-// Three options with equal visual dignity; guest costs Gate 3 exactly one
-// tap and everything the product has works identically for her. All three
-// go through the identity store and the auth port (dev-only today:
-// instant success, no network). Continuing is store-driven — the launch
-// surface re-renders onward the moment the identity lands — and `onDone`
-// exists for the standalone route. The calm launch moment: the wordmark
-// and tagline fade in gently (Reduce Motion honoured); the buttons are
-// present and tappable from the first frame.
+// Sign-in (ADR-0011; owner brief 2026-09-07, wave 1): how she continues.
+// Guest is the default — the launch surface assigns it on its own and
+// never shows this screen — so today the screen is reached from
+// Settings → Account as a pushed route (`fromSettings`), where she is
+// already a guest and the provider is the only option that changes
+// anything. Without the flag it still offers both options with equal
+// dignity (the shape ADR-0011 drew), so the screen stays honest wherever
+// it is mounted. Every option goes through the identity store and the
+// auth port (dev-only today: instant success, no network); `onDone`
+// fires after a landed identity. The wordmark and tagline fade in gently
+// (Reduce Motion honoured); the buttons are tappable from the first frame.
 
 interface SignInScreenProps {
   /** Called after any successful continue (used by the route wrapper). */
   onDone?: () => void;
+  /**
+   * Reached from Settings, where she already continues as a guest: the
+   * guest option is not offered, because it would change nothing.
+   */
+  fromSettings?: boolean;
 }
 
-export function SignInScreen({ onDone }: SignInScreenProps) {
+export function SignInScreen({ onDone, fromSettings = false }: SignInScreenProps) {
   const signInWithApple = useIdentityStore((s) => s.signInWithApple);
   const continueAsGuest = useIdentityStore((s) => s.continueAsGuest);
 
@@ -94,16 +101,18 @@ export function SignInScreen({ onDone }: SignInScreenProps) {
             }}
           />
         )}
-        <AuthButton
-          testID="sign-in-guest"
-          tone="guest"
-          label={strings.auth.guest}
-          pending={pending === "guest"}
-          quieted={pending !== null && pending !== "guest"}
-          onPress={() => {
-            void run("guest", continueAsGuest);
-          }}
-        />
+        {!fromSettings && (
+          <AuthButton
+            testID="sign-in-guest"
+            tone="guest"
+            label={strings.auth.guest}
+            pending={pending === "guest"}
+            quieted={pending !== null && pending !== "guest"}
+            onPress={() => {
+              void run("guest", continueAsGuest);
+            }}
+          />
+        )}
         {failed && (
           <AppText
             variant="bodySoft"

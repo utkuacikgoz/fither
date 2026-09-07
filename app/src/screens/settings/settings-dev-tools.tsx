@@ -9,6 +9,7 @@ import { useDevReceiptStore } from "../../monetization/dev-billing";
 import { getMonitoring } from "../../monitoring/monitoring";
 import {
   seedFinishPreviewForDev,
+  seedFreeSessionsPreviewForDev,
   seedFreshEntitlementForDev,
   seedTrialActiveForDev,
   seedTrialExpiredForDev,
@@ -37,6 +38,8 @@ export const DEV_PREVIEW_LABELS = {
   paywallExpired: "[dev] Preview paywall (expired)",
   paywallTrialActive: "[dev] Preview paywall (trial active)",
   entitlementFresh: "[dev] Reset entitlement (fresh)",
+  freeSessionsControl: "[dev] Preview free sessions (control: 1 of 1 used)",
+  freeSessionsThree: "[dev] Preview free sessions (three: 1 of 3 used)",
   unlock: "[dev] Preview unlock",
   finishCompleted: "[dev] Preview finish (complete)",
   finishEndedEarly: "[dev] Preview finish (ended early)",
@@ -97,6 +100,26 @@ export function DevToolsCard({ order, reduceMotion, onOpenTiming }: DevToolsCard
           label={DEV_PREVIEW_LABELS.entitlementFresh}
           onPress={() => {
             seedFreshEntitlementForDev();
+            router.replace("/");
+          }}
+        />
+        {/* ADR-0025: the free-sessions experiment from either side. The
+            variant is forced through the store's dev override (the
+            build's activation stays what it is); one qualifying session
+            is seeded; "/" then gates (control) or keeps training (three). */}
+        <QuietButton
+          testID="settings-dev-free-sessions-control"
+          label={DEV_PREVIEW_LABELS.freeSessionsControl}
+          onPress={() => {
+            seedFreeSessionsPreviewForDev("control");
+            router.replace("/");
+          }}
+        />
+        <QuietButton
+          testID="settings-dev-free-sessions-three"
+          label={DEV_PREVIEW_LABELS.freeSessionsThree}
+          onPress={() => {
+            seedFreeSessionsPreviewForDev("three");
             router.replace("/");
           }}
         />

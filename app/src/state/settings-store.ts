@@ -35,6 +35,13 @@ interface SettingsState {
    */
   toggleAlwaysAvoid: (area: BodyArea) => void;
   /**
+   * Replace the persistent avoid-list wholesale. The first session's
+   * soreness step uses it when she chooses to remember today's picks for
+   * every session (owner brief 2026-09-07: restrictions asked once).
+   * Persists immediately via the store layer.
+   */
+  setAlwaysAvoid: (alwaysAvoid: BodyArea[]) => void;
+  /**
    * Spoken cues during a session. OFF by default: audio she did not ask
    * for, on a first session at 6am next to a sleeping child, is the
    * wrong surprise — she turns it on in Settings. The quiet answer in
@@ -71,6 +78,7 @@ export const useSettingsStore = create<SettingsState>()(
       setEquipment: (equipment) => set({ equipment }),
       completeOnboarding: (equipment, alwaysAvoid) =>
         set({ equipment, alwaysAvoid, onboardingCompleted: true }),
+      setAlwaysAvoid: (alwaysAvoid) => set({ alwaysAvoid }),
       toggleAlwaysAvoid: (area) =>
         set((state) => ({
           alwaysAvoid: state.alwaysAvoid.includes(area)

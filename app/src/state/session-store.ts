@@ -218,6 +218,12 @@ async function applyStaleSnapshot(
       trialStartDate: record.trialStartDate,
       purchase: record.purchase,
     });
+    // The free-session allowance (ADR-0025): a committed session with a
+    // completed block counts once per session id, from the journaled
+    // result, so a replay never counts twice.
+    if (record.result.ledgerEvents.some((e) => e.type === "session")) {
+      useEntitlementStore.getState().recordQualifyingSession(record.sessionId, snapshot.session.date);
+    }
     await writeCompletionRecord({ ...record, status: "committed" });
     await clearPersistedActiveSession();
     useActiveSessionStore.setState({ snapshot: null });
@@ -587,6 +593,10 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         trialStartDate: record.trialStartDate,
         purchase: record.purchase,
       });
+      // ADR-0025: count the qualifying session once per session id.
+      if (record.result.ledgerEvents.some((e) => e.type === "session")) {
+        useEntitlementStore.getState().recordQualifyingSession(stableId, session.date);
+      }
       await writeCompletionRecord({ ...record, status: "committed" });
       await clearPersistedActiveSession();
       useActiveSessionStore.setState({ snapshot: null });

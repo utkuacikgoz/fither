@@ -1,14 +1,17 @@
 // The day streak (ADR-0018, owner decision 2026-09-06). Pure: a fold
 // over history dates and "today", no clock, no Date object at all. A
 // day counts as trained when she attempted at least one block on it:
-// completed or struggled (owner decision 2026-09-07: "Hard today" is
-// still showing up and doing the work). Skipped blocks are not training. A run is consecutive
+// completed or struggled (owner decision 2026-09-07, ADR-0023: "Hard
+// today" is still showing up and doing the work). Skipped blocks are not
+// training. That rule is `trainedDay` in week.ts, shared with the week
+// view, and the day arithmetic lives beside it. A run is consecutive
 // calendar days of trained days; ONE missed day per run is forgiven as
 // a rest day (it adds nothing to the count, the run continues); a second
 // miss ends the run. Today is never a miss until it is over: a run that
 // is alive but untrained today is `atRisk`, not broken.
 
 import type { HistoryEntry } from "./types";
+import { dayNumber, trainedDay } from "./week";
 
 export interface StreakState {
   /** Consecutive trained days in the current run, counting today if trained. 0 = no run alive. */
@@ -21,41 +24,13 @@ export interface StreakState {
   atRisk: boolean;
 }
 
-// ---------- Date helper (pure string arithmetic) ----------
-
-/**
- * Days since 1970-01-01 for an ISO yyyy-mm-dd local calendar date.
- * Proleptic Gregorian civil-to-day arithmetic on the string's digits —
- * no Date, no timezone, so two dates one calendar day apart always
- * differ by exactly 1.
- */
-function dayNumber(iso: string): number {
-  const year = Number(iso.slice(0, 4));
-  const month = Number(iso.slice(5, 7));
-  const day = Number(iso.slice(8, 10));
-  // Shift the year to start in March so the leap day is the year's last.
-  const y = month <= 2 ? year - 1 : year;
-  const era = Math.floor(y / 400);
-  const yearOfEra = y - era * 400;
-  const monthFromMarch = (month + 9) % 12;
-  const dayOfYear = Math.floor((153 * monthFromMarch + 2) / 5) + day - 1;
-  const dayOfEra =
-    yearOfEra * 365 +
-    Math.floor(yearOfEra / 4) -
-    Math.floor(yearOfEra / 100) +
-    dayOfYear;
-  return era * 146_097 + dayOfEra - 719_468;
-}
-
 // ---------- Streak ----------
 
 /** Distinct trained day numbers, ascending. Unsorted and repeated dates are fine. */
 function trainedDays(entries: readonly HistoryEntry[]): number[] {
   const days = new Set<number>();
   for (const entry of entries) {
-    if (entry.blocks.some((b) => b.outcome !== "skipped")) {
-      days.add(dayNumber(entry.date));
-    }
+    if (trainedDay(entry)) days.add(dayNumber(entry.date));
   }
   return [...days].sort((a, b) => a - b);
 }

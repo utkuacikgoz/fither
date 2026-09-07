@@ -206,6 +206,16 @@ is what gets built.
   blocks her recommends the way out as tappable actions (the engine
   names which areas unblock; one row each, today only), never a
   description plus a generic button. Applies to every dead end.
+- 2026-09-07, growth brief, wave 1: no sign-in screen at launch (guest by
+  default, Sign in with Apple lives in Settings); the promise headline
+  sits on the first decision screen (equipment) instead of a welcome-only
+  screen; restrictions are asked once (the first session's soreness step
+  offers "Remember for every session"); the preview explains the session
+  as a short list of engine facts under "Why it fits". → Rules: a screen
+  that only carries a message is a tap she pays for, fold it into the
+  first decision; never ask the same question twice before the first
+  session; explanations list facts the engine emitted, never a sentence
+  about personalisation.
 - 2026-09-07, feedback subpage: the lead paragraph and the privacy
   caption were "too much text, show do not tell". → Rule: a form screen
   is its title, its fields and its one button. What a field is for goes

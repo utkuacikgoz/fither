@@ -1,7 +1,7 @@
-import { useState } from "react";
-import type { Adaptation } from "@fither/engine";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { BrandMark } from "../../design/primitives/brand-mark";
@@ -10,32 +10,16 @@ import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
-import { hairline, radius, spacing } from "../../design/tokens";
+import { SectionCaption } from "../../design/primitives/section-caption";
+import { Tile } from "../../design/primitives/tile";
+import { hairline, spacing } from "../../design/tokens";
 import { useTheme } from "../../design/theme";
 import { needsCareMoment } from "../../lib/care-moment";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
+import { loadLibrary } from "../../session/load-library";
+import { sessionFacts } from "../../session/session-facts";
 import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
-
-function adaptationText(adaptation: Adaptation): string {
-  switch (adaptation.kind) {
-    case "soreness":
-      return strings.preview.adaptations.soreness(
-        adaptation.areas
-          .map((area) => strings.prompt.soreness.areas[area].toLowerCase())
-          .join(", "),
-      );
-    case "quiet":
-      return strings.preview.adaptations.quiet;
-    case "lowEnergy":
-      return strings.preview.adaptations.lowEnergy;
-    case "softLanding":
-      return strings.preview.adaptations.softLanding;
-    case "staleFocus":
-      return strings.preview.adaptations.staleFocus;
-    case "tasteBlock":
-      return strings.preview.adaptations.tasteBlock;
-  }
-}
 
 interface SessionPreviewScreenProps {
   onStart: () => void;
@@ -47,6 +31,7 @@ export function SessionPreviewScreen({
   onChangeAnswers,
 }: SessionPreviewScreenProps) {
   const colors = useTheme();
+  const reduceMotion = useReducedMotion();
   const session = useSessionStore((state) => state.session);
   const player = useSessionStore((state) => state.player);
   const prompt = useSessionStore((state) => state.prompt);
@@ -58,6 +43,17 @@ export function SessionPreviewScreen({
   // ordinary preview.
   const [careDone, setCareDone] = useState(false);
 
+  // session_preview (ADR-0024): a built session was on screen, once per
+  // session, whatever she does next. Above the early return: hooks
+  // never move.
+  const previewSeed = session?.seed ?? null;
+  const previewMinutes = session?.minutes ?? null;
+  const previewBlocks = session?.blocks.length ?? 0;
+  useEffect(() => {
+    if (previewSeed === null || previewMinutes === null) return;
+    track("session_preview", { minutes: previewMinutes, blocks: previewBlocks });
+  }, [previewSeed, previewMinutes, previewBlocks]);
+
   if (!session || !player) return <Screen>{null}</Screen>;
 
   // The "everything hurts" moment when the engine could still build: the
@@ -66,10 +62,11 @@ export function SessionPreviewScreen({
   const care =
     prompt !== null && needsCareMoment(prompt.avoid.length, true);
 
-  const primaryAdaptation = session.adaptations[0];
-  const explanation = primaryAdaptation
-    ? adaptationText(primaryAdaptation)
-    : strings.preview.defaultFit;
+  // Why it fits (owner brief 2026-09-07): a short list of facts the
+  // engine emitted, mapped to words in session-facts. Nothing here
+  // decides anything; the library is read only to state what the
+  // session's movements are.
+  const facts = sessionFacts(session, prompt, loadLibrary());
 
   // Optional, local-only note: append-only store on this device, never
   // sent anywhere. Leaving it empty costs nothing. Saved on EVERY way off
@@ -146,19 +143,25 @@ export function SessionPreviewScreen({
           <AppText variant="display" style={styles.headline} accessibilityRole="header">
             {strings.preview.headline}
           </AppText>
-          <AppText variant="bodySoft">
-            {strings.preview.summary(session.minutes, session.blocks.length)}
-          </AppText>
         </View>
 
-        {/* Why today fits, as the one highlighted thing on the page
-            (ADR-0017): a panel edged in the green. */}
-        <View
-          style={[styles.fitPanel, { backgroundColor: colors.accentSoft, borderLeftColor: colors.accent }]}
-        >
-          <AppText variant="body" testID="preview-fit">
-            {explanation}
-          </AppText>
+        {/* The facts list, plain body lines on the same surface tile as
+            the plan, its caption outside (design ledger, round 5). The
+            count lives here, so the headline carries no summary line. */}
+        <View style={styles.facts}>
+          <SectionCaption label={strings.preview.factsTitle} />
+          <Tile reduceMotion={reduceMotion} testID="preview-fit">
+            {facts.map((fact, index) => (
+              <AppText
+                key={`${index}-${fact}`}
+                variant="body"
+                style={styles.factLine}
+                testID={`preview-fact-${index}`}
+              >
+                {fact}
+              </AppText>
+            ))}
+          </Tile>
         </View>
 
         <View style={styles.plan}>
@@ -231,16 +234,12 @@ const styles = StyleSheet.create({
   },
   headline: {
     marginTop: spacing.sm,
-    marginBottom: spacing.md,
   },
-  fitPanel: {
-    borderLeftWidth: spacing.xs - 1,
-    borderRadius: radius.card / 2,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  fitLine: {
+  facts: {
     marginTop: spacing.xl,
+  },
+  factLine: {
+    paddingVertical: spacing.xs,
   },
   plan: {
     marginTop: spacing.xl,

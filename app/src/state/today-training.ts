@@ -1,4 +1,4 @@
-import type { HistoryEntry } from "@fither/engine";
+import { trainedDay, type HistoryEntry } from "@fither/engine";
 
 // What today's history says about today — the single definition of "done
 // for today" (audit wave 2, ADR-0012 §2). It lived inline in the daily
@@ -35,10 +35,9 @@ export function todayTraining(
 ): TodayTraining {
   const trainedToday = entries.filter(
     (entry) =>
-      entry.date === today &&
-      // Attempted, not just completed (owner decision 2026-09-07): a
-      // struggled block is training; only skipped is not.
-      entry.blocks.some((block) => block.outcome !== "skipped"),
+      // The engine's one definition of a trained day (ADR-0018 §1 as
+      // amended by ADR-0023): attempted, not just completed.
+      entry.date === today && trainedDay(entry),
   );
   return {
     trained: trainedToday.length > 0,

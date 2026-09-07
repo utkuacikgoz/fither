@@ -14,14 +14,21 @@ import { eraseEverything } from "../../state/erase-all";
 import { useIdentityStore } from "../../state/identity-store";
 import { SettingsGroup } from "./settings-group";
 
-// The Account group: sign out, and erase everything on this phone — the
-// account-deletion path App Review requires once Sign in with Apple
-// exists (guideline 5.1.1(v)). Erase asks once, inline: the two rows give
-// way to the confirm panel (owner-approved erase-confirm mockup — danger
-// hairline, the safe action filled, the destructive one quiet and in the
-// danger colour), never a system dialog. Both exits land on "/" — the
-// launch surface owns the gating order and, with no identity, shows the
-// sign-in choice. Her training stays on the phone after a sign-out.
+// The Account group: for a guest, the door to Sign in with Apple (owner
+// brief 2026-09-07: guest by default, so this is where sign-in lives);
+// for a signed-in identity, sign out; and for both, erase everything on
+// this phone — the account-deletion path App Review requires once Sign
+// in with Apple exists (guideline 5.1.1(v)). Erase asks once, inline:
+// the rows give way to the confirm panel (owner-approved erase-confirm
+// mockup — danger hairline, the safe action filled, the destructive one
+// quiet and in the danger colour), never a system dialog. Both exits
+// land on "/" — the launch surface owns the gating order and, with no
+// identity, makes her a guest again. Her training stays on the phone
+// after a sign-out.
+//
+// No lead line above the sign-in row: a settings group is rows under a
+// caption, with no slot for a body line (settings.account.signInLead
+// stays unused until the page grows one).
 
 interface AccountSectionProps {
   order: number;
@@ -30,7 +37,11 @@ interface AccountSectionProps {
 
 export function AccountSection({ order, reduceMotion }: AccountSectionProps) {
   const colors = useTheme();
+  const identity = useIdentityStore((s) => s.identity);
   const signOut = useIdentityStore((s) => s.signOut);
+  // Signed in means a provider identity; a guest (or, briefly, none at
+  // all while a fresh guest lands) gets the door in, never the way out.
+  const signedIn = identity !== null && identity.kind !== "guest";
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const copy = strings.settings.account;
@@ -103,11 +114,20 @@ export function AccountSection({ order, reduceMotion }: AccountSectionProps) {
               onPress={() => router.push("/settings/feedback")}
             />
           )}
-          <SettingsRow
-            testID="settings-sign-out"
-            label={copy.signOut}
-            onPress={() => void handleSignOut()}
-          />
+          {signedIn ? (
+            <SettingsRow
+              testID="settings-sign-out"
+              label={copy.signOut}
+              onPress={() => void handleSignOut()}
+            />
+          ) : (
+            <SettingsRow
+              testID="settings-sign-in"
+              label={copy.signIn}
+              chevron
+              onPress={() => router.push("/sign-in")}
+            />
+          )}
           <SettingsRow
             testID="settings-erase"
             label={copy.erase}

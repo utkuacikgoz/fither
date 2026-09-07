@@ -27,6 +27,7 @@ import { strings } from "../copy/strings";
 import { AppText } from "../design/primitives/app-text";
 import { Screen } from "../design/primitives/screen";
 import { entitlementStatus, isEntitled } from "../monetization/entitlement";
+import { freeSessionsAllowance } from "../monetization/experiment";
 import { isFinished } from "../session/player-machine";
 import { useActiveSessionStore } from "../state/active-session-store";
 import { useEntitlementStore } from "../state/entitlement-store";
@@ -111,9 +112,16 @@ function requirementMet(requirement: RouteRequirement): boolean {
     case "hydratedOnly":
       return true;
     case "entitledToStart": {
-      const { trialStartDate, purchase, trialUsed } = useEntitlementStore.getState();
+      const { trialStartDate, purchase, trialUsed, qualifyingSessions } =
+        useEntitlementStore.getState();
       return isEntitled(
-        entitlementStatus({ firstCompletedDate: trialStartDate, purchase, trialUsed }),
+        entitlementStatus({
+          firstCompletedDate: trialStartDate,
+          purchase,
+          trialUsed,
+          qualifyingSessions,
+          freeSessions: freeSessionsAllowance(),
+        }),
       );
     }
     case "generatedSession":

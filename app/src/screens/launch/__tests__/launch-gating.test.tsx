@@ -1,7 +1,8 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import React from "react";
 
+import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { useDevAuthSessionStore } from "../../../auth/dev-auth";
 import { strings } from "../../../copy/strings";
 import { todayIso } from "../../../lib/dates";
@@ -22,10 +23,12 @@ import {
 } from "../../../test-utils/fixtures";
 import { LaunchScreen } from "../launch-screen";
 
-// Onboarding + entitlement gating around the launch surface (ADR-0009).
-// The resume decision always wins; onboarding runs once for a fresh
-// profile; only an expired unpurchased trial swaps the prompt for the
-// paywall — and never touches history, points or an in-flight session.
+// Identity, onboarding + entitlement gating around the launch surface
+// (ADR-0009; owner brief 2026-09-07). The resume decision always wins;
+// an install with no identity becomes a guest on its own, never a
+// sign-in screen; onboarding runs once for a fresh profile; only an
+// expired unpurchased trial swaps the prompt for the paywall — and never
+// touches history, points or an in-flight session.
 
 function callbacks() {
   return {
@@ -80,6 +83,7 @@ function seedHistoryEntry() {
 }
 
 beforeEach(() => {
+  clearRecordedEvents();
   useLedgerStore.setState({ events: [], hydrated: true, hydrationFailed: false });
   useProfileStore.setState({
     profile: createInitialProfile(),
@@ -117,8 +121,8 @@ beforeEach(() => {
     finish: null,
     saveFailed: false,
   });
-  // Most tests exercise gates BEYOND sign-in, so an identity is seeded;
-  // the sign-in placement suite below clears it per test.
+  // Most tests exercise gates BEYOND identity, so one is seeded; the
+  // guest-by-default suite below clears it per test.
   useIdentityStore.setState({
     identity: { kind: "guest", date: "2026-08-01" },
     hydrated: true,
@@ -131,56 +135,145 @@ beforeEach(() => {
   });
 });
 
-describe("sign-in placement (ADR-0011)", () => {
-  it("no identity opens into sign-in, before onboarding", () => {
+describe("guest by default (owner brief 2026-09-07)", () => {
+  it("a fresh install becomes a guest on its own and lands on onboarding — never a sign-in screen", async () => {
     useIdentityStore.setState({ identity: null });
     const screen = renderLaunch();
-    expect(screen.getByText(strings.auth.guest)).toBeTruthy();
-    // Onboarding's absence is asserted via its body line (historically
-    // the headline text was shared with sign-in; the assertion stays on
-    // the unambiguous string).
-    expect(screen.queryByText(strings.onboarding.welcome.body)).toBeNull();
-    expect(screen.cbs.onHome).not.toHaveBeenCalled();
-  });
-
-  it("guest is one tap and continues into onboarding, store-driven", async () => {
-    useIdentityStore.setState({ identity: null });
-    const screen = render(<LaunchScreen {...callbacks()} />);
-    fireEvent.press(screen.getByTestId("sign-in-guest"));
+    // Nothing is decided while the guest lands: the calm holding line,
+    // and no sign-in option anywhere.
+    expect(screen.queryByText(strings.auth.guest)).toBeNull();
+    expect(screen.queryByText(strings.auth.apple)).toBeNull();
     await waitFor(() =>
-      expect(screen.getByText(strings.onboarding.welcome.body)).toBeTruthy(),
+      expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy(),
     );
     expect(useIdentityStore.getState().identity?.kind).toBe("guest");
-  });
-
-  it("an existing identity never sees sign-in again", () => {
-    const screen = render(<LaunchScreen {...callbacks()} />);
     expect(screen.queryByText(strings.auth.guest)).toBeNull();
-    expect(screen.getByText(strings.onboarding.welcome.body)).toBeTruthy();
+    expect(screen.queryByText(strings.auth.apple)).toBeNull();
+    expect(screen.cbs.onHome).not.toHaveBeenCalled();
+    // first_use_entry (ADR-0024): once, with nothing attached.
+    expect(recordedEvents().filter((e) => e.name === "first_use_entry")).toEqual([
+      { name: "first_use_entry", properties: {} },
+    ]);
   });
 
-  it("the resume decision wins over sign-in", () => {
+  it("a returning install never reports first_use_entry", async () => {
+    clearRecordedEvents();
+    useSettingsStore.setState({ onboardingCompleted: true });
+    renderLaunch();
+    await waitFor(() => expect(useIdentityStore.getState().identity).not.toBeNull());
+    expect(recordedEvents().filter((e) => e.name === "first_use_entry")).toEqual([]);
+  });
+
+  it("asks for the guest identity exactly once, even across re-renders while it lands", async () => {
+    useIdentityStore.setState({ identity: null });
+    const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
+    const spy = jest.spyOn(getAuth(), "continueAsGuest");
+    const screen = renderLaunch();
+    screen.rerender(<LaunchScreen {...callbacks()} />);
+    screen.rerender(<LaunchScreen {...callbacks()} />);
+    await waitFor(() =>
+      expect(useIdentityStore.getState().identity?.kind).toBe("guest"),
+    );
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it("an existing Apple identity is preserved across relaunch — never replaced by a guest", async () => {
+    const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
+    const spy = jest.spyOn(getAuth(), "continueAsGuest");
+    useIdentityStore.setState({
+      identity: { kind: "apple", date: "2026-08-01", providerUserId: "apple-user-1" },
+    });
+    const first = renderLaunch();
+    expect(first.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
+    first.unmount();
+
+    // Simulated relaunch: the identity is exactly what was persisted.
+    const relaunch = renderLaunch();
+    expect(relaunch.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
+    await waitFor(() => expect(relaunch.getByText(strings.onboarding.welcome.headline)).toBeTruthy());
+    expect(useIdentityStore.getState().identity).toEqual({
+      kind: "apple",
+      date: "2026-08-01",
+      providerUserId: "apple-user-1",
+    });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("an existing guest identity is kept as it is, not recreated", async () => {
+    const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
+    const spy = jest.spyOn(getAuth(), "continueAsGuest");
+    renderLaunch();
+    await waitFor(() =>
+      expect(useIdentityStore.getState().identity).toEqual({ kind: "guest", date: "2026-08-01" }),
+    );
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("an install that trained before identity existed becomes a guest without losing its history", async () => {
+    useIdentityStore.setState({ identity: null });
+    useSettingsStore.setState({ onboardingCompleted: true });
+    seedHistoryEntry();
+    const screen = renderLaunch();
+    await waitFor(() => expect(screen.cbs.onHome).toHaveBeenCalledTimes(1));
+    expect(useIdentityStore.getState().identity?.kind).toBe("guest");
+    expect(useProfileStore.getState().history.entries).toHaveLength(1);
+    expect(useSettingsStore.getState().onboardingCompleted).toBe(true);
+    expect(screen.queryByText(strings.onboarding.welcome.headline)).toBeNull();
+    expect(screen.queryByText(strings.auth.guest)).toBeNull();
+  });
+
+  it("decides nothing until hydration — no guest is created against unhydrated state", async () => {
+    useIdentityStore.setState({ identity: null, hydrated: false });
+    const { getAuth } = jest.requireActual<typeof import("../../../auth/auth")>("../../../auth/auth");
+    const spy = jest.spyOn(getAuth(), "continueAsGuest");
+    const screen = renderLaunch();
+    expect(screen.getByText(strings.errors.preparing)).toBeTruthy();
+    expect(spy).not.toHaveBeenCalled();
+    // Hydration lands with the identity the disk held: an Apple identity
+    // is what she keeps.
+    act(() => {
+      useIdentityStore.setState({
+        identity: { kind: "apple", date: "2026-08-01" },
+        hydrated: true,
+      });
+    });
+    await waitFor(() =>
+      expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy(),
+    );
+    expect(spy).not.toHaveBeenCalled();
+    expect(useIdentityStore.getState().identity?.kind).toBe("apple");
+    spy.mockRestore();
+  });
+
+  it("the resume decision wins over the guest assignment", async () => {
     useIdentityStore.setState({ identity: null });
     seedTodaySnapshot();
     const screen = renderLaunch();
     expect(screen.getByText(strings.resume.continueLabel)).toBeTruthy();
     expect(screen.queryByText(strings.auth.guest)).toBeNull();
     expect(screen.cbs.onHome).not.toHaveBeenCalled();
+    // The guest still lands in the background; the offer stays put.
+    await waitFor(() =>
+      expect(useIdentityStore.getState().identity?.kind).toBe("guest"),
+    );
+    expect(screen.getByText(strings.resume.continueLabel)).toBeTruthy();
   });
 });
 
 describe("onboarding placement", () => {
-  it("a fresh profile opens into onboarding, not the hub", () => {
+  it("a fresh profile opens into onboarding, not the hub — the promise atop the equipment question", () => {
     const screen = renderLaunch();
     expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
+    expect(screen.getByText(strings.onboarding.equipment.lead)).toBeTruthy();
     expect(screen.cbs.onHome).not.toHaveBeenCalled();
   });
 
-  it("completing onboarding goes straight to the questions, handoff and all, once", () => {
+  it("completing onboarding — one tap — goes straight to the questions, handoff and all, once", () => {
     const screen = renderLaunch();
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
     fireEvent.press(screen.getByTestId("onboarding-chair"));
-    fireEvent.press(screen.getByTestId("onboarding-avoid-nothing"));
 
     // Her first run never spends the hub's extra tap: the four questions
     // come next, carrying the drafted handoff eyebrow (ADR-0013 §5).

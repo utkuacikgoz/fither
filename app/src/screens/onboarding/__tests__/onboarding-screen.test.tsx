@@ -2,6 +2,7 @@ import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { Image } from "react-native";
 
+import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { loadLibrary } from "../../../session/load-library";
 import { movementFigure } from "../../../session/movement-figures";
@@ -10,8 +11,12 @@ import {
   collectStringValues,
   renderedTextLeaves,
 } from "../../../test-utils/copy-audit";
-import { glyph } from "../../../design/tokens";
 import { EQUIPMENT_FIGURES, OnboardingScreen } from "../onboarding-screen";
+
+// Onboarding after the owner brief of 2026-09-07 (wave 1, first use):
+// one screen, one decision. The welcome-only screen is retired — the
+// promise heads the equipment question — and the avoid step is retired
+// for first use (restrictions are asked once, on the first session).
 
 const hidden = { includeHiddenElements: true } as const;
 
@@ -26,24 +31,41 @@ beforeEach(() => {
 });
 
 describe("OnboardingScreen", () => {
-  it("walks the three drafted screens, one decision each, auto-advancing", () => {
+  it("opens on the promise atop the equipment question, in the approved order: headline, lead, two rows", () => {
+    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
+    expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
+    expect(screen.getByText(strings.onboarding.equipment.lead)).toBeTruthy();
+    expect(screen.getByTestId("onboarding-floor-only")).toBeTruthy();
+    expect(screen.getByTestId("onboarding-chair")).toBeTruthy();
+
+    const leaves = renderedTextLeaves(screen.toJSON());
+    const order = [
+      strings.onboarding.welcome.headline,
+      strings.onboarding.equipment.lead,
+      strings.onboarding.equipment.options.floorOnly,
+      strings.onboarding.equipment.options.chair,
+    ].map((text) => leaves.indexOf(text));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it("carries no mark, no Begin, no welcome body and no avoid step — the retired screens are gone", () => {
+    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
+    expect(screen.queryByTestId("onboarding-mark", hidden)).toBeNull();
+    expect(screen.queryByTestId("onboarding-begin")).toBeNull();
+    expect(screen.queryByText(strings.onboarding.welcome.body)).toBeNull();
+    expect(screen.queryByText(strings.onboarding.welcome.cta)).toBeNull();
+    expect(screen.queryByText(strings.onboarding.avoid.question)).toBeNull();
+    expect(screen.queryByTestId("onboarding-avoid-nothing")).toBeNull();
+    expect(screen.queryByTestId("onboarding-avoid-confirm")).toBeNull();
+  });
+
+  it("one tap completes it: a chair persists, the permanent list starts empty, and it hands off", () => {
     const onDone = jest.fn();
     const screen = render(<OnboardingScreen onDone={onDone} />);
-
-    expect(screen.getByText(strings.onboarding.welcome.headline)).toBeTruthy();
-    expect(screen.getByText(strings.onboarding.welcome.body)).toBeTruthy();
-
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
-    expect(
-      screen.getByText(strings.onboarding.equipment.question),
-    ).toBeTruthy();
-
-    fireEvent.press(screen.getByTestId("onboarding-chair"));
-    expect(screen.getByText(strings.onboarding.avoid.question)).toBeTruthy();
     expect(onDone).not.toHaveBeenCalled();
 
-    // "Nothing" is the one-tap default path.
-    fireEvent.press(screen.getByTestId("onboarding-avoid-nothing"));
+    fireEvent.press(screen.getByTestId("onboarding-chair"));
     expect(onDone).toHaveBeenCalledTimes(1);
 
     const settings = useSettingsStore.getState();
@@ -53,91 +75,31 @@ describe("OnboardingScreen", () => {
   });
 
   it("floor-only keeps the chair out of her equipment", () => {
-    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
-    fireEvent.press(screen.getByTestId("onboarding-floor-only"));
-    fireEvent.press(screen.getByTestId("onboarding-avoid-nothing"));
-
-    const { equipment } = useSettingsStore.getState();
-    expect(equipment).not.toContain("chair");
-    expect(equipment).toContain("none");
-  });
-
-  it("persists picked avoid areas as the permanent work-around list", () => {
     const onDone = jest.fn();
     const screen = render(<OnboardingScreen onDone={onDone} />);
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
-    fireEvent.press(screen.getByTestId("onboarding-chair"));
-
-    fireEvent.press(screen.getByTestId("onboarding-avoid-knees"));
-    fireEvent.press(screen.getByTestId("onboarding-avoid-back"));
-    // Deselecting works before confirming.
-    fireEvent.press(screen.getByTestId("onboarding-avoid-back"));
-    fireEvent.press(screen.getByTestId("onboarding-avoid-confirm"));
+    fireEvent.press(screen.getByTestId("onboarding-floor-only"));
 
     expect(onDone).toHaveBeenCalledTimes(1);
-    expect(useSettingsStore.getState().alwaysAvoid).toEqual(["knees"]);
-    expect(useSettingsStore.getState().onboardingCompleted).toBe(true);
+    const { equipment, onboardingCompleted } = useSettingsStore.getState();
+    expect(equipment).not.toContain("chair");
+    expect(equipment).toContain("none");
+    expect(onboardingCompleted).toBe(true);
   });
 
-  it("hides 'All good' once an area is picked, so picks can't be silently discarded", () => {
-    // Mirrors the daily prompt's soreness step exactly (audit S5): same
-    // constraint, same question, one behaviour.
-    const onDone = jest.fn();
-    const screen = render(<OnboardingScreen onDone={onDone} />);
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
-    fireEvent.press(screen.getByTestId("onboarding-chair"));
-
-    expect(screen.getByTestId("onboarding-avoid-nothing")).toBeTruthy();
-
-    fireEvent.press(screen.getByTestId("onboarding-avoid-knees"));
-    // The discard path no longer exists while anything is selected.
-    expect(screen.queryByTestId("onboarding-avoid-nothing")).toBeNull();
-    expect(screen.queryByText(strings.prompt.soreness.allGood)).toBeNull();
-    expect(onDone).not.toHaveBeenCalled();
-
-    // Deselecting the last area brings the one-tap default back.
-    fireEvent.press(screen.getByTestId("onboarding-avoid-knees"));
-    expect(screen.getByTestId("onboarding-avoid-nothing")).toBeTruthy();
-  });
-
-  it("confirm renders only with picks, labelled from strings.ts", () => {
+  it("never touches a permanent list that already exists — the answer is equipment only", () => {
+    // Not a first-use state in practice (onboarding runs once), but the
+    // contract is that this screen writes exactly what it asked.
+    useSettingsStore.setState({ alwaysAvoid: [] });
     const screen = render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
     fireEvent.press(screen.getByTestId("onboarding-chair"));
-
-    expect(screen.queryByTestId("onboarding-avoid-confirm")).toBeNull();
-
-    fireEvent.press(screen.getByTestId("onboarding-avoid-hips"));
-    // The action-naming label (audit S10) — asserted through its key, so
-    // the copy-writer's surface stays the single source of the words.
-    expect(screen.getByText(strings.onboarding.avoid.confirm)).toBeTruthy();
+    expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
   });
 
-  it("opens on the drawn mark — the welcome is the brand moment, and Begin waits for nothing", () => {
-    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
-    expect(screen.getByTestId("onboarding-mark", hidden)).toBeTruthy();
-    // Gate 3: the choreography is above the button, never in front of it.
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
-    expect(
-      screen.getByText(strings.onboarding.equipment.question),
-    ).toBeTruthy();
-  });
-
-  it("counts three steps from the first screen — the rail runs from the welcome (ADR-0017)", () => {
+  it("the rail counts the steps that remain — one — from the first frame (ADR-0017)", () => {
     const screen = render(<OnboardingScreen onDone={jest.fn()} />);
     expect(
       screen.getByTestId("onboarding-flow").props.accessibilityValue,
-    ).toEqual({ min: 0, max: 3, now: 1 });
-
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
-    expect(
-      screen.getByTestId("onboarding-flow").props.accessibilityValue.now,
-    ).toBe(2);
-    fireEvent.press(screen.getByTestId("onboarding-chair"));
-    expect(
-      screen.getByTestId("onboarding-flow").props.accessibilityValue.now,
-    ).toBe(3);
+    ).toEqual({ min: 0, max: 1, now: 1 });
   });
 
   it("shows each equipment option as a day-one movement she can do with it", () => {
@@ -157,7 +119,6 @@ describe("OnboardingScreen", () => {
     expect(chair).toMatchObject({ tier: 1, equipment: "chair" });
 
     const screen = render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
     const rowImage = (testID: string) =>
       screen.getByTestId(testID, hidden).findByType(Image).props.source;
     expect(rowImage("onboarding-floor-only")).toEqual(
@@ -168,26 +129,24 @@ describe("OnboardingScreen", () => {
     );
   });
 
-  it("renders no user-facing text outside strings.ts on any step", () => {
+  it("renders no user-facing text outside strings.ts", () => {
     const allowed = collectStringValues(strings);
-    // areasNoted is parameterised; allowlist the output this flow renders.
-    allowed.add(strings.prompt.soreness.areasNoted(1));
-    // The selection checkmark is a glyph token, not copy.
-    allowed.add(glyph.check);
     const screen = render(<OnboardingScreen onDone={jest.fn()} />);
+    for (const leaf of renderedTextLeaves(screen.toJSON())) {
+      // On failure the message shows the offending leaf, not just false.
+      expect(allowed.has(leaf) ? true : leaf).toBe(true);
+    }
+  });
+});
 
-    const auditStep = () => {
-      for (const leaf of renderedTextLeaves(screen.toJSON())) {
-        // On failure the message shows the offending leaf, not just false.
-        expect(allowed.has(leaf) ? true : leaf).toBe(true);
-      }
-    };
+describe("onboarding_complete (ADR-0024)", () => {
+  beforeEach(() => clearRecordedEvents());
 
-    auditStep();
-    fireEvent.press(screen.getByTestId("onboarding-begin"));
-    auditStep();
+  it("reports the room she chose and nothing else", () => {
+    const screen = render(<OnboardingScreen onDone={jest.fn()} />);
     fireEvent.press(screen.getByTestId("onboarding-chair"));
-    fireEvent.press(screen.getByTestId("onboarding-avoid-hips"));
-    auditStep();
+    expect(recordedEvents()).toEqual([
+      { name: "onboarding_complete", properties: { equipment: "chair" } },
+    ]);
   });
 });

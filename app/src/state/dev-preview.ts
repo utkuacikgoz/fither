@@ -11,7 +11,9 @@ import type { ApplyResult, BlockOutcome } from "@fither/engine";
 
 import { todayIso } from "../lib/dates";
 import { useDevReceiptStore } from "../monetization/dev-billing";
+import type { FreeSessionsVariant } from "../monetization/experiment";
 import { useEntitlementStore } from "./entitlement-store";
+import { useExperimentStore } from "./experiment-store";
 import {
   createPlayer,
   finishEarly,
@@ -40,6 +42,8 @@ export function seedTrialExpiredForDev(now: Date = new Date()): void {
     trialStartDate: isoDaysAgo(8, now),
     purchase: null,
     trialUsed: true,
+    qualifyingSessions: 1,
+    lastQualifyingSessionId: "dev-preview:1",
   });
   useDevReceiptStore.setState({ receipt: null });
 }
@@ -50,16 +54,44 @@ export function seedTrialActiveForDev(now: Date = new Date()): void {
     trialStartDate: isoDaysAgo(1, now),
     purchase: { plan: "annual", date: todayIso(now), trial: true },
     trialUsed: true,
+    qualifyingSessions: 1,
+    lastQualifyingSessionId: "dev-preview:1",
   });
 }
 
 /**
  * A truly fresh install, entitlement-wise: no trial started, no purchase,
  * and (unlike the plain entitlement reset, which deliberately keeps the
- * fake receipt so restore stays exercisable) no dev-billing receipt.
+ * fake receipt so restore stays exercisable) no dev-billing receipt. The
+ * experiment's dev override is cleared too, so the launch surface reads
+ * the build's real activation again.
  */
 export function seedFreshEntitlementForDev(): void {
   useEntitlementStore.getState().resetForDev();
+  useDevReceiptStore.setState({ receipt: null });
+  useExperimentStore.getState().setForceVariantForDev(null);
+}
+
+/**
+ * The free-sessions experiment (ADR-0025) seen from either side: force
+ * the variant through the store's dev override (the build's activation
+ * and any recorded assignment are untouched) and seed ONE qualifying
+ * session behind her with no entitlement. The launch surface then shows
+ * the honest result — control gates on the paywall, three keeps her
+ * training with two free sessions still in hand.
+ */
+export function seedFreeSessionsPreviewForDev(
+  variant: FreeSessionsVariant,
+  now: Date = new Date(),
+): void {
+  useExperimentStore.getState().setForceVariantForDev(variant);
+  useEntitlementStore.setState({
+    trialStartDate: isoDaysAgo(1, now),
+    purchase: null,
+    trialUsed: false,
+    qualifyingSessions: 1,
+    lastQualifyingSessionId: "dev-preview:1",
+  });
   useDevReceiptStore.setState({ receipt: null });
 }
 
