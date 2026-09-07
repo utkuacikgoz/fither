@@ -6,7 +6,7 @@ green GitHub CI verified per wave commit (runs #90 onward).
 ## Verified green
 
 ```
-node scripts/validate-movements.mjs  OK — 60 movements, ladders complete,
+node scripts/validate-movements.mjs  OK — 64 movements, ladders complete,
                                      constrained tiers 1-4 intact
 pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
                                      isolated EAS build environments
@@ -53,7 +53,9 @@ that cannot write Watchman's LaunchAgent.
 
 **Phase 1 — engine**
 
-- 60-movement library, five complete tier 1–6 ladders.
+- 64-movement library, five complete tier 1–6 ladders; four wrist-neutral
+  push variants (tiers 1 to 3, 2026-09-07) so sore wrists no longer remove
+  all push work.
 - Pure on-device engine: generation, per-pattern progression with time
   floors (ADR-0008), typed adaptations, history, once-per-lifetime
   unlocks, append-only points (20/25/30 by length, +5 new-tier block,

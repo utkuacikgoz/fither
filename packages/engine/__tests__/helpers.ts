@@ -10,7 +10,7 @@ import type {
 import { createInitialProfile, PATTERNS } from "../src/index.js";
 import movementsJson from "../../../data/movements.json";
 
-/** The real 60-movement library, as the app would pass it in. */
+/** The real bundled movement library, as the app would pass it in. */
 export const realLibrary = movementsJson as unknown as MovementLibrary;
 
 /** A tiny synthetic library for constraint-filter tests: one 2-tier ladder

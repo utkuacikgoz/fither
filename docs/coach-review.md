@@ -106,9 +106,15 @@ to. ★ = tier-4 milestone (becomes a named skill unlock).
 | 4 ★ | Pike Push-Up | 6 reps, ~4s each | shoulders, elbows, wrists | Decline Push-Up |
 | 5 | Decline Push-Up (feet on chair) | 6 reps, ~4s each | shoulders, elbows, wrists, midsection | Archer Push-Up |
 | 6 | Archer Push-Up | 4 reps, ~5s each | shoulders, elbows, wrists, midsection | — (top of ladder) |
+| 1 | Forearm Wall Push (wrist-neutral) | 10 reps, ~3s each | shoulders, elbows | Chair Grip Push-Up |
+| 1 | Fist Wall Push-Up (wrist-neutral) | 10 reps, ~4s each | shoulders, elbows | Chair Grip Push-Up |
+| 2 | Chair Grip Push-Up (wrist-neutral) | 8 reps, ~4s each | shoulders, elbows | Fist Kneeling Push-Up |
+| 3 | Fist Kneeling Push-Up (wrist-neutral) | 8 reps, ~4s each | shoulders, elbows | Full Push-Up |
 
-Note: every push movement loads the wrists — this is the subject of
-question 7.
+Note: the four wrist-neutral variants (added 2026-09-07, question 7)
+are the only push movements that do not load the wrists. A wrist
+avoider trains push at tiers 1 to 3 and plateaus at tier 3; a tier 4
+fist push-up was left for your call (knuckle load on a hard floor).
 
 ### Pull (10 movements)
 
