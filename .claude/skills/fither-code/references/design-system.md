@@ -206,3 +206,7 @@ is what gets built.
   blocks her recommends the way out as tappable actions (the engine
   names which areas unblock; one row each, today only), never a
   description plus a generic button. Applies to every dead end.
+- 2026-09-07, heavy-day preview: cluttered, two headlines competing. →
+  Rule: never two headlines on one screen. A moment that deserves its
+  own headline (the care acknowledgement) gets its own screen and one
+  button forward; the next screen starts clean.
