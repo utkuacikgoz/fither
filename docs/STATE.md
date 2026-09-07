@@ -88,6 +88,9 @@ that cannot write Watchman's LaunchAgent.
   never a constraint violation, empty only at 3+ avoided areas (44 sets)
   and always unblockable; two owner findings (underfill with 2+ areas at
   20/30 minutes, repeated movements in long sessions) recorded there.
+- ADR-0023: "Hard today" counts. A struggled block is an attempted block:
+  the finish closes as a session with its figures, the day counts for the
+  hub and the streak; points and progression unchanged.
 - ADR-0021: the cap grows as patterns fall away (one pattern can carry
   30 minutes) and the picker takes a fresh movement down the ladder
   before repeating; whole space now fills to 90%, sim gates unchanged.
@@ -285,18 +288,6 @@ ones.
    project, owner dashboard. The engine never moves server-side.
 
 ## Deferred, recorded
-
-- **DECIDE (owner): does "Hard today" count as done?** The finish draws
-  the figures of *completed* blocks, and the engine records a session
-  only when a block completed — so a 10-minute session where she did
-  every block and answered "Hard today" twice closes as "Today didn't
-  fit. That happens." with 0 points and no figures, after she showed up
-  and did everything. The points rule is decided (ADR-0008) and
-  predates phase 3; the figures make the erasure visible and the copy
-  is plainly false for that user. Options: (a) leave as is; (b) figures
-  for attempted blocks (not skipped) and a nothing-done close only when
-  zero blocks were *attempted* — store and copy changes, no engine rule
-  involved. Surfaced by the phase-3 reviewer; not changed without you.
 
 - Wrist-neutral push variants; chronic sore wrists currently remove push
   work (movement-author plus coach review).

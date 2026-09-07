@@ -44,7 +44,8 @@ permanently.
 ## Forbidden mechanics (restating the domain list, mechanically)
 
 - **Streaks — allowed, bounded (owner decision 2026-09-06, ADR-0018).**
-  Consecutive days with a completed block; one rest day per run is
+  Consecutive days with an attempted block (completed or struggled,
+  never skipped alone); one rest day per run is
   forgiven; best run kept. Shown, never threatened: no reset copy, no
   "don't break the chain", no "we miss you".
 - **No weight, no calories, no measurements.** Not as optional fields, not

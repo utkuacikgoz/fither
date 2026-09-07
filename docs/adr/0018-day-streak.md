@@ -22,9 +22,9 @@ language) stands.
 ## Decision
 
 1. **The rule lives in the engine** (`packages/engine/src/streak.ts`,
-   `computeStreak(entries, todayIso)`). A day is trained when at least
-   one block completed on it, the same fact the "session" ledger event
-   records. A run is consecutive trained days. One missed day per run is
+   `computeStreak(entries, todayIso)`). A day is trained when she
+   attempted at least one block on it, completed or struggled (amended
+   by ADR-0023; skipped alone is not training). A run is consecutive trained days. One missed day per run is
    a rest day: it adds nothing to the count and the run continues. A
    second miss ends the run. Today is never a miss until it is over: a
    run that is alive but untrained today is `atRisk`, never broken. The

@@ -57,8 +57,9 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   const session = useSessionStore((s) => s.session);
   const reduceMotion = useReducedMotion();
 
-  // What she did, drawn: the figure of every block whose outcome the
-  // player recorded as completed (ADR-0013 — the landing after the
+  // What she did, drawn: the figure of every block she attempted,
+  // completed or struggled (owner decision 2026-09-07), as the player
+  // recorded it (ADR-0013 — the landing after the
   // effort shows the effort, not a sentence about it). Read straight off
   // the player's own outcomes, index-aligned to its blocks; the store
   // keeps the player until she continues, so this is the same record the
@@ -68,12 +69,15 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
     player === null
       ? []
       : player.blocks
-          .filter((_, index) => player.outcomes[index] === "completed")
+          .filter((_, index) => player.outcomes[index] !== "skipped")
           .map((block) => block.movementId);
 
-  // A session with zero completed blocks gets the honest close — no
+  // A session with zero attempted blocks gets the honest close — no
   // "complete", no "counts", no points row (ADR-0012 / audit P0 #5).
   const nothingDone = finish !== null && !finish.completedAnything;
+  // A session of struggled blocks earns nothing: no "+0" row, the day
+  // still counts (the headline, the figures and the streak say so).
+  const showPoints = finish !== null && !nothingDone && finish.pointsEarned > 0;
 
   // VoiceOver hears the close HERE, where the honest reason is known —
   // the player deliberately says nothing at done (a generic "Session
@@ -153,7 +157,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
             {note}
           </AppText>
         </FadeIn>
-        {finish && !nothingDone && (
+        {finish && showPoints && (
           <FadeIn {...beat(2)}>
             <View style={styles.points}>
               <AppText variant="numeral" color={colors.accent} testID="finish-points">
