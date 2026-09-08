@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { track } from "../../analytics/analytics";
 import { getAuth, type AuthProvider } from "../../auth/auth";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -52,6 +53,12 @@ export function SignInScreen({ onDone, fromSettings = false }: SignInScreenProps
   // review rejection and a lie). Guest is always there. The port answers
   // synchronously, so the first frame is the right frame.
   const [providers] = useState<AuthProvider[]>(() => getAuth().availableProviders());
+
+  // sign_in_view: the frame was shown, once per mount; the result is
+  // the identity store's to report.
+  useEffect(() => {
+    track("sign_in_view", {});
+  }, []);
 
   const run = async (
     tone: "apple" | "guest",

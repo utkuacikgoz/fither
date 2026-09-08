@@ -306,7 +306,7 @@ describe("ShareScreen", () => {
       await flushShare();
       expect(captureRef).toHaveBeenCalledTimes(1);
       expect(shareSpy).toHaveBeenCalledTimes(1);
-      expect(recordedEvents()).toHaveLength(1);
+      expect(recordedEvents().map((e) => e.name)).toEqual(["share_start", "share_complete"]);
     });
 
     it("Not now goes back", () => {
@@ -326,7 +326,24 @@ describe("ShareScreen", () => {
       await flushShare();
       expect(recordedEvents()).toEqual([
         { name: "share_start", properties: { source: "finish", context: "meetings" } },
+        { name: "share_complete", properties: { completed: true } },
       ]);
+    });
+
+    it("share_complete: a picked destination is completed, a dismissed sheet is not, a sheet that never opened says nothing", async () => {
+      shareSpy.mockResolvedValueOnce({ action: Share.dismissedAction });
+      const screen = render(<ShareScreen source="receipt" />);
+      fireEvent.press(screen.getByTestId("share-send"));
+      await flushShare();
+      expect(recordedEvents().filter((e) => e.name === "share_complete")).toEqual([
+        { name: "share_complete", properties: { completed: false } },
+      ]);
+
+      clearRecordedEvents();
+      shareSpy.mockRejectedValueOnce(new Error("sheet unavailable"));
+      fireEvent.press(screen.getByTestId("share-send"));
+      await flushShare();
+      expect(recordedEvents().map((e) => e.name)).toEqual(["share_start"]);
     });
 
     it("context is none when no row was chosen; rendering and choosing send nothing", () => {

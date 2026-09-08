@@ -1,6 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { clearRecordedEvents, recordedPerson } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { todayIso } from "../../../lib/dates";
 import { firstMovementTracker } from "../../../lib/first-movement-timer";
@@ -81,6 +82,7 @@ beforeEach(() => {
     saveFailed: false,
   });
   firstMovementTracker.reset(); // each test is its own app launch
+  clearRecordedEvents();
 });
 
 describe("LaunchScreen", () => {
@@ -93,6 +95,30 @@ describe("LaunchScreen", () => {
     expect(cbs.onPromptHandoff).not.toHaveBeenCalled();
     expect(screen.queryByText(strings.resume.headline)).toBeNull();
     expect(cbs.onResumeFinished).not.toHaveBeenCalled();
+  });
+
+  it("syncs the person's facts once the stores have hydrated, from what they hold", () => {
+    expect(recordedPerson()).toEqual({});
+    useProfileStore.setState({
+      history: {
+        entries: [
+          { date: "2026-08-01", minutes: 20, blocks: [{ movementId: "plank", pattern: "core", outcome: "completed" }] },
+          { date: "2026-08-02", minutes: 30, blocks: [{ movementId: "plank", pattern: "core", outcome: "skipped" }] },
+        ],
+      },
+    });
+    const screen = render(<LaunchScreen {...callbacks()} />);
+    expect(recordedPerson()).toEqual({
+      entitlement: "free",
+      sessions_completed: 1,
+      last_minutes: 30,
+      intention: "none",
+      voice: false,
+      signed_in: false,
+    });
+    // Once per launch decision, not per render.
+    screen.rerender(<LaunchScreen {...callbacks()} />);
+    expect(recordedPerson()).toMatchObject({ sessions_completed: 1 });
   });
 
   it("offers the one calm resume decision for today's in-progress session", () => {

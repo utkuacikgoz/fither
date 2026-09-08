@@ -1,5 +1,7 @@
 import { StyleSheet, View } from "react-native";
 
+import { track } from "../../analytics/analytics";
+import { syncPersonProperties } from "../../analytics/person";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
@@ -31,6 +33,8 @@ export function VoiceAskScreen({ onDone }: VoiceAskScreenProps) {
 
   const choose = (voice: boolean) => {
     answer(voice);
+    track("voice_ask", { voice });
+    syncPersonProperties();
     onDone();
   };
 

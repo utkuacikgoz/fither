@@ -1,5 +1,5 @@
 // Recipient page copy. Every string here is user-facing and passes
-// .claude/skills/fither-voice/SKILL.md: second person, no dashes, nothing
+// the fither-voice rules: second person, no dashes, nothing
 // from the forbidden list, ten minutes is complete.
 //
 // Sources: docs/growth/treatments.md (between_meetings, away_from_home,

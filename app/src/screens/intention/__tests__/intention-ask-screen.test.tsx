@@ -1,7 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
+import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { useIntentionStore } from "../../../state/intention-store";
 import {
@@ -51,6 +51,8 @@ describe("IntentionAskScreen", () => {
     expect(recordedEvents()).toEqual([
       { name: "weekly_intention_set", properties: { target: event } },
     ]);
+    // The person's intention fact follows the answer.
+    expect(recordedPerson()).toMatchObject({ intention: event });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
@@ -64,6 +66,7 @@ describe("IntentionAskScreen", () => {
     expect(recordedEvents()).toEqual([
       { name: "weekly_intention_set", properties: { target: "none" } },
     ]);
+    expect(recordedPerson()).toMatchObject({ intention: "none" });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 

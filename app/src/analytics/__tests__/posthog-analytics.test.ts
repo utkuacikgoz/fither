@@ -29,7 +29,7 @@ describe("PostHog adapter", () => {
         "phc_test",
         expect.objectContaining({
           host: "https://us.i.posthog.com",
-          captureAppLifecycleEvents: false,
+          captureAppLifecycleEvents: true,
           disableGeoip: true,
           preloadFeatureFlags: false,
           disableSurveys: true,

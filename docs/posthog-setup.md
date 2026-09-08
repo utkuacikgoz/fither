@@ -52,9 +52,25 @@ pure JavaScript — no rebuild is needed to switch it on.
 | `experiment_exposure` | `experiment`, `variant` (control / three) | a variant was assigned on this phone, once per experiment (ADR-0025) |
 | `trial_start` | `plan` (annual / monthly) | the store granted a subscription trial |
 
-No `identify()` is ever called; the distinct id is PostHog's anonymous
-one, reset on sign-out. Nothing else is sent: no screen views, no
-lifecycle events, no device model, no locale.
+The drop-off pass (2026-09-08) added twenty more, one per place she can
+leave — `sign_in_view`, `sign_in_result`, `prompt_answer`,
+`no_session_shown`, `no_session_action`, `care_note`, `preview_leave`,
+`voice_ask`, `block_outcome`, `skill_unlocked`, `reminder_ask`,
+`paywall_plan`, `paywall_leave`, `purchase_result`, `restore_result`,
+`lifetime_offer`, `share_complete`, `account_action` — with the payloads
+in `app/src/analytics/events.ts` and the funnels in
+`docs/measurement.md`. PostHog's own `Application Opened` /
+`Application Backgrounded` are on.
+
+Identity: anonymous until Sign in with Apple, then `identify()` with a
+salted one-way hash of the Apple user id; reset on sign-out and erase.
+Person properties: `entitlement`, `sessions_completed`, `last_minutes`,
+`intention`, `voice`, `signed_in`. Still never sent: screen views,
+device model, locale, names, emails, the areas she works around, notes.
+
+Owner step for paid conversion: RevenueCat → Integrations → PostHog,
+paste the project key. Purchases, renewals, cancellations and expirations
+then arrive as server events on the same person.
 
 ## Verifying
 

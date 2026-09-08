@@ -9,6 +9,7 @@ import {
 import { create } from "zustand";
 
 import { track } from "../analytics/analytics";
+import { syncPersonProperties } from "../analytics/person";
 import { firstMovementTracker } from "../lib/first-movement-timer";
 import { applyResult } from "../session/apply-result";
 import {
@@ -369,7 +370,8 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     } = get();
     if (!player) return;
     const now = Date.now();
-    let next = reduce(player, event);
+    const reduced = reduce(player, event);
+    let next = reduced;
     // Anchor the live stretch whenever a dispatch touches a work phase
     // with no anchor running — the session's first work entry, and again
     // after a restore (which may land directly INSIDE a work phase, so
@@ -433,6 +435,23 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
     // already begun, so a relaunch mid-session never counts twice.
     if (session !== null && !hasBegun(player) && hasBegun(next)) {
       track("workout_start", { minutes: session.minutes });
+    }
+    // block_outcome: the machine recorded HER answer for one block —
+    // completed/struggled from the feedback question, skipped from the
+    // skip. Read from the transition (a rejected event records nothing)
+    // and from the reduce BEFORE the ceiling wrap, whose skips are the
+    // clock's, not hers.
+    const answered = reduced.outcomes[player.outcomes.length];
+    if (
+      (event.type === "feedback" || event.type === "skipBlock") &&
+      answered !== undefined &&
+      reduced.outcomes.length === player.outcomes.length + 1
+    ) {
+      track("block_outcome", {
+        index: player.outcomes.length,
+        total: reduced.blocks.length,
+        outcome: answered,
+      });
     }
     // Persist the crash-recovery snapshot only when the machine actually
     // moved — phase transitions and captured outcomes. Countdown ticks
@@ -648,7 +667,14 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
             session.date,
           ).current,
         });
+        // skill_unlocked: one per milestone the engine granted in this
+        // result — the pattern and the tier, never the movement name.
+        for (const skill of record.result.unlockedSkills) {
+          track("skill_unlocked", { pattern: skill.pattern, tier: skill.tier });
+        }
       }
+      // The commit moved her facts (sessions, last length, entitlement).
+      syncPersonProperties();
     } catch (error) {
       // The active snapshot and journal are deliberately retained. A retry
       // replays the exact result instead of asking the engine to award it again.

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { nextMilestone } from "@fither/engine";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
@@ -42,6 +43,13 @@ export function LifetimeOfferScreen({ onDone }: LifetimeOfferScreenProps) {
   const library = loadLibrary();
   const ladderPattern = nextMilestone(profile)?.pattern ?? "push";
   const reached = profile.patterns[ladderPattern].tier;
+
+  // lifetime_offer view: the letter was actually on screen — a store
+  // with no lifetime product shows nothing and reports nothing.
+  const offered = offering !== null;
+  useEffect(() => {
+    if (offered) track("lifetime_offer", { action: "view" });
+  }, [offered]);
 
   const buy = async () => {
     if (busy) return;
@@ -117,7 +125,10 @@ export function LifetimeOfferScreen({ onDone }: LifetimeOfferScreenProps) {
         <QuietButton
           testID="lifetime-offer-decline"
           label={strings.lifetimeOffer.decline}
-          onPress={onDone}
+          onPress={() => {
+            track("lifetime_offer", { action: "decline" });
+            onDone();
+          }}
         />
       </View>
     </Screen>

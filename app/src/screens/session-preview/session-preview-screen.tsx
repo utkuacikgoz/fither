@@ -203,6 +203,7 @@ export function SessionPreviewScreen({
           testID="preview-change-answers"
           label={strings.preview.changeAnswers}
           onPress={() => {
+            track("preview_leave", { action: "changeAnswers" });
             saveCareNote();
             prepareSessionEdit();
             onChangeAnswers();

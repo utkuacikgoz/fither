@@ -27,9 +27,11 @@ export interface IdentityRecord {
   kind: IdentityKind;
   date: string;
   /**
-   * The provider's opaque, stable user id (Apple's `user`), kept only so
-   * a revoked credential can be recognised at launch. Never shown, never
-   * sent anywhere; absent for guest and for legacy records.
+   * The provider's opaque, stable user id (Apple's `user`), kept so a
+   * revoked credential can be recognised at launch and so analytics can
+   * count her once across devices — as a one-way hash of it
+   * (analytics/identity.ts), never the id itself. Never shown; absent
+   * for guest and for legacy records.
    */
   providerUserId?: string;
 }

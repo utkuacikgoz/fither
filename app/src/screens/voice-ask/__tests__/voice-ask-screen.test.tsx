@@ -1,12 +1,14 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { useSettingsStore } from "../../../state/settings-store";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
 import { VoiceAskScreen } from "../voice-ask-screen";
 
 beforeEach(() => {
+  clearRecordedEvents();
   useSettingsStore.setState({ voice: false, voiceAsked: false, hydrated: true });
 });
 
@@ -36,6 +38,17 @@ describe("VoiceAskScreen", () => {
     fireEvent.press(screen.getByTestId("voice-ask-decline"));
     expect(useSettingsStore.getState()).toMatchObject({ voice: false, voiceAsked: true });
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["voice-ask-allow", true],
+    ["voice-ask-decline", false],
+  ] as const)("%s reports voice_ask and syncs the person's voice fact", (testID, voice) => {
+    const screen = render(<VoiceAskScreen onDone={jest.fn()} />);
+    expect(recordedEvents()).toEqual([]);
+    fireEvent.press(screen.getByTestId(testID));
+    expect(recordedEvents()).toEqual([{ name: "voice_ask", properties: { voice } }]);
+    expect(recordedPerson()).toMatchObject({ voice });
   });
 
   it("renders no user-facing text outside strings.ts", () => {

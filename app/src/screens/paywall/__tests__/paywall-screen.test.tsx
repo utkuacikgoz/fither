@@ -268,3 +268,18 @@ describe("paywall_view (ADR-0024)", () => {
     expect(recordedEvents().map((e) => e.properties)).toEqual([{ surface: "settings" }]);
   });
 });
+
+describe("paywall_plan (drop-off pass)", () => {
+  beforeEach(() => clearRecordedEvents());
+
+  it("reports each plan row she taps, and nothing on the default selection", () => {
+    const screen = render(<PaywallScreen />);
+    expect(recordedEvents().filter((e) => e.name === "paywall_plan")).toEqual([]);
+    fireEvent.press(screen.getByTestId("paywall-plan-monthly"));
+    fireEvent.press(screen.getByTestId("paywall-plan-annual"));
+    expect(recordedEvents().filter((e) => e.name === "paywall_plan")).toEqual([
+      { name: "paywall_plan", properties: { plan: "monthly" } },
+      { name: "paywall_plan", properties: { plan: "annual" } },
+    ]);
+  });
+});

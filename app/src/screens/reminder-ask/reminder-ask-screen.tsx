@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
@@ -45,6 +46,8 @@ export function ReminderAskScreen({ onDone }: ReminderAskScreenProps) {
     setBusy(true);
     const granted = await allow();
     setBusy(false);
+    // reminder_ask: her yes, or her yes that iOS then refused.
+    track("reminder_ask", { outcome: granted ? "allow" : "osDenied" });
     if (granted) {
       setStep("time");
     } else {
@@ -56,6 +59,7 @@ export function ReminderAskScreen({ onDone }: ReminderAskScreenProps) {
 
   const handleDecline = () => {
     decline();
+    track("reminder_ask", { outcome: "decline" });
     onDone();
   };
 

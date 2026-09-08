@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import type { WeeklyTarget } from "@fither/engine";
 
 import { track } from "../../analytics/analytics";
+import { syncPersonProperties } from "../../analytics/person";
 import { strings } from "../../copy/strings";
 import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
@@ -46,6 +47,7 @@ export function IntentionAskScreen({ onDone }: IntentionAskScreenProps) {
     // a re-entry can never ask again (intention-store).
     setTarget(option.target);
     track("weekly_intention_set", { target: option.event });
+    syncPersonProperties();
     onDone();
   };
 

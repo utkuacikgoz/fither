@@ -119,6 +119,19 @@ describe("SessionPreviewScreen", () => {
     expect(useSessionStore.getState().player).toBeNull();
   });
 
+  it("preview_leave: Change today's answers reports the one way out without starting", () => {
+    clearRecordedEvents();
+    seedPreview([]);
+    const screen = render(
+      <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
+    );
+    fireEvent.press(screen.getByTestId("preview-change-answers"));
+    expect(recordedEvents().filter((e) => e.name === "preview_leave")).toEqual([
+      { name: "preview_leave", properties: { action: "changeAnswers" } },
+    ]);
+    expect(recordedEvents().some((e) => e.name === "workout_start")).toBe(false);
+  });
+
   it("session_preview (ADR-0024): reports the built session once: minutes and block count only", () => {
     clearRecordedEvents();
     seedPreview([]);

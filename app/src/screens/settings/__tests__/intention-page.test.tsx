@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
+import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { glyph } from "../../../design/tokens";
 import { useIntentionStore } from "../../../state/intention-store";
@@ -59,6 +59,8 @@ describe("Settings → Sessions a week", () => {
       { target: "two" },
       { target: "none" },
     ]);
+    // The person's intention fact follows the last answer.
+    expect(recordedPerson()).toMatchObject({ intention: "none" });
   });
 
   it("changing the target is prospective: history is untouched, only the reading changes", () => {

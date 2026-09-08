@@ -2,14 +2,20 @@
 // (fither-code "Ops stack"; ADR-0015, extended by ADR-0024). The funnel
 // the retention and conversion thesis needs and nothing else: did she
 // arrive, get set up, see her session, start, finish, meet the gate,
-// try. Every event names what the platform actually observed (a paywall
-// shown, not a purchase considered). Every property is a closed
-// union or a small number — the forbidden list (fither-domain) cannot
-// even be represented here, and a test scans this directory for its
-// words, comments included. Nothing identifying travels: no name, no
-// email, no provider id, no query strings.
+// try — and, since the drop-off pass (owner decision 2026-09-08), every
+// step she can leave from: each prompt answer, each block inside a
+// session, each choice on the paywall, each permission ask. Every event
+// names what the platform actually observed (a paywall shown, not a
+// purchase considered). Every property is a closed union or a small
+// number — the forbidden list (fither-domain) cannot even be
+// represented here, and a test scans this directory for its words,
+// comments included. Nothing identifying travels: no name, no email,
+// no query strings, and never the provider id itself — when she signs
+// in with Apple the analytics person becomes a one-way hash of that id
+// (analytics/identity.ts), so she counts once across devices and the
+// id stays on the phone.
 
-import type { SessionMinutes } from "@fither/engine";
+import type { Energy, Pattern, SessionMinutes } from "@fither/engine";
 
 /** Why a finished session closed — mirrors the store's FinishClose reasons. */
 export type WorkoutCloseReason =
@@ -52,6 +58,64 @@ export interface AnalyticsEvents {
   experiment_exposure: { experiment: "free_sessions_v1"; variant: "control" | "three" };
   /** A store trial began through the purchase sheet (ADR-0014 §6). */
   trial_start: { plan: "annual" | "monthly" };
+
+  // ---- Drop-off pass (2026-09-08): where she leaves, step by step ----
+
+  /** The sign-in frame was shown (first use, or after sign-out). */
+  sign_in_view: Record<string, never>;
+  /** How the frame ended: the provider sheet's outcome, or the guest path. */
+  sign_in_result: { method: "apple" | "guest"; outcome: "done" | "cancelled" | "failed" };
+  /** One daily-prompt answer given; the four steps in order make the prompt funnel. */
+  prompt_answer:
+    | { step: "time"; minutes: SessionMinutes }
+    | { step: "energy"; energy: Energy }
+    | { step: "quiet"; quiet: boolean }
+    | { step: "soreness"; areas: number };
+  /** The engine could not build around today's answers; how many areas, how many single set-asides would unblock. */
+  no_session_shown: { areas: number; unblocking: number };
+  /** What she did on the dead end. */
+  no_session_action: { action: "setAside" | "changeAnswers" };
+  /** The care beat closed: a note kept on the phone, or skipped. Never the note. */
+  care_note: { saved: boolean };
+  /** She left the preview without starting. */
+  preview_leave: { action: "changeAnswers" };
+  /** The one-time voice ask was answered. */
+  voice_ask: { voice: boolean };
+  /** A block concluded inside the player: where in the session, and how. */
+  block_outcome: { index: number; total: number; outcome: "completed" | "struggled" | "skipped" };
+  /** A named skill was reached (the unlock screen). */
+  skill_unlocked: { pattern: Pattern; tier: number };
+  /** The reminder ask was answered; osDenied = she said yes and iOS said no. */
+  reminder_ask: { outcome: "allow" | "decline" | "osDenied" };
+  /** A plan row was tapped on the paywall. */
+  paywall_plan: { plan: "annual" | "monthly" };
+  /** She left the paywall without buying, where leaving is possible. */
+  paywall_leave: { surface: "gate" | "expired" | "settings" };
+  /** The purchase sheet's outcome, any plan. */
+  purchase_result: { plan: "annual" | "monthly" | "lifetime"; outcome: "purchased" | "cancelled" | "failed" };
+  /** Restore purchases, from the paywall or Settings. */
+  restore_result: { outcome: "restored" | "empty" | "failed" };
+  /** The day-3 lifetime offer was shown, or declined. */
+  lifetime_offer: { action: "view" | "decline" };
+  /** The iOS share sheet closed; completed = she picked a destination. */
+  share_complete: { completed: boolean };
+  /** She signed out or erased everything: the churn signals. */
+  account_action: { action: "signOut" | "erase" };
+}
+
+/**
+ * Facts about the person, not moments (PostHog person properties).
+ * Set whole, never merged with guesses; each is a closed value.
+ */
+export interface PersonProperties {
+  entitlement: "free" | "trial" | "active" | "lapsed";
+  /** Completed sessions, ever. */
+  sessions_completed: number;
+  /** The length she chose last. */
+  last_minutes: SessionMinutes | null;
+  intention: "two" | "three" | "none";
+  voice: boolean;
+  signed_in: boolean;
 }
 
 /** The public scenario ids a shared link may carry; anything else is dropped. */
@@ -82,4 +146,22 @@ export const ANALYTICS_EVENT_NAMES: readonly AnalyticsEventName[] = [
   "scenario_entry",
   "experiment_exposure",
   "trial_start",
+  "sign_in_view",
+  "sign_in_result",
+  "prompt_answer",
+  "no_session_shown",
+  "no_session_action",
+  "care_note",
+  "preview_leave",
+  "voice_ask",
+  "block_outcome",
+  "skill_unlocked",
+  "reminder_ask",
+  "paywall_plan",
+  "paywall_leave",
+  "purchase_result",
+  "restore_result",
+  "lifetime_offer",
+  "share_complete",
+  "account_action",
 ];

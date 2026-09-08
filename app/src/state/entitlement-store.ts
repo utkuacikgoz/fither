@@ -10,6 +10,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { track } from "../analytics/analytics";
+import { syncPersonProperties } from "../analytics/person";
 import { getBilling, type PlanId, type PurchaseRecord } from "../monetization/billing";
 
 /**
@@ -138,6 +139,12 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
 
       purchasePlan: async (plan) => {
         const outcome = await getBilling().purchase(plan);
+        // purchase_result: the sheet's own word, any plan — the plan she
+        // asked for, since a refused sheet grants none.
+        track("purchase_result", {
+          plan,
+          outcome: outcome.ok ? "purchased" : outcome.reason,
+        });
         if (!outcome.ok) return outcome.reason;
         set({ purchase: outcome.purchase, trialUsed: true });
         // trial_start: the store granted a free period on a subscription
@@ -146,16 +153,22 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
         if (outcome.purchase.trial && outcome.purchase.plan !== "lifetime") {
           track("trial_start", { plan: outcome.purchase.plan });
         }
+        syncPersonProperties();
         return "purchased";
       },
 
       restorePurchases: async () => {
         const outcome = await getBilling().restore();
-        if (!outcome.ok) {
-          return outcome.reason === "nothingToRestore" ? "empty" : "failed";
-        }
+        const result: RestoreResult = outcome.ok
+          ? "restored"
+          : outcome.reason === "nothingToRestore"
+            ? "empty"
+            : "failed";
+        track("restore_result", { outcome: result });
+        if (!outcome.ok) return result;
         set({ purchase: outcome.purchase, trialUsed: true });
-        return "restored";
+        syncPersonProperties();
+        return result;
       },
 
       resetForDev: () =>

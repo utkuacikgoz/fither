@@ -5,8 +5,10 @@
 // geolocation. The SDK queues events in AsyncStorage and flushes when it
 // can — airplane mode costs nothing and loses nothing.
 //
-// Identity: PostHog's anonymous distinct id only. identify() is never
-// called; the Apple provider id, name and email never reach the vendor.
+// Identity: PostHog's anonymous distinct id until she signs in with
+// Apple; then identify() with the one-way hash from analytics/identity.ts
+// (owner decision 2026-09-08: she counts once across devices). The Apple
+// provider id, name and email never reach the vendor.
 
 import PostHog from "posthog-react-native";
 
@@ -27,7 +29,9 @@ function ensureClient(): PostHog | null {
   if (client || !API_KEY) return client;
   client = new PostHog(API_KEY, {
     host: HOST,
-    captureAppLifecycleEvents: false,
+    // Application Opened / Backgrounded, with from_background: the
+    // return-visit signal the drop-off funnels start from.
+    captureAppLifecycleEvents: true,
     disableGeoip: true,
     preloadFeatureFlags: false,
     sendFeatureFlagEvent: false,
@@ -46,6 +50,29 @@ export const postHogAnalytics: AnalyticsPort = {
       ensureClient()?.capture(name, properties);
     } catch {
       // Never surfaces: a lost event is the worst case by design.
+    }
+  },
+  identify(distinctId) {
+    try {
+      ensureClient()?.identify(distinctId);
+    } catch {
+      // Never let analytics break a screen.
+    }
+  },
+  alias(distinctId) {
+    try {
+      ensureClient()?.alias(distinctId);
+    } catch {
+      // Never let analytics break a screen.
+    }
+  },
+  setPersonProperties(properties) {
+    try {
+      // $set on the person, carried by a dedicated event so it applies
+      // without waiting for the next capture.
+      ensureClient()?.capture("$set", { $set: properties });
+    } catch {
+      // Never let analytics break a screen.
     }
   },
   reset() {

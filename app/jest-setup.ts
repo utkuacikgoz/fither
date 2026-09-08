@@ -162,6 +162,9 @@ jest.mock("react-native-purchases", () => {
     purchasePackage: jest.fn(),
     restorePurchases: jest.fn(),
     getCustomerInfo: jest.fn(),
+    getAppUserID: jest.fn(async () => "$RCAnonymousID:test"),
+    logIn: jest.fn(async () => ({ created: false, customerInfo: {} })),
+    logOut: jest.fn(async () => ({})),
   };
   return { __esModule: true, default: Purchases, PACKAGE_TYPE, PURCHASES_ERROR_CODE, LOG_LEVEL };
 });

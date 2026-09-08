@@ -31,6 +31,25 @@ describe("analytics events", () => {
       "scenario_entry",
       "experiment_exposure",
       "trial_start",
+      // Drop-off pass (2026-09-08): where she leaves, step by step.
+      "sign_in_view",
+      "sign_in_result",
+      "prompt_answer",
+      "no_session_shown",
+      "no_session_action",
+      "care_note",
+      "preview_leave",
+      "voice_ask",
+      "block_outcome",
+      "skill_unlocked",
+      "reminder_ask",
+      "paywall_plan",
+      "paywall_leave",
+      "purchase_result",
+      "restore_result",
+      "lifetime_offer",
+      "share_complete",
+      "account_action",
     ]);
   });
 

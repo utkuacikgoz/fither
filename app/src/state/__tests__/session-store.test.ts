@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 
-import { clearRecordedEvents, recordedEvents } from "../../analytics/dev-analytics";
+import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../analytics/dev-analytics";
 import { strings } from "../../copy/strings";
 import { capturedErrors, clearCapturedErrors } from "../../monitoring/quiet-monitoring";
 import { firstMovementTracker } from "../../lib/first-movement-timer";
@@ -186,7 +186,57 @@ describe("session store", () => {
       // Later transitions and ticks are not a second start.
       useSessionStore.getState().dispatchPlayer({ type: "tick" });
       useSessionStore.getState().dispatchPlayer({ type: "skipBlock" });
-      expect(recordedEvents()).toHaveLength(1);
+      expect(recordedEvents().filter((e) => e.name === "workout_start")).toHaveLength(1);
+    });
+
+    it("block_outcome reports each answered block: where in the session, and how", () => {
+      useSessionStore.getState().startSession(fixturePrompt);
+      const dispatch = useSessionStore.getState().dispatchPlayer;
+      dispatch({ type: "begin" });
+      // A tick mid-work and a begin at the wrong phase record nothing.
+      dispatch({ type: "tick" });
+      expect(recordedEvents().filter((e) => e.name === "block_outcome")).toEqual([]);
+      // The fixture's first block is rep work: advance through its sets
+      // to the feedback question, then answer it.
+      let guard = 0;
+      while (useSessionStore.getState().player?.phase.kind !== "feedback" && guard < 20) {
+        dispatch({ type: "advance" });
+        guard += 1;
+      }
+      // A skip on the feedback question is rejected by the machine: nothing.
+      dispatch({ type: "skipBlock" });
+      expect(recordedEvents().filter((e) => e.name === "block_outcome")).toEqual([]);
+      dispatch({ type: "feedback", outcome: "struggled" });
+      // The second block is skipped from its intro.
+      dispatch({ type: "skipBlock" });
+      expect(recordedEvents().filter((e) => e.name === "block_outcome")).toEqual([
+        { name: "block_outcome", properties: { index: 0, total: 2, outcome: "struggled" } },
+        { name: "block_outcome", properties: { index: 1, total: 2, outcome: "skipped" } },
+      ]);
+      expect(useSessionStore.getState().player?.outcomes).toEqual(["struggled", "skipped"]);
+    });
+
+    it("block_outcome names a completed answer too, and only hers — never the ceiling wrap's skips", () => {
+      useSessionStore.getState().startSession(fixturePrompt);
+      const dispatch = useSessionStore.getState().dispatchPlayer;
+      dispatch({ type: "begin" });
+      let guard = 0;
+      while (useSessionStore.getState().player?.phase.kind !== "feedback" && guard < 20) {
+        dispatch({ type: "advance" });
+        guard += 1;
+      }
+      // Past the ceiling: her answer counts, the wrap's skip of the
+      // remaining block is the clock's and is not reported.
+      useSessionStore.setState({
+        activeMs: sessionCeilingMs(fixtureSession.minutes) + 1,
+        workResumedAt: null,
+      });
+      dispatch({ type: "feedback", outcome: "completed" });
+      expect(useSessionStore.getState().player?.phase.kind).toBe("done");
+      expect(useSessionStore.getState().player?.outcomes).toEqual(["completed", "skipped"]);
+      expect(recordedEvents().filter((e) => e.name === "block_outcome")).toEqual([
+        { name: "block_outcome", properties: { index: 0, total: 2, outcome: "completed" } },
+      ]);
     });
 
     it("a restored mid-session player has already begun — no second workout_start", async () => {
@@ -212,7 +262,50 @@ describe("session store", () => {
           name: "workout_complete",
           properties: { minutes: 10, close: "completed", first: true, streak: 1 },
         },
+        // The fixture result grants one milestone: the pattern and the
+        // tier, never the movement's name.
+        { name: "skill_unlocked", properties: { pattern: "push", tier: 4 } },
       ]);
+    });
+
+    it("skill_unlocked fires once per granted skill, and not at all when none was", async () => {
+      mockedApply.mockReturnValue({
+        ok: true,
+        value: {
+          ...fixtureApplyResult(),
+          unlockedSkills: [
+            { pattern: "push", tier: 4, movementName: "Full Push-Up" },
+            { pattern: "core", tier: 2, movementName: "Plank" },
+          ],
+        },
+      });
+      useSessionStore.getState().startSession(fixturePrompt);
+      playWholeSession();
+      await useSessionStore.getState().completeSession();
+      expect(recordedEvents().filter((e) => e.name === "skill_unlocked")).toEqual([
+        { name: "skill_unlocked", properties: { pattern: "push", tier: 4 } },
+        { name: "skill_unlocked", properties: { pattern: "core", tier: 2 } },
+      ]);
+
+      clearRecordedEvents();
+      useSessionStore.getState().resetSession();
+      mockedApply.mockReturnValue({ ok: true, value: { ...fixtureApplyResult(), unlockedSkills: [] } });
+      useSessionStore.getState().startSession(fixturePrompt);
+      playWholeSession();
+      await useSessionStore.getState().completeSession();
+      expect(recordedEvents().filter((e) => e.name === "skill_unlocked")).toEqual([]);
+    });
+
+    it("the person's facts are synced once the commit lands, from the committed history", async () => {
+      expect(recordedPerson()).toEqual({});
+      useSessionStore.getState().startSession(fixturePrompt);
+      playWholeSession();
+      await useSessionStore.getState().completeSession();
+      expect(recordedPerson()).toMatchObject({
+        sessions_completed: 1,
+        last_minutes: 10,
+        signed_in: false,
+      });
     });
 
     it("a second-ever session is not 'first'; a replayed journal reports once, a committed one never", async () => {
@@ -241,8 +334,7 @@ describe("session store", () => {
       // The pending journal means the commit never landed, so nothing
       // was reported yet: this replay reports it, once.
       await useSessionStore.getState().completeSession();
-      expect(recordedEvents()).toHaveLength(1);
-      expect(recordedEvents()[0]?.name).toBe("workout_complete");
+      expect(recordedEvents().map((e) => e.name)).toEqual(["workout_complete", "skill_unlocked"]);
 
       // A committed journal has already reported: re-running the
       // completion for it (finish cleared, as after a relaunch) is silent.
@@ -269,7 +361,7 @@ describe("session store", () => {
       ]);
       await useSessionStore.getState().completeSession();
       expect(useSessionStore.getState().finish).not.toBeNull();
-      expect(recordedEvents()).toHaveLength(1);
+      expect(recordedEvents().filter((e) => e.name === "workout_complete")).toHaveLength(1);
       spy.mockRestore();
     });
   });
