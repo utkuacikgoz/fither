@@ -46,6 +46,7 @@ export function StatTile({
       order={order}
       reduceMotion={reduceMotion}
       style={styles.tile}
+      fill
       accessible
       accessibilityLabel={accessibilityLabel}
       {...(testID ? { testID } : {})}

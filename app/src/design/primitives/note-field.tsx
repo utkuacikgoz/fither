@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   input: {
+    marginTop: spacing.xs,
     minHeight: minTouchTarget * 2,
     borderWidth: hairline,
     borderRadius: radius.card,

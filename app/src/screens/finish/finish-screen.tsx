@@ -11,8 +11,7 @@ import { MovementFigure } from "../../design/primitives/movement-figure";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
-import { useTheme } from "../../design/theme";
-import { minTouchTarget, motion, spacing, typeScale } from "../../design/tokens";
+import { minTouchTarget, motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useTodayIso } from "../../lib/use-today";
 import { sessionReceipt } from "../../session/receipt";
@@ -87,7 +86,6 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   const saving = useSessionStore((s) => s.saving);
   const session = useSessionStore((s) => s.session);
   const reduceMotion = useReducedMotion();
-  const colors = useTheme();
   const today = useTodayIso();
 
   // A session with zero attempted blocks gets the honest close — no
@@ -110,8 +108,9 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
     ? entry.blocks.filter((block) => block.outcome !== "skipped")
     : [];
 
-  // A session of struggled blocks earns nothing: no "+0" row, the day
-  // still counts (the headline, the figures and the receipt say so).
+  // A session of struggled blocks earns nothing: no "+0" row on the
+  // receipt, the day still counts (the headline, the figures and the
+  // receipt say so).
   const showPoints = finish !== null && !nothingDone && finish.pointsEarned > 0;
 
   // VoiceOver hears the close HERE, where the honest reason is known —
@@ -150,12 +149,13 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
     completeSession();
   }, [completeSession]);
 
-  // Four beats once the close is known — the headline, the movements
-  // she did, the receipt, then the points — in the unlock's own rhythm.
-  // The saving and failed states are waiting states and get no
-  // choreography; the buttons sit outside it and are tappable the moment
-  // they render. The points rise in once and do not count up: a ticking
-  // total is slot-machine energy, and points buy nothing here.
+  // Three beats once the close is known — the headline, the movements
+  // she did, then the receipt with the points as its last line — in the
+  // unlock's own rhythm. The saving and failed states are waiting states
+  // and get no choreography; the buttons sit outside it and are tappable
+  // the moment they render. The points rise in with the receipt and do
+  // not count up: a ticking total is slot-machine energy, and points buy
+  // nothing here.
   const beat = (index: number) => ({
     reduceMotion,
     rise: settled ? motion.riseDistance : 0,
@@ -199,28 +199,14 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
         )}
         {receipt && (
           <View style={styles.receipt}>
-            <ReceiptTile receipt={receipt} week={week} order={2} reduceMotion={reduceMotion} />
+            <ReceiptTile
+              receipt={receipt}
+              week={week}
+              points={showPoints && finish ? finish.pointsEarned : 0}
+              order={2}
+              reduceMotion={reduceMotion}
+            />
           </View>
-        )}
-        {finish && showPoints && (
-          <FadeIn {...beat(3)}>
-            <View style={styles.points}>
-              <AppText
-                variant="numeral"
-                color={colors.accent}
-                style={styles.pointsValue}
-                testID="finish-points"
-              >
-                {`+${finish.pointsEarned}`}
-              </AppText>
-              {/* The unit agrees with the number (the long-flagged copy
-                  nit, closed): one point reads "+1 point", never unitless
-                  and never the false "+1 points". */}
-              <AppText variant="caption">
-                {strings.finish.pointsUnit(finish.pointsEarned)}
-              </AppText>
-            </View>
-          </FadeIn>
         )}
       </ScrollView>
       <View style={styles.bottom}>
@@ -268,18 +254,6 @@ const styles = StyleSheet.create({
   },
   receipt: {
     marginTop: spacing.lg - spacing.xs,
-  },
-  points: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: spacing.sm,
-    marginTop: spacing.md + spacing.xs,
-  },
-  pointsValue: {
-    // The numeral's face at the display size: the mockup's +20 sits
-    // beside its unit, not as a total that owns the screen.
-    fontSize: typeScale.display,
-    lineHeight: typeScale.display * 1.1,
   },
   bottom: {
     paddingBottom: spacing.sm,
