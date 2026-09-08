@@ -48,6 +48,17 @@ const movements = JSON.parse(readFileSync(LIBRARY, "utf8")).movements;
 // The spoken lines that are not movement cues: the countdown the voice
 // says over the last five seconds of a rest or a hold. They live on the
 // one copy surface (strings.ts); Node strips the types on import.
+// Node 22.6-22.17 strips types only behind a flag (22.18+ by default):
+// re-run under the flag rather than asking the owner to remember it.
+if (!process.execArgv.includes("--experimental-strip-types") && !process.features.typescript) {
+  const { spawnSync } = await import("node:child_process");
+  const run = spawnSync(
+    process.execPath,
+    ["--experimental-strip-types", "--no-warnings", ...process.argv.slice(1)],
+    { stdio: "inherit" },
+  );
+  process.exit(run.status ?? 1);
+}
 const { strings } = await import(pathToFileURL(path.join(root, "app", "src", "copy", "strings.ts")).href);
 const countdown = [1, 2, 3, 4, 5].map((second) => strings.player.countdown(second));
 const cues = [
