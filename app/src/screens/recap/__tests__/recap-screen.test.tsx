@@ -6,7 +6,6 @@ import { createInitialProfile, weekOf, type HistoryEntry, type LedgerEvent } fro
 import RecapRoute, { parseRecapWeek } from "../../../../app/recap";
 import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
-import { todayIso } from "../../../lib/dates";
 import { formatWeekRange } from "../../../lib/format-week";
 import { useActiveSessionStore } from "../../../state/active-session-store";
 import { useEntitlementStore } from "../../../state/entitlement-store";
@@ -16,6 +15,15 @@ import { useProfileStore } from "../../../state/profile-store";
 import { useSettingsStore } from "../../../state/settings-store";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
 import { RecapScreen } from "../recap-screen";
+
+// Today is pinned: the recap draws a ring on today's day, so a suite that
+// read the real clock passed on one date and failed on the next (CI, the
+// day the week rolled over). The anchor week below is fixed, so today is
+// too — the one date outside it that keeps every day state stable.
+const PINNED_TODAY = "2026-09-20";
+jest.mock("../../../lib/use-today", () => ({
+  useTodayIso: () => "2026-09-20",
+}));
 
 // The recap reads the week the way the engine folded it and the ledger
 // dated it. Tests seed the stores and assert what the page reads back;
@@ -150,7 +158,7 @@ describe("RecapScreen", () => {
   });
 
   it("defaults to the week containing today and rings today in the strip", () => {
-    const today = todayIso();
+    const today = PINNED_TODAY;
     const week = weekOf(today);
     const screen = render(<RecapScreen />);
     expect(screen.getByTestId("recap-range")).toHaveTextContent(
@@ -197,7 +205,7 @@ describe("/recap route", () => {
     expect(parseRecapWeek(["2026-09-10", "x"])).toBe("2026-09-10");
     (useLocalSearchParams as unknown as jest.Mock).mockReturnValue({ week: "soon" });
     const screen = render(<RecapRoute />);
-    const week = weekOf(todayIso());
+    const week = weekOf(PINNED_TODAY);
     expect(screen.getByTestId("recap-range")).toHaveTextContent(
       strings.recap.title(formatWeekRange(week.start, week.end)),
     );
