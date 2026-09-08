@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { clearRecordedEvents, recordedEvents } from "../../analytics/dev-analytics";
+import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../analytics/dev-analytics";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
 import { entitlementStatus } from "../../monetization/entitlement";
 import { FREE_SESSIONS_EXPERIMENT } from "../../monetization/experiment";
@@ -133,18 +133,84 @@ describe("entitlement store", () => {
 
 describe("the store's word (ADR-0014 §6)", () => {
   it("trial_start fires for a subscription's store trial, never for lifetime or a restore", async () => {
+    const trialStarts = () => recordedEvents().filter((e) => e.name === "trial_start");
     await useEntitlementStore.getState().purchasePlan("annual");
-    expect(recordedEvents()).toEqual([
+    expect(trialStarts()).toEqual([
       { name: "trial_start", properties: { plan: "annual" } },
     ]);
     useEntitlementStore.getState().resetForDev();
     await useEntitlementStore.getState().restorePurchases();
-    expect(recordedEvents()).toHaveLength(1);
+    expect(trialStarts()).toHaveLength(1);
 
     clearRecordedEvents();
     useEntitlementStore.getState().resetForDev();
     await useEntitlementStore.getState().purchasePlan("lifetime");
-    expect(recordedEvents()).toEqual([]);
+    expect(trialStarts()).toEqual([]);
+  });
+
+  it("purchase_result reports the sheet's word for any plan, before the trial fact", async () => {
+    await useEntitlementStore.getState().purchasePlan("annual");
+    expect(recordedEvents().map((e) => e.name)).toEqual(["purchase_result", "trial_start"]);
+    expect(recordedEvents()[0]).toEqual({
+      name: "purchase_result",
+      properties: { plan: "annual", outcome: "purchased" },
+    });
+
+    clearRecordedEvents();
+    useEntitlementStore.getState().resetForDev();
+    await useEntitlementStore.getState().purchasePlan("lifetime");
+    expect(recordedEvents()).toEqual([
+      { name: "purchase_result", properties: { plan: "lifetime", outcome: "purchased" } },
+    ]);
+  });
+
+  it("purchase_result names a closed sheet and a failure, and grants nothing", async () => {
+    const { getBilling } = jest.requireActual<typeof import("../../monetization/billing")>(
+      "../../monetization/billing",
+    );
+    const spy = jest
+      .spyOn(getBilling(), "purchase")
+      .mockResolvedValueOnce({ ok: false, reason: "cancelled" })
+      .mockResolvedValueOnce({ ok: false, reason: "failed" });
+    expect(await useEntitlementStore.getState().purchasePlan("monthly")).toBe("cancelled");
+    expect(await useEntitlementStore.getState().purchasePlan("annual")).toBe("failed");
+    expect(recordedEvents()).toEqual([
+      { name: "purchase_result", properties: { plan: "monthly", outcome: "cancelled" } },
+      { name: "purchase_result", properties: { plan: "annual", outcome: "failed" } },
+    ]);
+    expect(useEntitlementStore.getState().purchase).toBeNull();
+    expect(recordedPerson()).toEqual({});
+    spy.mockRestore();
+  });
+
+  it("restore_result: restored, empty, failed", async () => {
+    // Nothing on the fake store account yet: empty.
+    expect(await useEntitlementStore.getState().restorePurchases()).toBe("empty");
+    await useEntitlementStore.getState().purchasePlan("annual");
+    useEntitlementStore.getState().resetForDev();
+    clearRecordedEvents();
+    expect(await useEntitlementStore.getState().restorePurchases()).toBe("restored");
+    const { getBilling } = jest.requireActual<typeof import("../../monetization/billing")>(
+      "../../monetization/billing",
+    );
+    const spy = jest
+      .spyOn(getBilling(), "restore")
+      .mockResolvedValueOnce({ ok: false, reason: "failed" });
+    expect(await useEntitlementStore.getState().restorePurchases()).toBe("failed");
+    expect(recordedEvents()).toEqual([
+      { name: "restore_result", properties: { outcome: "restored" } },
+      { name: "restore_result", properties: { outcome: "failed" } },
+    ]);
+    spy.mockRestore();
+  });
+
+  it("a grant syncs the person's entitlement: a store trial reads as trial, a restore as active", async () => {
+    await useEntitlementStore.getState().purchasePlan("annual");
+    expect(recordedPerson()).toMatchObject({ entitlement: "trial" });
+    useEntitlementStore.getState().resetForDev();
+    useDevReceiptStore.setState({ receipt: { plan: "annual", date: "2026-08-01" } });
+    await useEntitlementStore.getState().restorePurchases();
+    expect(recordedPerson()).toMatchObject({ entitlement: "active" });
   });
 
   it("a purchase marks the free week as used, and stays used after a lapse", async () => {

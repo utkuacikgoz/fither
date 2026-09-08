@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import type { BodyArea } from "@fither/engine";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { BrandMark } from "../../design/primitives/brand-mark";
@@ -102,12 +103,18 @@ export function PromptNoSession({
           <PrimaryButton
             testID="care-continue"
             label={strings.care.continueNoSession}
-            onPress={() => setCareDone(true)}
+            onPress={() => {
+              // care_note: whether a note stays on the phone — never
+              // the note. Continue with an empty field kept nothing.
+              track("care_note", { saved: careNoteText.trim().length > 0 });
+              setCareDone(true);
+            }}
           />
           <QuietButton
             testID="care-skip"
             label={strings.care.skip}
             onPress={() => {
+              track("care_note", { saved: false });
               onChangeCareNote("");
               setCareDone(true);
             }}

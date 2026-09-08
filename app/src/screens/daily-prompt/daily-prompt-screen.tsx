@@ -7,6 +7,7 @@ import type {
   SessionMinutes,
 } from "@fither/engine";
 
+import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AnswerRow } from "../../design/primitives/answer-row";
 import { AppText } from "../../design/primitives/app-text";
@@ -171,9 +172,17 @@ export function DailyPromptScreen({
       onSessionReady();
     } else if (result.reason === "noSession") {
       const { profile, history } = useProfileStore.getState();
-      setUnblocking(unblockingAreasFor(prompt, profile, history, sessionSalt));
+      const unblockingAreas = unblockingAreasFor(prompt, profile, history, sessionSalt);
+      setUnblocking(unblockingAreas);
       setFailedAreaCount(mergedAvoid.length);
       setStep("noSession");
+      // no_session_shown: the dead end, as counts — how many areas the
+      // build had to work around, how many single set-asides would
+      // unblock it. Never which areas.
+      track("no_session_shown", {
+        areas: mergedAvoid.length,
+        unblocking: unblockingAreas.length,
+      });
     } else {
       setStep("error");
     }
@@ -187,10 +196,17 @@ export function DailyPromptScreen({
     if (firstSession && remember && avoid.length > 0) {
       setAlwaysAvoid(avoid);
     }
+    track("prompt_answer", { step: "soreness", areas: avoid.length });
     finish(avoid);
   };
 
+  const allGood = () => {
+    track("prompt_answer", { step: "soreness", areas: 0 });
+    finish([]);
+  };
+
   const setAsideArea = (area: BodyArea) => {
+    track("no_session_action", { action: "setAside" });
     const next = [...setAsideToday, area];
     setSetAsideToday(next);
     finish(avoid, next);
@@ -210,6 +226,7 @@ export function DailyPromptScreen({
   // the care moment) is saved on the way out, exactly as before: one
   // local, append-only save; it goes nowhere else.
   const adjustAnswers = () => {
+    track("no_session_action", { action: "changeAnswers" });
     const note = careNoteText.trim();
     if (note.length > 0) {
       appendCareNote({ date: todayIso(), text: note });
@@ -318,6 +335,7 @@ export function DailyPromptScreen({
                 selected={minutes === m}
                 onPress={() => {
                   setMinutes(m);
+                  track("prompt_answer", { step: "time", minutes: m });
                   setStep("energy");
                 }}
               />
@@ -347,6 +365,9 @@ export function DailyPromptScreen({
                 selected={energy === e}
                 onPress={() => {
                   setEnergy(e);
+                  track("prompt_answer", { step: "energy", energy: e });
+                  // A place preset answers quiet for her: no quiet
+                  // answer is given, so none is reported.
                   setStep(presetQuiet ? "soreness" : "quiet");
                 }}
               />
@@ -375,6 +396,7 @@ export function DailyPromptScreen({
               selected={quiet === true}
               onPress={() => {
                 setQuiet(true);
+                track("prompt_answer", { step: "quiet", quiet: true });
                 setStep("soreness");
               }}
             />
@@ -386,6 +408,7 @@ export function DailyPromptScreen({
               selected={quiet === false}
               onPress={() => {
                 setQuiet(false);
+                track("prompt_answer", { step: "quiet", quiet: false });
                 setStep("soreness");
               }}
             />
@@ -452,7 +475,7 @@ export function DailyPromptScreen({
               <PrimaryButton
                 testID="soreness-all-good"
                 label={strings.prompt.soreness.allGood}
-                onPress={() => finish([])}
+                onPress={allGood}
               />
             )}
           </View>

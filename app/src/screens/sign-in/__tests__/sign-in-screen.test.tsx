@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
+import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { useDevAuthSessionStore } from "../../../auth/dev-auth";
 import { strings } from "../../../copy/strings";
 import { useIdentityStore } from "../../../state/identity-store";
@@ -18,6 +19,7 @@ import { SignInScreen } from "../sign-in-screen";
 // already a guest and only the provider is offered (`fromSettings`).
 
 beforeEach(() => {
+  clearRecordedEvents();
   useIdentityStore.setState({
     identity: null,
     hydrated: true,
@@ -120,6 +122,13 @@ describe("from Settings (guest by default, owner brief 2026-09-07)", () => {
     expect(useIdentityStore.getState().identity?.kind).toBe("guest");
     expect(screen.queryByTestId("sign-in-guest")).toBeNull();
   });
+});
+
+it("sign_in_view fires once when the frame is shown, with nothing attached", () => {
+  const screen = render(<SignInScreen fromSettings onDone={jest.fn()} />);
+  expect(recordedEvents()).toEqual([{ name: "sign_in_view", properties: {} }]);
+  screen.rerender(<SignInScreen fromSettings onDone={jest.fn()} />);
+  expect(recordedEvents()).toHaveLength(1);
 });
 
 it("every rendered string comes from strings.ts", () => {

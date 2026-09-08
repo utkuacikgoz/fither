@@ -3,7 +3,7 @@ import * as Notifications from "expo-notifications";
 
 import { createInitialProfile } from "@fither/engine";
 
-import { recordedEvents, clearRecordedEvents } from "../../analytics/dev-analytics";
+import { devAnalytics, recordedEvents, clearRecordedEvents } from "../../analytics/dev-analytics";
 import { useDevAuthSessionStore } from "../../auth/dev-auth";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
 import { fixturePrompt } from "../../test-utils/fixtures";
@@ -108,15 +108,21 @@ describe("eraseEverything", () => {
     expect(useDevAuthSessionStore.getState().session).not.toBeNull();
     useSessionStore.getState().startSession(fixturePrompt);
     useSessionStore.getState().dispatchPlayer({ type: "begin" });
-    // The seed's trial_start and this workout_start are on the record.
-    expect(recordedEvents()).toHaveLength(2);
+    // The seed's sign-in, purchase and trial events and this
+    // workout_start are on the record.
+    expect(recordedEvents().length).toBeGreaterThan(0);
+    // account_action goes out under her id BEFORE the reset takes it —
+    // the reset also empties the dev record, so the port itself is watched.
+    const sent = jest.spyOn(devAnalytics, "track");
 
     await eraseEverything();
 
+    expect(sent).toHaveBeenCalledWith("account_action", { action: "erase" });
     expect(useDevAuthSessionStore.getState().session).toBeNull();
     expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalled();
     expect(useSessionStore.getState().session).toBeNull();
     expect(recordedEvents()).toEqual([]);
+    sent.mockRestore();
   });
 
   it("finishes the wipe even when the provider or the OS refuse", async () => {

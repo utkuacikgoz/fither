@@ -209,7 +209,14 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
               priceLabel={offering.priceLabel}
               noteLabel={offering.noteLabel}
               selected={selected === offering.plan}
-              onSelect={() => setSelected(offering.plan)}
+              onSelect={() => {
+                setSelected(offering.plan);
+                // paywall_plan: a row was tapped. The port never lists
+                // lifetime here (ADR-0014); the narrow is for the types.
+                if (offering.plan !== "lifetime") {
+                  track("paywall_plan", { plan: offering.plan });
+                }
+              }}
             />
           ))}
         </View>

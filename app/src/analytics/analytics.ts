@@ -14,7 +14,7 @@
 // adapter records events in memory, which is what tests read.
 
 import { devAnalytics } from "./dev-analytics";
-import type { AnalyticsEventName, AnalyticsEvents } from "./events";
+import type { AnalyticsEventName, AnalyticsEvents, PersonProperties } from "./events";
 import { postHogAnalytics, postHogConfigured } from "./posthog-analytics";
 
 export interface AnalyticsPort {
@@ -22,6 +22,19 @@ export interface AnalyticsPort {
   track<N extends AnalyticsEventName>(name: N, properties: AnalyticsEvents[N]): void;
   /** Forget the anonymous id — sign-out and the dev first-run reset. */
   reset(): void;
+  /**
+   * Make this phone's events hers across devices: the distinct id becomes
+   * the given value (already a one-way hash, analytics/identity.ts). The
+   * anonymous events before it are stitched by the platform.
+   */
+  identify(distinctId: string): void;
+  /** Facts about the person, replacing the previous values of those keys. */
+  setPersonProperties(properties: Partial<PersonProperties>): void;
+  /**
+   * Another system's id for the same person (the store's anonymous
+   * customer id), so its server-side events land on her.
+   */
+  alias(distinctId: string): void;
 }
 
 /** The active analytics implementation. */
@@ -41,5 +54,32 @@ export function track<N extends AnalyticsEventName>(
     getAnalytics().track(name, properties);
   } catch {
     // Deliberately silent: analytics is never allowed to surface.
+  }
+}
+
+/** Identify, guarded like track: an adapter bug can only ever lose the link. */
+export function identify(distinctId: string): void {
+  try {
+    getAnalytics().identify(distinctId);
+  } catch {
+    // Never let analytics break a screen.
+  }
+}
+
+/** Alias, guarded like track. */
+export function alias(distinctId: string): void {
+  try {
+    getAnalytics().alias(distinctId);
+  } catch {
+    // Never let analytics break a screen.
+  }
+}
+
+/** Person properties, guarded like track. */
+export function setPersonProperties(properties: Partial<PersonProperties>): void {
+  try {
+    getAnalytics().setPersonProperties(properties);
+  } catch {
+    // Never let analytics break a screen.
   }
 }

@@ -2,6 +2,7 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 import { router } from "expo-router";
 import React from "react";
 
+import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { todayIso } from "../../../lib/dates";
 import { createSession } from "../../../session/create-session";
@@ -912,5 +913,136 @@ describe("DailyPromptScreen", () => {
       fireEvent.press(screen.getByTestId("energy-okay"));
       expect(screen.getByText(strings.prompt.quiet.question)).toBeTruthy();
     });
+  });
+});
+
+describe("analytics — the prompt funnel (drop-off pass, 2026-09-08)", () => {
+  const named = (name: string) => recordedEvents().filter((e) => e.name === name);
+
+  beforeEach(() => clearRecordedEvents());
+
+  it("prompt_answer: one event per answered step, in order, carrying only the answer", () => {
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("time-20"));
+    fireEvent.press(screen.getByTestId("energy-okay"));
+    fireEvent.press(screen.getByTestId("quiet-no"));
+    fireEvent.press(screen.getByTestId("soreness-back"));
+    fireEvent.press(screen.getByTestId("soreness-shoulders"));
+    // Picking areas is not an answer yet; the confirm is.
+    expect(named("prompt_answer")).toHaveLength(3);
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+    expect(recordedEvents()).toEqual([
+      { name: "prompt_answer", properties: { step: "time", minutes: 20 } },
+      { name: "prompt_answer", properties: { step: "energy", energy: "okay" } },
+      { name: "prompt_answer", properties: { step: "quiet", quiet: false } },
+      { name: "prompt_answer", properties: { step: "soreness", areas: 2 } },
+    ]);
+  });
+
+  it("'All good' answers soreness with zero areas", () => {
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+    expect(named("prompt_answer").map((e) => e.properties)).toEqual([
+      { step: "time", minutes: 10 },
+      { step: "energy", energy: "low" },
+      { step: "quiet", quiet: true },
+      { step: "soreness", areas: 0 },
+    ]);
+  });
+
+  it("a place preset that answers quiet for her reports no quiet answer", () => {
+    usePlaceStore.getState().setQuiet("hotel", "always");
+    usePlaceStore.getState().setPlace("hotel");
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-strong"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+    expect(named("prompt_answer").map((e) => e.properties)).toEqual([
+      { step: "time", minutes: 10 },
+      { step: "energy", energy: "strong" },
+      { step: "soreness", areas: 0 },
+    ]);
+  });
+
+  it("no_session_shown carries the two counts once; a set-aside row and Change today's answers each name their action", () => {
+    mockedCreate.mockReturnValueOnce({ ok: false, reason: "noSession" });
+    mockedUnblocking.mockReturnValueOnce(["shoulders", "hips"]);
+    const onSessionReady = jest.fn();
+    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-shoulders"));
+    fireEvent.press(screen.getByTestId("soreness-hips"));
+    fireEvent.press(screen.getByTestId("soreness-core"));
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+    expect(named("no_session_shown")).toEqual([
+      { name: "no_session_shown", properties: { areas: 3, unblocking: 2 } },
+    ]);
+    // The care beat in between reports nothing about the dead end.
+    fireEvent.press(screen.getByTestId("care-continue"));
+    expect(named("no_session_shown")).toHaveLength(1);
+    expect(named("no_session_action")).toEqual([]);
+
+    fireEvent.press(screen.getByTestId("no-session-set-aside-shoulders"));
+    expect(named("no_session_action")).toEqual([
+      { name: "no_session_action", properties: { action: "setAside" } },
+    ]);
+    expect(onSessionReady).toHaveBeenCalledTimes(1);
+    // Nothing about WHICH area travelled.
+    expect(JSON.stringify(recordedEvents())).not.toContain("shoulders");
+  });
+
+  it("Change today's answers from the dead end reports changeAnswers", () => {
+    mockedCreate.mockReturnValueOnce({ ok: false, reason: "noSession" });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    fireEvent.press(screen.getByTestId("soreness-all-good"));
+    expect(named("no_session_shown")).toEqual([
+      { name: "no_session_shown", properties: { areas: 0, unblocking: 0 } },
+    ]);
+    fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+    expect(named("no_session_action")).toEqual([
+      { name: "no_session_action", properties: { action: "changeAnswers" } },
+    ]);
+  });
+
+  it("care_note says only whether a note was kept: text + continue true; empty continue and skip false", () => {
+    mockedCreate.mockReturnValue({ ok: false, reason: "noSession" });
+    const screen = render(<DailyPromptScreen onSessionReady={jest.fn()} />);
+    // Her answers are kept after Change today's answers, so "back" is
+    // picked only once — re-tapping it would toggle it off.
+    const walkToCare = (pickBack: boolean) => {
+      fireEvent.press(screen.getByTestId("time-10"));
+      fireEvent.press(screen.getByTestId("energy-low"));
+      fireEvent.press(screen.getByTestId("quiet-yes"));
+      if (pickBack) fireEvent.press(screen.getByTestId("soreness-back"));
+      fireEvent.press(screen.getByTestId("soreness-confirm"));
+    };
+    walkToCare(true);
+    fireEvent.changeText(screen.getByTestId("care-note"), "  knee felt sharp  ");
+    fireEvent.press(screen.getByTestId("care-continue"));
+    fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+
+    walkToCare(false);
+    fireEvent.changeText(screen.getByTestId("care-note"), "   ");
+    fireEvent.press(screen.getByTestId("care-continue"));
+    fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+
+    walkToCare(false);
+    fireEvent.changeText(screen.getByTestId("care-note"), "something");
+    fireEvent.press(screen.getByTestId("care-skip"));
+
+    expect(named("care_note").map((e) => e.properties)).toEqual([
+      { saved: true },
+      { saved: false },
+      { saved: false },
+    ]);
+    expect(JSON.stringify(recordedEvents())).not.toContain("knee");
   });
 });

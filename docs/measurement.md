@@ -39,6 +39,49 @@ first `first_use_entry` per anonymous id.
 Per-variant and per-scenario cuts: group by `experiment_exposure.variant`
 (wave 5) and by the first `scenario_entry.scenario` per id (wave 3).
 
+## Drop-off funnels (2026-09-08)
+
+The owner's question after the first device sessions: where do people
+leave. The drop-off pass added the events below (all in
+`app/src/analytics/events.ts`); each funnel is a PostHog funnel over one
+person, ordered, with the window stated. Read the steps as facts the
+platform observed, never as intent.
+
+| funnel | steps, in order | window |
+|---|---|---|
+| Sign-in | `sign_in_view` → `sign_in_result` (split by `method`, `outcome`) | same screen |
+| Daily prompt | `prompt_answer` step=time → energy → quiet → soreness → `session_preview` | 30 minutes. `quiet` is absent when a place preset answered it: build the funnel with quiet optional |
+| Dead end | `no_session_shown` → `no_session_action` (split by `action`) → `session_preview` | 30 minutes; `areas` and `unblocking` say how far from a session she was |
+| Preview to start | `session_preview` → `workout_start`; `preview_leave` counts the ones who went back | same session |
+| Inside the session | `workout_start` → `block_outcome` per `index` → `workout_complete`; the first `index` whose `outcome` is skipped, or the last `index` seen before an `endedEarly` close, is where the session broke | same session |
+| First close to the asks | `workout_complete` first=true → `reminder_ask` → `weekly_intention_set` | same day |
+| Voice | `voice_ask` (split by `voice`) against later `workout_complete` counts | 14 days |
+| Paywall | `paywall_view` → `paywall_plan` → `purchase_result` (split by `plan`, `outcome`); `trial_start` remains the trial's own event; `paywall_leave` where the surface allows leaving | 24 hours |
+| Lifetime offer | `lifetime_offer` view → `purchase_result` plan=lifetime, or `lifetime_offer` decline | same screen |
+| Restore | `restore_result` split by `outcome` | none; a failure rate, not a funnel |
+| Share | `share_eligible` → `share_start` → `share_complete` (split by `completed`) | same screen |
+| Churn signals | `account_action` split by `action`; pair with the person's `sessions_completed` at the time | none |
+
+Return visits come from PostHog's own `Application Opened` (with
+`from_background`) and `Application Backgrounded`, turned on in the
+adapter; no custom event duplicates them.
+
+**Identity.** Until she signs in, the person is the anonymous id PostHog
+created on the phone. On Sign in with Apple the app calls `identify`
+with a one-way salted hash of the Apple user id
+(`app/src/analytics/identity.ts`), so a reinstall or a second iPhone
+counts as the same person and the funnels above survive a device change.
+The Apple id itself never leaves the phone; sign-out and erase reset the
+person. Person properties (`entitlement`, `sessions_completed`,
+`last_minutes`, `intention`, `voice`, `signed_in`) are set whole after
+each commit and each purchase, so any funnel can be split by them.
+
+**Paid conversion** is not an app event: RevenueCat's PostHog integration
+sends purchase, renewal, cancellation and expiration as server events
+against the same person (RevenueCat app user id = the PostHog distinct
+id; the adapter passes it through). Turn it on in RevenueCat →
+Integrations → PostHog with the project key.
+
 ## Queries (PostHog, HogQL sketches)
 
 First-workout completion per first-use entrant:

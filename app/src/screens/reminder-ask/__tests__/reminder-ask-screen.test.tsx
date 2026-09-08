@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
+import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import {
   getNotifications,
@@ -29,6 +30,7 @@ jest.mock("../../../notifications/notifications", () => {
 const port = getNotifications() as jest.Mocked<NotificationsPort>;
 
 beforeEach(() => {
+  clearRecordedEvents();
   port.getPermission.mockResolvedValue("undetermined");
   port.requestPermission.mockResolvedValue("granted");
   port.scheduleDaily.mockResolvedValue(undefined);
@@ -98,6 +100,41 @@ describe("ReminderAskScreen", () => {
     expect(useReminderStore.getState().asked).toBe(true);
     expect(screen.queryByText(strings.notifications.time.question)).toBeNull();
     expect(port.scheduleDaily).not.toHaveBeenCalled();
+  });
+
+  describe("reminder_ask", () => {
+    it("allow + OS grant reports allow, once, before the time question", async () => {
+      const screen = render(<ReminderAskScreen onDone={jest.fn()} />);
+      expect(recordedEvents()).toEqual([]);
+      fireEvent.press(screen.getByTestId("reminder-ask-allow"));
+      await screen.findByText(strings.notifications.time.question);
+      expect(recordedEvents()).toEqual([
+        { name: "reminder_ask", properties: { outcome: "allow" } },
+      ]);
+      // Choosing an hour is not a second answer to the ask.
+      fireEvent.press(screen.getByTestId("reminder-ask-evening"));
+      await waitFor(() => expect(port.scheduleDaily).toHaveBeenCalled());
+      expect(recordedEvents()).toHaveLength(1);
+    });
+
+    it("allow + OS refusal reports osDenied", async () => {
+      port.requestPermission.mockResolvedValue("denied");
+      const onDone = jest.fn();
+      const screen = render(<ReminderAskScreen onDone={onDone} />);
+      fireEvent.press(screen.getByTestId("reminder-ask-allow"));
+      await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+      expect(recordedEvents()).toEqual([
+        { name: "reminder_ask", properties: { outcome: "osDenied" } },
+      ]);
+    });
+
+    it("'Not now' reports decline", () => {
+      const screen = render(<ReminderAskScreen onDone={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("reminder-ask-decline"));
+      expect(recordedEvents()).toEqual([
+        { name: "reminder_ask", properties: { outcome: "decline" } },
+      ]);
+    });
   });
 
   it("renders no user-facing text outside strings.ts, both steps", async () => {

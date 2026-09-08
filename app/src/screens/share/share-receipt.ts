@@ -2,6 +2,8 @@ import type { RefObject } from "react";
 import { Share, type View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
+import { track } from "../../analytics/analytics";
+
 // Sharing a receipt or a week (wave 3): the same shape as the skill
 // share (unlock/share-skill.ts) — the card she sees is captured as
 // rendered and handed to the system sheet as a PNG, and every way that
@@ -35,7 +37,10 @@ export async function shareReceipt({ message, card }: ShareReceiptOptions): Prom
     url = null;
   }
   try {
-    await Share.share(url !== null ? { url, message } : { message });
+    const result = await Share.share(url !== null ? { url, message } : { message });
+    // share_complete: the sheet closed — a destination picked, or
+    // dismissed. iOS names nothing more, and neither do we.
+    track("share_complete", { completed: result.action === Share.sharedAction });
   } catch {
     // The sheet never opened. No existing error string fits calmly, so
     // we stay quiet rather than alarm her over a share.

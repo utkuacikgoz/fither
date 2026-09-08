@@ -105,6 +105,12 @@ const offerings: readonly Offering[] = [
 ];
 
 export const devBilling: BillingPort = {
+  async setUser(): Promise<void> {
+    // No store customer in the dev adapter; nothing to tie.
+  },
+  async clearUser(): Promise<void> {
+    // Nothing to forget.
+  },
   getOfferings(): readonly Offering[] {
     return offerings;
   },

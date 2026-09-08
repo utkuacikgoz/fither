@@ -34,7 +34,23 @@ python3 web/scripts/preview.py       # previews via a local server and the pinne
 python3 web/scripts/build-assets.py  # refresh fonts and figures from app/assets
 ```
 
-## Deploying on a static host
+## Deploying: the live site is the fither-web repository
+
+`fither.app` is served by Vercel from the sibling `fither-web` repository
+(landing page, privacy, terms). This directory stays the source of the
+recipient page; after editing `src/` run
+
+```
+node web/scripts/build-page.mjs && node web/scripts/sync-site.mjs ../fither-web
+```
+
+and commit the result in `fither-web`. The sync writes `s/` (the page, its
+CSS and modules, with `/src/` paths rewritten to `/s/`), the figures, and
+`.well-known/apple-app-site-association`; `fither-web/vercel.json` rewrites
+`/s/<scenario>` to the page and serves the association file as JSON with
+no trailing-slash redirect.
+
+## Deploying on another static host
 
 Any static host works (Cloudflare Pages, Netlify, Vercel static, S3 with
 a CDN, nginx). Publish the `web/` directory as the site root and set up

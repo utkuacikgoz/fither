@@ -13,7 +13,13 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.fitherfitness.app",
       "buildNumber": "1",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:fither.app"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "plugins": [
       "expo-router",
@@ -23,7 +29,9 @@
       [
         "@sentry/react-native/expo",
         {
-          "url": "https://sentry.io/"
+          "url": "https://sentry.io/",
+          "organization": "be-ki",
+          "project": "fither"
         }
       ],
       [

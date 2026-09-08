@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { track } from "../../analytics/analytics";
+import { syncPersonProperties } from "../../analytics/person";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { Screen } from "../../design/primitives/screen";
@@ -133,6 +134,8 @@ export function LaunchScreen({
     // first_use_entry (ADR-0024): a fresh install reached its first
     // decision screen. Same predicate, once per launch decision.
     if (!onboardingCompleted && !hasHistory) track("first_use_entry", {});
+    // The person's facts, as the hydrated stores hold them at launch.
+    syncPersonProperties();
     const result = restoreActiveSession(todayIso());
     setRestore(result);
     if (result === "completedUnsaved") {

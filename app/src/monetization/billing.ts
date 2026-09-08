@@ -49,6 +49,15 @@ export type RestoreOutcome =
   | { ok: false; reason: "nothingToRestore" | "failed" };
 
 export interface BillingPort {
+  /**
+   * Tie the store customer to the signed-in person (the analytics
+   * distinct id, already a one-way hash): the store's server-side
+   * purchase events then land on her in analytics. Never awaited by a
+   * screen; a failure changes nothing about entitlement.
+   */
+  setUser(distinctId: string): Promise<void>;
+  /** Back to an anonymous store customer (sign-out, erase). */
+  clearUser(): Promise<void>;
   /** The paywall's plans: annual first (annual led), then monthly. Never lifetime. */
   getOfferings(): readonly Offering[];
   /** The one-time plan, for the day-3 offer only; null if the store has none. */

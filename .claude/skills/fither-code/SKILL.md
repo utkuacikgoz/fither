@@ -80,16 +80,22 @@ possible; one sneaky dependency breaks the whole validation story.
   crash/error data only, no `setUser`, `beforeSend` scrubs. Verified
   with the deliberate test crash (Settings → Developer tools) BEFORE the
   first TestFlight build; source maps via the `SENTRY_*` build variables.
-- **Analytics: PostHog, behind a port (ADR-0015).** Four events —
-  `deep_link_open`, `workout_start`, `workout_complete`, `trial_start` —
-  defined ONLY in `app/src/analytics/events.ts`; call sites use `track()`
-  from `analytics.ts` and never import the SDK. A fifth event is an ADR
-  edit first. Payloads are closed unions; a test scans the module for the
-  forbidden list's words, comments included. `identify()` is never
-  called. Events queue offline and flush later; `track` is synchronous,
-  swallows everything, and must never block or gate anything
-  (airplane-mode rule). The adapter is selected by
-  `EXPO_PUBLIC_POSTHOG_KEY`; tests read the dev adapter's record.
+- **Analytics: PostHog, behind a port (ADR-0015, ADR-0024, drop-off
+  pass 2026-09-08).** Every event is defined ONLY in
+  `app/src/analytics/events.ts` (the funnel plus one event per place she
+  can leave: each prompt answer, each block outcome, each paywall choice,
+  each permission ask; `docs/measurement.md` names the funnels). Call
+  sites use `track()` from `analytics.ts` and never import the SDK. A new
+  event is a schema edit first, with its test. Payloads are closed unions
+  or small numbers; a test scans the module for the forbidden list's
+  words, comments included. Identity: anonymous until Sign in with Apple,
+  then `identify()` with the salted one-way hash from
+  `analytics/identity.ts` — never the provider id; sign-out and erase
+  `reset()`. Person properties go through `setPersonProperties()` from
+  `analytics/person.ts`, set whole. Events queue offline and flush
+  later; `track` is synchronous, swallows everything, and must never
+  block or gate anything (airplane-mode rule). The adapter is selected
+  by `EXPO_PUBLIC_POSTHOG_KEY`; tests read the dev adapter's record.
 - **Transactional email: Resend**, from our own domain (SPF/DKIM
   verified). Receipts/trial-ending/data-request mails only — no marketing
   drip. Templates are copy-writer surface and pass the fither-voice

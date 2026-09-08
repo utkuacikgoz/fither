@@ -6,6 +6,7 @@ import Purchases, {
   type PurchasesPackage,
 } from "react-native-purchases";
 
+import { alias } from "../analytics/analytics";
 import { strings } from "../copy/strings";
 import { todayIso } from "../lib/dates";
 import type {
@@ -63,6 +64,15 @@ function ensureConfigured(): void {
     lastInfo = info;
   });
   configured = true;
+  // The store's anonymous customer id becomes an alias of the analytics
+  // person, so RevenueCat's server-side purchase events (its PostHog
+  // integration) land on the same person as the app's own events, even
+  // for a guest who never signs in.
+  Purchases.getAppUserID()
+    .then((id) => alias(id))
+    .catch(() => {
+      // No id, no alias; the app-side events still stand on their own.
+    });
 }
 
 function planOf(pkg: PurchasesPackage): PlanId | null {
@@ -152,6 +162,23 @@ const fallbackOfferings: readonly Offering[] = [
 ];
 
 export const revenueCatBilling: BillingPort = {
+  async setUser(distinctId): Promise<void> {
+    ensureConfigured();
+    if (!configured) return;
+    try {
+      await Purchases.logIn(distinctId);
+    } catch {
+      // The customer stays anonymous; entitlement is unaffected.
+    }
+  },
+  async clearUser(): Promise<void> {
+    if (!configured) return;
+    try {
+      await Purchases.logOut();
+    } catch {
+      // Already anonymous (logOut rejects then); nothing to do.
+    }
+  },
   getOfferings(): readonly Offering[] {
     void loadOfferings();
     return offeringsCache.length > 0 ? offeringsCache : fallbackOfferings;

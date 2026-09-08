@@ -15,8 +15,9 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { getAnalytics } from "../analytics/analytics";
+import { getAnalytics, track } from "../analytics/analytics";
 import { getAuth } from "../auth/auth";
+import { getBilling } from "../monetization/billing";
 import { getNotifications } from "../notifications/notifications";
 import { hydratedStores, persistedKeys } from "./persisted-stores";
 import { useSessionStore } from "./session-store";
@@ -41,5 +42,8 @@ export async function eraseEverything(): Promise<void> {
     });
   }
   await quietly(() => AsyncStorage.multiRemove(persistedKeys()));
+  // The churn signal goes out under her id, then the id itself goes.
+  track("account_action", { action: "erase" });
   getAnalytics().reset();
+  await quietly(() => getBilling().clearUser());
 }
