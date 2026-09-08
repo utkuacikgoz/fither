@@ -29,7 +29,7 @@ import { useSessionStore } from "../../state/session-store";
 import { speakCue, stopVoice } from "../../session/voice";
 import { FeedbackPhase, RestPhase, SideSwitchPhase, SkipConfirmPhase } from "./player-phases";
 import { useSettingsStore } from "../../state/settings-store";
-import { announcementKey, phaseAnnouncement, workCue } from "./announcements";
+import { announcementKey, countdownLine, phaseAnnouncement, workCue } from "./announcements";
 
 // The session is sacred: movement name, complete setup, one live cue, one
 // huge number, a thin progress line. Nothing else. No points mid-set.
@@ -148,6 +148,18 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     // without changing the position the key names.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmingSkip, phaseKey, voiceOn]);
+
+  // The last five seconds of a rest or a timed hold, counted down by the
+  // voice (owner decision 2026-09-08): one line per second, the five a
+  // warning. Spoken only — VoiceOver keeps its one announcement per
+  // transition (audit P0 #6). Keyed on the line and the position, so a
+  // re-render inside one second never repeats it, and the paused count
+  // under the skip confirm says nothing.
+  const countdown = player === null || confirmingSkip ? null : countdownLine(player);
+  useEffect(() => {
+    if (countdown === null || !voiceOn) return;
+    void speakCue(countdown);
+  }, [countdown, phaseKey, voiceOn]);
 
   if (!player || player.phase.kind === "done") {
     return <Screen>{null}</Screen>;

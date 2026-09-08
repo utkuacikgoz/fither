@@ -3,6 +3,7 @@ import { Stack, useRouter } from "expo-router";
 import { useTheme } from "../src/design/theme";
 import { pushedHeaderOptions } from "../src/lib/pushed-header";
 import { RouteGuard } from "../src/lib/route-guard";
+import { nextStartRoute } from "../src/lib/start-flow";
 import { SessionPreviewScreen } from "../src/screens/session-preview/session-preview-screen";
 
 // Public route (URL scheme): a cold open has no generated session to
@@ -23,7 +24,7 @@ export default function PreviewRoute() {
       <Stack.Screen options={pushedHeaderOptions(colors)} />
       <RouteGuard requires="generatedSession">
         <SessionPreviewScreen
-          onStart={() => router.replace("/session")}
+          onStart={() => router.replace(nextStartRoute())}
           onChangeAnswers={() => router.replace("/prompt")}
         />
       </RouteGuard>

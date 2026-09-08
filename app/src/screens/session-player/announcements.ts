@@ -78,3 +78,29 @@ export function workCue(state: PlayerState): string | null {
   if (lines.length === 0) return null;
   return lines[(phase.setIndex + (phase.side === "right" ? 1 : 0)) % lines.length] ?? null;
 }
+
+/** The voice counts the last five seconds of a rest or a timed hold. */
+export const COUNTDOWN_FROM = 5;
+
+type CountdownSecond = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * The spoken countdown line for the current second, or null (owner
+ * decision 2026-09-08): only a count that is running (a rest, or a
+ * timed hold), only its last five seconds, and never the count's first
+ * second — a hold or rest that short belongs to its start cue, not to a
+ * warning on top of it. The five is the warning line; four to one are
+ * the numbers. Spoken by the voice only: VoiceOver keeps its one
+ * announcement per transition.
+ */
+export function countdownLine(state: PlayerState): string | null {
+  const { phase } = state;
+  if (phase.kind !== "rest" && phase.kind !== "work") return null;
+  const remaining = phase.remainingSeconds;
+  if (remaining === null || remaining < 1 || remaining > COUNTDOWN_FROM) return null;
+  const block = state.blocks[phase.blockIndex];
+  if (!block) return null;
+  const total = phase.kind === "rest" ? block.restSeconds : block.amount;
+  if (remaining >= total) return null;
+  return strings.player.countdown(remaining as CountdownSecond);
+}

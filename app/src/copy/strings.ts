@@ -35,6 +35,18 @@ const PLACE_LABELS = {
   home: "Home",
   hotel: "Hotel",
 } as const;
+// COPY-WRITER (2026-09-08, owner decision): what the recorded voice says
+// at 5, 4, 3, 2 and 1 seconds left on a timed hold or a rest. Each string
+// is also the key of its own bundled audio file, which is why this is a
+// table and not arithmetic on NUMBER_WORDS: whoever records the voice
+// reads the exact text here. player.countdown reads from it.
+const COUNTDOWN_WORDS = {
+  5: "Five seconds",
+  4: "Four",
+  3: "Three",
+  2: "Two",
+  1: "One",
+} as const;
 
 export const strings = {
   // COPY-WRITER: home hub (2026-09-04, ADR-0013 §4) — the app's face
@@ -337,6 +349,16 @@ export const strings = {
     rest: "Rest",
     restNote: "Breathe.",
     restDone: "I'm ready",
+    // COPY-WRITER (2026-09-08, owner decision): the recorded voice counts
+    // down the last five seconds of every timed hold and every rest. Five
+    // is the warning: "Five seconds" says a count is coming, the way a
+    // coach says it before counting a hold out. Four to one are the bare
+    // number words. Each string is also the key of its own audio file, so
+    // no digits, no punctuation, no dashes, each under three words; the
+    // table is COUNTDOWN_WORDS above `strings`. Never "Five seconds left"
+    // ("left" turns a count into a clock), never "Go" at the end: the
+    // function has no zero, and the screen moves on by itself.
+    countdown: (seconds: 1 | 2 | 3 | 4 | 5): string => COUNTDOWN_WORDS[seconds],
     setCounter: (current: number, total: number) => `Set ${current} of ${total}`,
     // COPY-WRITER (2026-09-07, redesign mockups): top-right caption on the
     // block intro and the feedback question, which exercise this is of how
@@ -770,6 +792,40 @@ export const strings = {
       met: "Your week's target is met. Another day counts just as much.",
     },
   },
+  // COPY-WRITER (2026-09-08, owner decision): the voice is no longer
+  // silently off. The app asks ONCE, on the way into her first session,
+  // and never again; the once is enforced by the ask record, not by the
+  // copy. Same four-key shape as notifications.rationale (headline, line,
+  // allow, decline), and the screen renders these four strings and
+  // nothing else. She is one tap from her first movement, so every word
+  // here spends Gate 3.
+  //   · headline: four words, a question, the shape of "Want a daily
+  //     note?". "Cues" is the word settings.voice.body already owns;
+  //     `line` defines it at once for someone who has not had a session.
+  //   · line: two sentences. First, what the voice does, as two facts: the
+  //     cue as a set starts, a countdown as a hold or rest ends (the last
+  //     five seconds; the number waits for Settings). Second, the two
+  //     facts about control: the phone's silent switch still mutes it,
+  //     and it is hers to change in Settings. "Silent" is
+  //     settings.voice.off's own word. Nothing about sending: the audio
+  //     is bundled in the app and nothing leaves the phone, so there is
+  //     no privacy line to write and no wording that implies one is
+  //     needed. A quiet day does not mute the voice (place.note), and
+  //     this line names only the phone's switch, so it cannot be read
+  //     as saying otherwise.
+  //   · allow: the filled button names the outcome, never "Yes".
+  //     Imperative, like every primary button in the app.
+  //   · decline: the plain state she is already in (settings.voice.off,
+  //     "Silent"), with equal dignity. Not "No thanks" (nothing offered
+  //     is being turned down), not "Not now" (no promise to ask again,
+  //     because we don't).
+  // No dashes; each sentence of `line` under 80 characters.
+  voiceAsk: {
+    headline: "Want the cues spoken?",
+    line: "The cue as each set starts, a countdown as each hold and rest ends. Silent when your phone is on silent, and yours to change any time in Settings.",
+    allow: "Speak the cues",
+    decline: "Stay silent",
+  },
   resume: {
     // From docs/copy/draft-strings.md ("Resume prompt"). Both paths keep
     // her work: "Finish here" applies the blocks she completed — it is
@@ -1067,8 +1123,9 @@ export const strings = {
     },
     // COPY-WRITER: coach voice (2026-09-04). The one recorded voice reads
     // each movement's cue aloud during a session — the same cue lines
-    // already on screen, nothing extra. Off by default; she turns it on
-    // here. The body states two facts and stops: what it reads, and how
+    // already on screen, nothing extra. Asked once, on the way into her
+    // first session (voiceAsk); this page holds the answer either way.
+    // The body states two facts and stops: what it reads, and how
     // it sits with a quiet day. No voice name, no provider, no "coming
     // soon", nothing sold. The heading is one word because the body does
     // the explaining. The two rows name the plain state she gets —
@@ -1081,9 +1138,20 @@ export const strings = {
     // that promise would be false: the voice plays on a quiet day too,
     // and headphones are how it stays hers alone. Nothing about the
     // place preset here; the voice is one setting whatever the place.
+    //
+    // COPY-WRITER (2026-09-08, owner decision): first sentence revised,
+    // key unchanged. The voice now also counts down the last five seconds
+    // of every timed hold and every rest (player.countdown), so the body
+    // says so, in the owner's own words ("every hold and rest"). "during
+    // your session" went: the sentence is on the Voice page, and nothing
+    // else it could mean. Still two sentences; "quiet days included"
+    // still covers the whole first one. The old "Off by default" line in
+    // the 2026-09-04 note above is corrected in place, since it was no
+    // longer true. Nothing about the silent switch here: voiceAsk says it
+    // once, and this page is the setting, not the phone.
     voice: {
       title: "Voice",
-      body: "Reads each movement's cue aloud during your session, quiet days included. With headphones, no one else hears it.",
+      body: "Reads each movement's cue aloud and counts down the last five seconds of every hold and rest, quiet days included. With headphones, no one else hears it.",
       on: "Spoken",
       off: "Silent",
     },

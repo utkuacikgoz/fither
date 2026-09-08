@@ -28,7 +28,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const LIBRARY = path.join(root, "data", "movements.json");
@@ -45,7 +45,14 @@ const force = args.has("--force");
 const keyOf = (text) => createHash("sha1").update(text).digest("hex").slice(0, 12);
 
 const movements = JSON.parse(readFileSync(LIBRARY, "utf8")).movements;
-const cues = [...new Set(movements.flatMap((m) => [...m.cues, ...(m.inSetCues ?? [])]))].sort();
+// The spoken lines that are not movement cues: the countdown the voice
+// says over the last five seconds of a rest or a hold. They live on the
+// one copy surface (strings.ts); Node strips the types on import.
+const { strings } = await import(pathToFileURL(path.join(root, "app", "src", "copy", "strings.ts")).href);
+const countdown = [1, 2, 3, 4, 5].map((second) => strings.player.countdown(second));
+const cues = [
+  ...new Set([...movements.flatMap((m) => [...m.cues, ...(m.inSetCues ?? [])]), ...countdown]),
+].sort();
 
 mkdirSync(OUT_DIR, { recursive: true });
 

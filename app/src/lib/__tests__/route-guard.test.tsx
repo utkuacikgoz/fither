@@ -11,6 +11,7 @@ import SessionRoute from "../../../app/session";
 import SettingsRoute from "../../../app/(tabs)/settings";
 import SignInRoute from "../../../app/sign-in";
 import UnlockRoute from "../../../app/unlock";
+import VoiceAskRoute from "../../../app/voice-ask";
 import { useDevAuthSessionStore } from "../../auth/dev-auth";
 import { strings } from "../../copy/strings";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
@@ -25,6 +26,7 @@ import { useIdentityStore } from "../../state/identity-store";
 import { useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useSessionStore } from "../../state/session-store";
+import { hasVoiceAudio } from "../../session/voice-manifest";
 import { useSettingsStore } from "../../state/settings-store";
 import {
   fixturePlayerBlocks,
@@ -38,6 +40,12 @@ import { RouteGuard } from "../route-guard";
 // valid — a calm redirect to "/" — never a blank screen, never a
 // success claim over nothing. Plus the guard's own contract: wait for
 // the hydration set, decide once at entry, honest storage failure.
+
+jest.mock("../../session/voice-manifest", () => ({
+  hasVoiceAudio: jest.fn(() => true),
+  voiceCue: () => null,
+}));
+const mockedHasVoiceAudio = jest.mocked(hasVoiceAudio);
 
 function Sentinel() {
   return <View testID="guarded-child" />;
@@ -112,6 +120,31 @@ describe("cold open with empty stores lands on a valid destination", () => {
     expect(screen.queryByText(strings.preview.start)).toBeNull();
     // Never blank while replacing — the calm holding line renders.
     expect(screen.getByText(strings.errors.preparing)).toBeTruthy();
+  });
+
+  it("/voice-ask redirects home with no session waiting, and once the ask is spent", async () => {
+    mockedHasVoiceAudio.mockReturnValue(true);
+    useSettingsStore.setState({ voiceAsked: false });
+    const cold = render(<VoiceAskRoute />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    expect(cold.queryByText(strings.voiceAsk.headline)).toBeNull();
+    cold.unmount();
+
+    jest.mocked(router.replace).mockClear();
+    seedGeneratedSession();
+    useSettingsStore.setState({ voiceAsked: true });
+    const spent = render(<VoiceAskRoute />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    expect(spent.queryByText(strings.voiceAsk.headline)).toBeNull();
+  });
+
+  it("/voice-ask renders while a session waits and the ask is owed", () => {
+    mockedHasVoiceAudio.mockReturnValue(true);
+    seedGeneratedSession();
+    useSettingsStore.setState({ voiceAsked: false });
+    const screen = render(<VoiceAskRoute />);
+    expect(screen.getByText(strings.voiceAsk.headline)).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it("/session redirects home instead of a playerless player", async () => {
