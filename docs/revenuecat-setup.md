@@ -9,7 +9,7 @@ test uses the dev adapter. Nothing else in the app changes.
 
 | Where | Item | Value |
 |---|---|---|
-| App Store Connect → App | Bundle ID | `com.fither.app` |
+| App Store Connect → App | Bundle ID | `com.fitherfitness.app` |
 | App Store Connect → Subscriptions | Subscription group | one group, e.g. `FITHER Pro` |
 | ↳ product | **yearly** | $59.99 / 1 year, **introductory offer: 7 days free** |
 | ↳ product | **monthly** | $12.99 / 1 month, **introductory offer: 7 days free** (so "Start my free week" is true for either plan) |
