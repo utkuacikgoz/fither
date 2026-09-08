@@ -5,7 +5,7 @@ import {
   type PlayerState,
 } from "../../../session/player-machine";
 import { fixturePlayerBlocks } from "../../../test-utils/fixtures";
-import { announcementKey, phaseAnnouncement } from "../announcements";
+import { announcementKey, phaseAnnouncement, workCue } from "../announcements";
 
 // The pure half of the VoiceOver work (audit P0 #6): one key per machine
 // position so the screen announces transitions exactly once, and every
@@ -53,8 +53,8 @@ describe("phaseAnnouncement", () => {
     );
   });
 
-  it("work start: the cue the screen shows for that set and side", () => {
-    expect(phaseAnnouncement(repWorkState())).toBe("Push through your palms.");
+  it("work start: the in-set correction the screen shows for that set and side", () => {
+    expect(phaseAnnouncement(repWorkState())).toBe("Elbows back, not out.");
 
     const right = reduce(
       reduce(
@@ -68,8 +68,28 @@ describe("phaseAnnouncement", () => {
     );
     expect(right.phase.kind).toBe("work");
     expect(phaseAnnouncement(right)).toBe(
-      `${strings.player.sides.right}. Breathe steadily.`,
+      `${strings.player.sides.right}. Ribs down, keep breathing.`,
     );
+  });
+
+  it("work rotates the in-set corrections per set, one each, never the setup cues", () => {
+    const block = { ...fixturePlayerBlocks[0]!, sets: 3, inSetCues: ["First fix", "Second fix"] };
+    let state = reduce(createPlayer([block]), { type: "begin" });
+    expect(workCue(state)).toBe("First fix");
+    state = reduce(reduce(state, { type: "advance" }), { type: "advance" }); // rest → set 2
+    expect(state.phase).toMatchObject({ kind: "work", setIndex: 1 });
+    expect(workCue(state)).toBe("Second fix");
+    state = reduce(reduce(state, { type: "advance" }), { type: "advance" }); // rest → set 3
+    expect(state.phase).toMatchObject({ kind: "work", setIndex: 2 });
+    expect(workCue(state)).toBe("First fix");
+    expect(block.cues).not.toContain(workCue(state));
+  });
+
+  it("work falls back to the setup cues only for a block with no in-set corrections", () => {
+    const block = { ...fixturePlayerBlocks[0]!, inSetCues: [] };
+    const state = reduce(createPlayer([block]), { type: "begin" });
+    expect(workCue(state)).toBe("Push through your palms.");
+    expect(workCue(reduce(createPlayer([{ ...block, cues: [] }]), { type: "begin" }))).toBeNull();
   });
 
   it("side switch: the switch instruction", () => {

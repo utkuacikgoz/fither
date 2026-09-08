@@ -27,6 +27,7 @@ export const fixtureLibrary: MovementLibrary = {
       unilateral: false,
       timing: { type: "reps", defaultValue: 8, secondsPerRep: 3 },
       cues: ["Push through your palms.", "Keep your body in one line."],
+      inSetCues: ["Elbows back, not out.", "Hips level with your shoulders."],
     },
     {
       id: "plank",
@@ -40,6 +41,7 @@ export const fixtureLibrary: MovementLibrary = {
       unilateral: false,
       timing: { type: "seconds", defaultValue: 20 },
       cues: ["Squeeze your glutes.", "Breathe steadily."],
+      inSetCues: ["Ribs down, keep breathing."],
     },
   ],
 };
@@ -86,6 +88,7 @@ export const fixturePlayerBlocks: PlayerBlock[] = [
     movementId: "wall-push-up",
     name: "Wall Push-Up",
     cues: ["Push through your palms.", "Keep your body in one line."],
+    inSetCues: ["Elbows back, not out.", "Hips level with your shoulders."],
     unilateral: false,
     sets: 2,
     amount: 8,
@@ -96,6 +99,7 @@ export const fixturePlayerBlocks: PlayerBlock[] = [
     movementId: "plank",
     name: "Plank",
     cues: ["Squeeze your glutes.", "Breathe steadily."],
+    inSetCues: ["Ribs down, keep breathing."],
     unilateral: false,
     sets: 1,
     amount: 20,

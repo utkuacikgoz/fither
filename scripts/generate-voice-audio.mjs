@@ -45,7 +45,7 @@ const force = args.has("--force");
 const keyOf = (text) => createHash("sha1").update(text).digest("hex").slice(0, 12);
 
 const movements = JSON.parse(readFileSync(LIBRARY, "utf8")).movements;
-const cues = [...new Set(movements.flatMap((m) => m.cues))].sort();
+const cues = [...new Set(movements.flatMap((m) => [...m.cues, ...(m.inSetCues ?? [])]))].sort();
 
 mkdirSync(OUT_DIR, { recursive: true });
 

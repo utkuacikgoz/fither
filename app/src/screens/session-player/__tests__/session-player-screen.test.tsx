@@ -74,7 +74,7 @@ describe("SessionPlayerScreen", () => {
       expect(speakCue).not.toHaveBeenCalled(); // the intro is read, not spoken
       fireEvent.press(screen.getByTestId("player-begin"));
       expect(speakCue).toHaveBeenCalledTimes(1);
-      expect(speakCue).toHaveBeenCalledWith("Push through your palms.");
+      expect(speakCue).toHaveBeenCalledWith("Elbows back, not out.");
       // Reps-based: no ticks run here; the per-tick claim is proved on
       // the timed block below, where ticks re-render under the same key.
       expect(speakCue).toHaveBeenCalledTimes(1);
@@ -82,7 +82,7 @@ describe("SessionPlayerScreen", () => {
       fireEvent.press(screen.getByTestId("player-set-done"));
       fireEvent.press(screen.getByTestId("player-end-rest"));
       expect(speakCue).toHaveBeenCalledTimes(2);
-      expect(speakCue).toHaveBeenLastCalledWith("Keep your body in one line.");
+      expect(speakCue).toHaveBeenLastCalledWith("Hips level with your shoulders.");
     });
 
     it("a timed set ticks every second and speaks exactly once", () => {
@@ -95,7 +95,7 @@ describe("SessionPlayerScreen", () => {
       fireEvent.press(screen.getByTestId("feedback-good"));
       fireEvent.press(screen.getByTestId("player-begin"));
       expect(speakCue).toHaveBeenCalledTimes(3);
-      expect(speakCue).toHaveBeenLastCalledWith("Squeeze your glutes.");
+      expect(speakCue).toHaveBeenLastCalledWith("Ribs down, keep breathing.");
       act(() => {
         jest.advanceTimersByTime(5000); // five ticks, same machine key
       });
@@ -121,7 +121,7 @@ describe("SessionPlayerScreen", () => {
       const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
       fireEvent.press(screen.getByTestId("player-begin"));
       expect(speakCue).toHaveBeenCalledTimes(1);
-      expect(speakCue).toHaveBeenCalledWith("Push through your palms.");
+      expect(speakCue).toHaveBeenCalledWith("Elbows back, not out.");
     });
 
     it("a quiet day with the voice off is silent — the setting, not the day, decides", () => {
@@ -156,7 +156,9 @@ describe("SessionPlayerScreen", () => {
     fireEvent.press(screen.getByTestId("player-begin"));
 
     expect(screen.getByText("8")).toBeTruthy();
-    expect(screen.getByText("Push through your palms.")).toBeTruthy();
+    // The work set shows the in-set correction, not the intro's setup cue.
+    expect(screen.getByText("Elbows back, not out.")).toBeTruthy();
+    expect(screen.queryByText("Push through your palms.")).toBeNull();
     expect(screen.getByText(strings.player.setCounter(1, 2))).toBeTruthy();
     expect(screen.getByTestId("player-set-done")).toBeTruthy();
   });
@@ -185,7 +187,7 @@ describe("SessionPlayerScreen", () => {
         fontSize: typeScale.body,
         color: darkColors.inkSoft,
       });
-      expect(flat(screen.getByText("Push through your palms."))).toMatchObject({
+      expect(flat(screen.getByText("Elbows back, not out."))).toMatchObject({
         fontSize: typeScale.bodyLarge,
         fontFamily: fontFamily.semibold,
       });
@@ -532,7 +534,7 @@ describe("SessionPlayerScreen", () => {
       const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
       fireEvent.press(screen.getByTestId("player-begin"));
       expect(announce).toHaveBeenCalledTimes(2);
-      expect(announce).toHaveBeenLastCalledWith("Push through your palms.");
+      expect(announce).toHaveBeenLastCalledWith("Elbows back, not out.");
 
       fireEvent.press(screen.getByTestId("player-set-done"));
       expect(announce).toHaveBeenCalledTimes(3);
@@ -550,7 +552,7 @@ describe("SessionPlayerScreen", () => {
       // Second set: its own single work announcement, next cue in sequence.
       fireEvent.press(screen.getByTestId("player-end-rest"));
       expect(announce).toHaveBeenCalledTimes(4);
-      expect(announce).toHaveBeenLastCalledWith("Keep your body in one line.");
+      expect(announce).toHaveBeenLastCalledWith("Hips level with your shoulders.");
     });
 
     it("hold work announces once at start and stays silent through the countdown", () => {
@@ -562,7 +564,7 @@ describe("SessionPlayerScreen", () => {
 
       fireEvent.press(screen.getByTestId("player-begin"));
       expect(announce).toHaveBeenCalledTimes(2);
-      expect(announce).toHaveBeenLastCalledWith("Squeeze your glutes.");
+      expect(announce).toHaveBeenLastCalledWith("Ribs down, keep breathing.");
 
       act(() => {
         jest.advanceTimersByTime(5000);
@@ -580,7 +582,7 @@ describe("SessionPlayerScreen", () => {
       const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
       fireEvent.press(screen.getByTestId("player-begin"));
       expect(announce).toHaveBeenLastCalledWith(
-        `${strings.player.sides.left}. Squeeze your glutes.`,
+        `${strings.player.sides.left}. Ribs down, keep breathing.`,
       );
 
       act(() => {
@@ -594,7 +596,7 @@ describe("SessionPlayerScreen", () => {
       fireEvent.press(screen.getByTestId("player-start-right"));
       expect(announce).toHaveBeenCalledTimes(4);
       expect(announce).toHaveBeenLastCalledWith(
-        `${strings.player.sides.right}. Breathe steadily.`,
+        `${strings.player.sides.right}. Ribs down, keep breathing.`,
       );
     });
 

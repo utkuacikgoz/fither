@@ -31,9 +31,13 @@ Top level: `{ "version": 1, "movements": [Movement, ...] }` — 60 movements.
     "defaultValue": 8,              // reps count or hold seconds
     "secondsPerRep": 4              // required when type is "reps"
   },
-  "cues": [                         // 2-4 coaching cues; voice scripts generate from these
+  "cues": [                         // 2-4 setup cues, read at the block intro; voice scripts generate from these
     "Hands under shoulders",
     "One straight line from knees to head"
+  ],
+  "inSetCues": [                    // 1-3 in-set corrections, 8 words max, spoken and shown DURING a set
+    "Elbows point back, not out to the sides",
+    "If your hips sag, squeeze your glutes"
   ]
 }
 ```

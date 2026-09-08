@@ -13,8 +13,10 @@ export interface PlayerBlock {
   movementId: string;
   /** Display name resolved from the movement library at session creation. */
   name: string;
-  /** Complete ordered coaching sequence from the movement library. */
+  /** Complete ordered setup sequence from the movement library (the intro). */
   cues: string[];
+  /** In-set corrections from the library: one per set, shown and spoken during work. */
+  inSetCues: string[];
   /** Whether every prescribed set must be completed on both sides. */
   unilateral: boolean;
   sets: number;
@@ -65,7 +67,8 @@ export function createPlayer(blocks: PlayerBlock[]): PlayerState {
 /**
  * Rejoin a persisted machine with the current movement library. Active
  * sessions created before side-aware playback stored neither full cues nor
- * unilateral metadata. A legacy work phase resumes on the first side; no
+ * unilateral metadata, and ones from before in-set corrections stored no
+ * inSetCues. A legacy work phase resumes on the first side; no
  * completed side is invented.
  */
 export function restorePlayerBlocks(
@@ -77,6 +80,7 @@ export function restorePlayerBlocks(
     state.blocks.some(
       (persisted) =>
         !Array.isArray((persisted as PlayerBlock).cues) ||
+        !Array.isArray((persisted as PlayerBlock).inSetCues) ||
         typeof (persisted as PlayerBlock).unilateral !== "boolean",
     ) ||
     (state.phase.kind === "work" && persistedPhase.side === undefined);

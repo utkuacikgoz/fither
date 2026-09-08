@@ -72,8 +72,11 @@ Never, in any surface, including notifications, store listing and scripts:
   available whenever you are." Bad: anything referencing yesterday.
 - **Paywall**: state what's included and the price, plainly. No fake
   urgency, no countdown timers, no "only today".
-- **Session player**: cue lines come from `cues` in `movements.json` and
-  must work spoken aloud — read them out before committing.
+- **Session player**: cue lines come from `movements.json` and must work
+  spoken aloud — read them out before committing. `cues` are the setup,
+  read at the block intro; `inSetCues` are corrections spoken DURING a
+  set, one per set, so each is under eight words and names what to do
+  ("If your hips sag, squeeze your glutes"), never what went wrong.
 - **Share cards**: name the skill ("First Full Push-Up"), nothing about
   the body.
 - **Errors**: plain and actionable. "Couldn't restore your purchase.

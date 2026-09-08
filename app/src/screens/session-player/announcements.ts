@@ -63,17 +63,18 @@ export function phaseAnnouncement(state: PlayerState): string | null {
 /**
  * The exact cue the screen renders for the current work set and side —
  * the ONE definition shared by the screen, VoiceOver and the spoken
- * voice, so all three say the same line. Null outside work or for a
- * block without cues.
+ * voice, so all three say the same line. The in-set corrections carry
+ * the set (owner decision 2026-09-08): one per set and side, rotating,
+ * so a three-set block hears each. The setup cues stay at the intro and
+ * are the fallback only for a block whose library entry has none. Null
+ * outside work or for a block without cues of either kind.
  */
 export function workCue(state: PlayerState): string | null {
   const { phase } = state;
   if (phase.kind !== "work") return null;
   const block = state.blocks[phase.blockIndex];
-  if (!block || block.cues.length === 0) return null;
-  return (
-    block.cues[
-      (phase.setIndex + (phase.side === "right" ? 1 : 0)) % block.cues.length
-    ] ?? null
-  );
+  if (!block) return null;
+  const lines = block.inSetCues.length > 0 ? block.inSetCues : block.cues;
+  if (lines.length === 0) return null;
+  return lines[(phase.setIndex + (phase.side === "right" ? 1 : 0)) % lines.length] ?? null;
 }
