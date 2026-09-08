@@ -54,6 +54,12 @@ jobs:
       - name: 'Gate: unit tests'
         run: pnpm test
 
+      # The recipient page's contract with the app (scenario allowlist,
+      # association file) — synced into the fither-web repository by
+      # web/scripts/sync-site.mjs, so it must hold here first.
+      - name: 'Gate: recipient page tests'
+        run: pnpm web:test
+
       # The sim runs in ~2s, so it runs on every push and PR with no path
       # filter — a PR touching packages/engine/** or data/** can never slip
       # past it. The printed G1-G5 numbers are the point, so they are teed to

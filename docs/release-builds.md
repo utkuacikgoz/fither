@@ -22,6 +22,61 @@ that exact commit. An EAS build is a separate gate: when one is triggered or
 required, confirm its final status with `eas build:list` and retain the build
 URL. Do not infer EAS success from GitHub CI or from a local Expo export.
 
+## Building and uploading with Xcode, no EAS (the path in use, 2026-09-08)
+
+The owner builds on the Mac and uploads straight to App Store Connect.
+Nothing here needs an Expo account.
+
+1. **Production keys.** Release builds read `app/.env.production` on top
+   of `app/.env` (both gitignored):
+
+   ```
+   EXPO_PUBLIC_REVENUECAT_IOS_KEY=appl_…
+   EXPO_PUBLIC_SENTRY_DSN=https://…ingest.us.sentry.io/…
+   EXPO_PUBLIC_POSTHOG_KEY=phc_…
+   EXPO_PUBLIC_SHARE_BASE_URL=https://fither.app
+   ```
+
+   A missing key ships that port's dev adapter: no analytics, no
+   crash reports, or the fake store. `SENTRY_AUTH_TOKEN` (an org token
+   with `project:releases` and `org:read`) exported in the shell lets the
+   build upload source maps; without it, run the archive with
+   `SENTRY_ALLOW_FAILURE=true` and crashes arrive unsymbolicated.
+
+2. **Native project.** Regenerate after any change to `app.json` or a
+   native dependency, and before every archive to be safe:
+
+   ```
+   cd app && npx expo prebuild --platform ios --clean
+   ```
+
+3. **Archive** (team `9D78WTZAD8`, bundle `com.fitherfitness.app`; the
+   device-registration flag needs an iPhone on USB the first time):
+
+   ```
+   cd app/ios && xcodebuild -workspace FITHER.xcworkspace -scheme FITHER \
+     -configuration Release -destination 'generic/platform=iOS' \
+     -archivePath ~/fither-build/FITHER.xcarchive \
+     -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+     DEVELOPMENT_TEAM=9D78WTZAD8 CODE_SIGN_STYLE=Automatic archive
+   ```
+
+4. **Upload** with an export options plist (`method`
+   `app-store-connect`, `destination` `upload`, `teamID`):
+
+   ```
+   xcodebuild -exportArchive -archivePath ~/fither-build/FITHER.xcarchive \
+     -exportOptionsPlist ~/fither-build/ExportOptions.plist \
+     -exportPath ~/fither-build/export -allowProvisioningUpdates
+   ```
+
+   The build appears under TestFlight in about ten minutes.
+   `ITSAppUsesNonExemptEncryption` is set false in `app.json`, so no
+   compliance question per build.
+
+5. **Every later build**: bump `ios.buildNumber` in `app/app.json`
+   (same version, new number), commit, repeat 2 to 4.
+
 ## One-time account setup
 
 These actions require the owner's Expo and Apple accounts and cannot be
