@@ -219,6 +219,8 @@ async function applyStaleSnapshot(
       trialStartDate: record.trialStartDate,
       purchase: record.purchase,
     });
+    // The silent commit changes the same facts the visible one does.
+    syncPersonProperties();
     // The free-session allowance (ADR-0025): a committed session with a
     // completed block counts once per session id, from the journaled
     // result, so a replay never counts twice.
