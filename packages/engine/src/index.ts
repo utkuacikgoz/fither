@@ -19,8 +19,10 @@ export {
 export {
   applySessionResult,
   calendarDaysBetween,
+  earnedTierOf,
   milestoneMovement,
   nextMilestone,
+  regressionFloor,
   tiersToMilestone,
   SKILL_MILESTONE_TIERS,
 } from "./apply";

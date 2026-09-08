@@ -55,15 +55,21 @@ this tree accepts; its invariants are pinned in
                      work doubles (both sides)                                      blockSeconds
    new tier          first session at a freshly reached tier flags its blocks (bonus)  generate.ts:203-208
 
+5b. Calibration      first two sessions only (history < CALIBRATION_MAX_SESSIONS):
+    taste            one set of the next tier straight after each pattern's block, at
+                     any energy, while that pattern is below CALIBRATION_MAX_TIER and
+                     the block-plus-taste pair fits; ADR-0026            generate.ts:223-315
+
 6. Taste block       strong energy only: one set of a next-tier movement from a pattern
                      trained today, if the 60 s reserve fits; progression-neutral      generate.ts:240-262
+                     (a pattern given a calibration taste is never given a plain one)
 
 7. Padding           rest lengthened 1 s at a time across blocks (never past 90 s,
                      never volume) until total >= 90% of budget or every rest is maxed  generate.ts:266-281
 
 8. Adaptations       soreness (only if an area actually removed something), quiet (never,
                      today), lowEnergy (only where energy, not budget, cut sets),
-                     softLanding, staleFocus, tasteBlock                              generate.ts:285-323
+                     softLanding, staleFocus, tasteBlock, calibrationTaste            generate.ts:285-323
 
 9. Empty session     pool empty for every pattern -> zero blocks. The app then asks
                      unblockingAreas (src/unblocking.ts) which single avoided area, set
@@ -97,12 +103,31 @@ Two findings went to the owner and were decided the same day (ADR-0021):
    and every remaining repeat is one where no unused eligible movement
    of that pattern existed (a test pins this). At 30 minutes with one
    area avoided: shoulders 416 -> 140 of 432, ankles 92 -> 0.
+   (Those are the ADR-0021 numbers. Today's audit reads 113,852 and
+   shoulders 124 of 432 — see the refresh note below.)
 
 Still open, informational: `coversEveryAvailablePatternWhenItFits`
-fails 1,428 times at 10 minutes (a pattern's cheapest block would have
+fails 1,558 times at 10 minutes (a pattern's cheapest block would have
 fitted but a heavier one was tried and did not); the 10-minute session
 is full either way. Quiet changes nothing today because every movement
 in the library is silent.
+
+**Refresh, 2026-09-08 (calibration).** Both informational counts moved
+when starting-level calibration landed (ADR-0026), because the audit's
+`fresh` profile with an empty history is exactly the case that now gets
+a one-set calibration taste after every pattern's block:
+
+| count | ADR-0021 | today |
+|---|---|---|
+| `coversEveryAvailablePatternWhenItFits` failures | 1,428 | 1,558 |
+| sessions containing a repeated movement | 118,272 | 113,852 |
+| repeats at 30 min, shoulders avoided (of 432) | 140 | 124 |
+
+Both moves are the tastes taking budget: a taste block spends seconds a
+fifth pattern's cheapest block might have used (more uncovered patterns
+at 10 minutes) while also filling slots that would otherwise have been
+filled by repeating a movement (fewer repeats). Neither is a new
+finding, and no hard invariant moved — every one still reads 0.
 
 ## Which areas each ladder touches
 

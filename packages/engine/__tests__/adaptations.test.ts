@@ -12,6 +12,7 @@ import {
 import {
   emptyHistory,
   historyWithPatterns,
+  settledHistory,
   profileAtTier,
   prompt,
   realLibrary,
@@ -35,7 +36,8 @@ describe("adaptations — baseline", () => {
     const session = generateSession(
       realLibrary,
       profileAtTier(2),
-      emptyHistory,
+      // Past calibration (ADR-0026), so no calibrationTaste either.
+      settledHistory,
       prompt(),
       42,
     );
@@ -227,7 +229,7 @@ describe("adaptations — taste block", () => {
     const session = generateSession(
       realLibrary,
       profileAtTier(2),
-      emptyHistory,
+      settledHistory,
       prompt({ energy: "strong", minutes: 30 }),
       31,
     );

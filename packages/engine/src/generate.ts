@@ -9,6 +9,7 @@ import type {
   Session,
   SessionBlock,
 } from "./types";
+import { CALIBRATION_MAX_SESSIONS, CALIBRATION_MAX_TIER } from "./types";
 import { createRng } from "./rng";
 import { PATTERNS } from "./profile";
 
@@ -27,7 +28,14 @@ export const REDUCED_SETS = 2;
 export const MIN_SETS = 2;
 /** Aim to fill at least this fraction of the time budget. */
 export const TARGET_UTILIZATION = 0.9;
-/** Seconds held back for the optional strong-energy taste block. */
+/**
+ * Seconds held back for a taste block — the optional strong-energy one
+ * (ADR-0007) or the calibration tastes of the first two sessions
+ * (ADR-0026). Reserved once, not per taste: calibration tastes are then
+ * appended one at a time only while the FULL budget still has room for
+ * them, so a 10-minute session offers as many as fit and no more. A
+ * taste that does not fit is simply not offered.
+ */
 export const TASTE_RESERVE_SECONDS = 60;
 /**
  * A staleFocus adaptation is emitted when the session's top-priority
@@ -177,6 +185,7 @@ export function generateSession(
   let energyReducedABlock = false;
   const softLandingPatterns = new Set<Pattern>();
   let tasteAdded: { pattern: Pattern; movementId: string } | null = null;
+  const calibrationTastes: Array<{ pattern: Pattern; movementId: string }> = [];
 
   const pickMovement = (pattern: Pattern, tier: number): Movement | null => {
     // Prescribe at current tier. A movement not yet used today comes
@@ -204,6 +213,20 @@ export function generateSession(
   };
 
   const wantTaste = prompt.energy === "strong";
+  /**
+   * Starting-level calibration (ADR-0026): the first two sessions of a
+   * profile ask, once per pattern, whether she should start higher. It is
+   * the taste mechanism of ADR-0007 with a wider mouth — any energy,
+   * every pattern — and it stops for good once two sessions are on
+   * record. `history.entries` counts sessions the engine has applied.
+   */
+  const calibrating = history.entries.length < CALIBRATION_MAX_SESSIONS;
+  const canCalibrate = (pattern: Pattern): boolean =>
+    calibrating && profile.patterns[pattern].tier < CALIBRATION_MAX_TIER;
+  // Calibration tastes are NOT reserved for: each one is budgeted
+  // together with the block it follows (below), so a session never holds
+  // back time for a taste it does not end up offering. The strong-energy
+  // reserve is unchanged (ADR-0007).
   const mainBudget = wantTaste ? budget - TASTE_RESERVE_SECONDS : budget;
 
   const availablePatterns = PATTERNS.filter((p) =>
@@ -211,7 +234,32 @@ export function generateSession(
   ).length;
   const patternCap = maxBlocksPerPattern(availablePatterns);
 
-  const tryAddBlock = (pattern: Pattern): boolean => {
+  const nextTierCandidate = (pattern: Pattern): Movement | null => {
+    const state = profile.patterns[pattern];
+    if (state.tier >= 6) return null;
+    const candidates = pool.filter(
+      (m) => m.pattern === pattern && m.tier === state.tier + 1,
+    );
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(rng() * candidates.length)] ?? null;
+  };
+
+  /**
+   * Add one block for `pattern` if it fits.
+   *
+   * `withCalibrationTaste` (ADR-0026, first round of a calibrating
+   * session) tries to seat a one-set taste of the next tier directly
+   * after the block, and budgets the PAIR: the taste is offered only
+   * when block and taste fit together, so a 10-minute session offers as
+   * many as fit and simply does not offer the rest. Nothing is reserved,
+   * so a taste that is not offered costs the session no time. The taste
+   * is preferred over the block's third set — later rounds fill volume,
+   * but calibration only happens now.
+   */
+  const tryAddBlock = (
+    pattern: Pattern,
+    withCalibrationTaste = false,
+  ): boolean => {
     if ((blocksPerPattern.get(pattern) ?? 0) >= patternCap) {
       return false;
     }
@@ -228,9 +276,16 @@ export function generateSession(
       state.struggleCount === 0 &&
       !state.volumeReduced &&
       m.tier === state.tier;
-    for (let sets = desiredSets; sets >= MIN_SETS; sets--) {
-      const cost = blockSeconds(m, sets, DEFAULT_REST_SECONDS);
-      if (total + cost <= mainBudget) {
+    const tasteMovement = withCalibrationTaste
+      ? nextTierCandidate(pattern)
+      : null;
+    const tasteCost = tasteMovement
+      ? blockSeconds(tasteMovement, 1, DEFAULT_REST_SECONDS)
+      : 0;
+    for (const withTaste of tasteMovement ? [true, false] : [false]) {
+      for (let sets = desiredSets; sets >= MIN_SETS; sets--) {
+        const cost = blockSeconds(m, sets, DEFAULT_REST_SECONDS);
+        if (total + cost + (withTaste ? tasteCost : 0) > mainBudget) continue;
         blocks.push(makeBlock(m, sets, atNewTier));
         usedIds.add(m.id);
         blocksPerPattern.set(pattern, (blocksPerPattern.get(pattern) ?? 0) + 1);
@@ -245,18 +300,33 @@ export function generateSession(
         ) {
           energyReducedABlock = true;
         }
+        if (withTaste && tasteMovement) {
+          // Directly after the block it calibrates, while she is fresh —
+          // the answer is then about capability, not fatigue. One set,
+          // never atNewTier: it is a question, not a promotion.
+          blocks.push(makeBlock(tasteMovement, 1, false));
+          total += tasteCost;
+          calibrationTastes.push({
+            pattern,
+            movementId: tasteMovement.id,
+          });
+        }
         return true;
       }
     }
     return false;
   };
 
-  // Round 1: one block per pattern, stalest first — coverage before volume.
-  // Further rounds add helpings while the budget and variety cap allow.
+  // Round 1: one block per pattern, stalest first — coverage before volume,
+  // and on a calibrating session each pattern's first block carries its
+  // calibration taste. Further rounds add helpings while the budget and
+  // variety cap allow.
   for (let round = 0; round < patternCap; round++) {
     let added = false;
     for (const pattern of order) {
-      if (tryAddBlock(pattern)) added = true;
+      if (tryAddBlock(pattern, round === 0 && canCalibrate(pattern))) {
+        added = true;
+      }
     }
     if (!added) break;
   }
@@ -268,11 +338,12 @@ export function generateSession(
       const state = profile.patterns[pattern];
       if (state.tier >= 6) continue;
       if (!blocksPerPattern.has(pattern)) continue; // only taste what you trained
-      const candidates = pool.filter(
-        (m) => m.pattern === pattern && m.tier === state.tier + 1,
-      );
-      if (candidates.length === 0) continue;
-      const m = candidates[Math.floor(rng() * candidates.length)];
+      // While calibrating, a pattern eligible for a calibration taste is
+      // never given a plain one as well: two identical-looking one-set
+      // previews with different meanings would be a lie on the preview
+      // screen, and one of them would be a duplicate movement.
+      if (canCalibrate(pattern)) continue;
+      const m = nextTierCandidate(pattern);
       if (!m) continue;
       const cost = blockSeconds(m, 1, DEFAULT_REST_SECONDS);
       if (total + cost <= budget) {
@@ -340,6 +411,16 @@ export function generateSession(
       kind: "tasteBlock",
       pattern: tasteAdded.pattern,
       movementId: tasteAdded.movementId,
+    });
+  }
+  // One per offered calibration taste, in the order they were offered.
+  // This list is also the record apply.ts reads: a taste counts for
+  // calibration only if the engine offered it as one.
+  for (const taste of calibrationTastes) {
+    adaptations.push({
+      kind: "calibrationTaste",
+      pattern: taste.pattern,
+      movementId: taste.movementId,
     });
   }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type {
   BlockOutcome,
   Pattern,
+  PatternState,
   Profile,
   Session,
   SessionBlock,
@@ -13,9 +14,23 @@ import {
   DAYS_AT_TIER_TO_ADVANCE,
   milestoneMovement,
   POINTS,
+  regressionFloor,
   SKILL_MILESTONE_TIERS,
 } from "../src/index.js";
-import { emptyHistory, profileAtTier, realLibrary } from "./helpers.js";
+import {
+  emptyHistory,
+  profileAtTier,
+  profilePlacedAtTier,
+  realLibrary,
+} from "./helpers.js";
+
+/** A settled pattern state, for the pure floor-arithmetic assertions. */
+const baseState: PatternState = {
+  tier: 1,
+  cleanCount: 0,
+  struggleCount: 0,
+  volumeReduced: false,
+};
 
 /** Base test date; dayIso(n) = n calendar days later (pure UTC math). */
 const BASE_UTC = Date.UTC(2026, 1, 2); // 2026-02-02
@@ -225,7 +240,10 @@ describe("applySessionResult — legacy profiles without tierSince (ADR-0008)", 
 
 describe("applySessionResult — struggle and regression", () => {
   it("reduces volume after 2 consecutive struggled sessions, regresses after 3", () => {
-    let profile = profileAtTier(3);
+    // Placed at tier 3 by calibration with the earned floor at 1: the
+    // tier drop is the correction of a placement (ADR-0026). An EARNED
+    // tier is never dropped — its own test is below.
+    let profile = profilePlacedAtTier(3);
     profile.patterns.push.tierSince = dayIso(-30);
 
     profile = apply(profile, pushSession(profile, dayIso(0)), ["struggled"])
@@ -255,7 +273,7 @@ describe("applySessionResult — struggle and regression", () => {
   });
 
   it("a regression restamps tierSince with the session date", () => {
-    let profile = profileAtTier(3);
+    let profile = profilePlacedAtTier(3);
     profile.patterns.push.tierSince = dayIso(-30);
     for (const day of [0, 1, 2]) {
       profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
@@ -263,6 +281,109 @@ describe("applySessionResult — struggle and regression", () => {
     }
     expect(profile.patterns.push.tier).toBe(2);
     expect(profile.patterns.push.tierSince).toBe(dayIso(2));
+  });
+
+  // The earned floor (ADR-0026, narrowed by the owner 2026-09-08). An
+  // earned tier is NOT a ratchet: repeated struggle still drops her one
+  // tier below it, exactly as ADR-0003 always allowed. What earning buys
+  // is that she can fall no further — and that a tier calibration merely
+  // placed her at can be corrected all the way back to the earned mark.
+  it("drops one tier below an EARNED tier, then never further", () => {
+    let profile = profileAtTier(3); // no earnedTier: reads as tier 3
+    profile.patterns.push.tierSince = dayIso(-30);
+    for (const day of [0, 1, 2]) {
+      profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
+        .profile;
+    }
+    // The ordinary struggle-driven drop: one tier below earned.
+    expect(profile.patterns.push).toMatchObject({
+      tier: 2,
+      earnedTier: 3,
+      volumeReduced: true, // soft landing at the lower tier
+      cleanCount: 0,
+    });
+    expect(profile.patterns.push.tierSince).toBe(dayIso(2));
+
+    // Three more struggled sessions: she is on the floor now, so the
+    // soft landing where she stands is the whole response.
+    for (const day of [3, 4, 5]) {
+      profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
+        .profile;
+    }
+    expect(profile.patterns.push).toMatchObject({
+      tier: 2,
+      earnedTier: 3,
+      volumeReduced: true,
+      cleanCount: 0,
+    });
+    // No further tier change, so the ADR-0008 floor clock is not restamped.
+    expect(profile.patterns.push.tierSince).toBe(dayIso(2));
+  });
+
+  it("regressionFloor is one tier below earned, never below tier 1", () => {
+    expect(regressionFloor({ ...baseState, tier: 3, earnedTier: 3 })).toBe(2);
+    expect(regressionFloor({ ...baseState, tier: 3, earnedTier: 1 })).toBe(1);
+    expect(regressionFloor({ ...baseState, tier: 1 })).toBe(1); // legacy read
+    expect(regressionFloor({ ...baseState, tier: 6, earnedTier: 6 })).toBe(5);
+  });
+
+  it("an earned tier bounds the fall even when calibration placed the ones below it", () => {
+    // Placed at 2, then earned 3 the ordinary way: the floor is 2 now,
+    // so the tier-1 ground under the placement can never be revisited.
+    let profile = profilePlacedAtTier(2);
+    profile.patterns.push.tierSince = dayIso(-30);
+    profile.patterns.push.cleanCount = 2;
+    profile = apply(profile, pushSession(profile, dayIso(0)), ["completed"])
+      .profile;
+    expect(profile.patterns.push).toMatchObject({ tier: 3, earnedTier: 3 });
+    for (const day of [1, 2, 3]) {
+      profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
+        .profile;
+    }
+    expect(profile.patterns.push.tier).toBe(2);
+    for (const day of [4, 5, 6, 7, 8, 9]) {
+      profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
+        .profile;
+    }
+    expect(profile.patterns.push).toMatchObject({ tier: 2, earnedTier: 3 });
+  });
+
+  it("corrects a placement one tier at a time, and stops at the earned floor", () => {
+    // Calibration's ceiling case: placed at 3, nothing earned above 1.
+    let profile = profilePlacedAtTier(3);
+    profile.patterns.push.tierSince = dayIso(-60);
+    const dropTiers: number[] = [];
+    for (let day = 0; day < 12; day++) {
+      const before = profile.patterns.push.tier;
+      profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
+        .profile;
+      if (profile.patterns.push.tier < before) {
+        dropTiers.push(profile.patterns.push.tier);
+      }
+    }
+    expect(dropTiers).toEqual([2, 1]); // 3 -> 2 -> 1, then nothing
+    expect(profile.patterns.push.earnedTier).toBe(1);
+  });
+
+  it("a state persisted without earnedTier keeps the ground it stands on", () => {
+    // Legacy tolerance: no earnedTier reads as the current tier, so an
+    // existing user's tier counts as earned — no migration hands her a
+    // deeper fall than the ordinary one-tier drop.
+    const legacy = profileAtTier(4);
+    delete legacy.patterns.push.earnedTier;
+    legacy.patterns.push.tierSince = dayIso(-90);
+    let profile = legacy;
+    for (const day of [0, 1, 2]) {
+      profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
+        .profile;
+    }
+    expect(profile.patterns.push.earnedTier).toBe(4);
+    expect(profile.patterns.push.tier).toBe(3); // the one ordinary drop
+    for (const day of [3, 4, 5, 6, 7, 8]) {
+      profile = apply(profile, pushSession(profile, dayIso(day)), ["struggled"])
+        .profile;
+    }
+    expect(profile.patterns.push.tier).toBe(3); // and no further
   });
 
   it("volume reduction without regression keeps the existing tierSince", () => {
@@ -546,7 +667,7 @@ describe("applySessionResult — ledger", () => {
 });
 
 describe("applySessionResult — lifetime unlock memory", () => {
-  it("unlocks each pattern milestone only once across regress and re-advance", () => {
+  it("unlocks a milestone once and keeps it when the tier is struggled at", () => {
     let profile = profileAtTier(3);
     profile.patterns.push.tierSince = dayIso(-28); // floor met
     profile.patterns.push.cleanCount = 2;
@@ -561,15 +682,39 @@ describe("applySessionResult — lifetime unlock memory", () => {
       tier: 4,
     });
 
+    // Repeated struggle still takes the ordinary one-tier drop off an
+    // earned tier (ADR-0026 as narrowed 2026-09-08), milestone tier or
+    // not — but the unlock is remembered for life: the skill stays in
+    // `unlockedMilestones` and is never awarded twice.
     for (let i = 1; i <= 3; i++) {
       profile = apply(profile, pushSession(profile, dayIso(i)), ["struggled"])
         .profile;
     }
-    expect(profile.patterns.push.tier).toBe(3);
+    expect(profile.patterns.push).toMatchObject({ tier: 3, earnedTier: 4 });
     expect(profile.patterns.push.tierSince).toBe(dayIso(3));
+    expect(profile.unlockedMilestones).toContainEqual({
+      pattern: "push",
+      tier: 4,
+    });
 
-    // Re-advance: 3 cleans banked, then the 28-day tier-3 floor from the
-    // regression date.
+    // And no further: tier 3 is the floor for an earned tier 4.
+    for (let i = 4; i <= 9; i++) {
+      profile = apply(profile, pushSession(profile, dayIso(i)), ["struggled"])
+        .profile;
+    }
+    expect(profile.patterns.push.tier).toBe(3);
+  });
+
+  it("never re-unlocks a milestone a profile already holds in memory", () => {
+    // The reachable re-advance today: a profile persisted at tier 3 that
+    // already unlocked push 4 under the pre-ADR-0026 regression rule.
+    // Re-earning the tier must not unlock, award or record it twice.
+    let profile: Profile = {
+      ...profileAtTier(3),
+      unlockedMilestones: [{ pattern: "push", tier: 4 }],
+    };
+    profile.patterns.push.tierSince = dayIso(3);
+
     profile = cleanOn(profile, 4);
     profile = cleanOn(profile, 5);
     profile = cleanOn(profile, 6);

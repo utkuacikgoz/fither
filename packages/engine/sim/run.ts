@@ -10,7 +10,9 @@ import {
   applySessionResult,
   createInitialProfile,
   createRng,
+  earnedTierOf,
   generateSession,
+  regressionFloor,
   PATTERNS,
   type BlockOutcome,
   type DailyPrompt,
@@ -44,6 +46,7 @@ const G5_PERSONAS: readonly PersonaId[] = [
   "lowCapability2",
   "quiet",
   "tenMin",
+  "experienced",
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +62,7 @@ const PERSONAS: PersonaId[] = [
   "erratic",
   "quiet",
   "tenMin",
+  "experienced",
 ];
 
 // Deterministic calendar: week 1 day 0 = Monday 2026-01-05.
@@ -75,7 +79,25 @@ let overBudgetCount = 0;
 let maxUtilization = 0;
 let minUtilization = 1;
 const g1WeekReached: number[] = []; // per consistent4 user; Infinity if never
-let g2Regressions = 0;
+// The same measurement for the experienced persona (ADR-0026), reported
+// beside G1 for information: what starting-level calibration buys the
+// woman who already trains. Not gated — G1 stays the consistent4 floor.
+const experiencedPushTier4: number[] = [];
+// G2 (owner decision 2026-09-08, ADR-0026 as narrowed the same day): a
+// 2x/week user never falls more than one tier below what she EARNED.
+// Two kinds of drop are explainable and are counted separately, for
+// information only:
+//   - a calibration placement being corrected (she lands at or above the
+//     earned tier — unearned ground, unwound);
+//   - the ONE ordinary struggle-driven drop from an earned tier that
+//     ADR-0003 always allowed (she lands exactly one tier below earned).
+// Anything else — any state more than one tier below earned — is the
+// gate failing. `regressionFloor` is the engine's own rule, so this is
+// an end-to-end assertion that apply.ts enforces it over the whole run
+// rather than a discovery the sim could make on its own.
+let g2BelowFloor = 0;
+let g2OrdinaryDrops = 0;
+let g2CalibrationCorrections = 0;
 let lowCapabilityBlocks = 0;
 let lowCapabilityDifficultBlocks = 0;
 let g4MaxAbsence = 0;
@@ -196,18 +218,27 @@ for (let u = 0; u < USERS; u++) {
       profile = applied.profile;
       history = applied.history;
 
-      // Gate 2: 2×/week users never lose a tier.
+      // Gate 2: 2×/week users never fall more than one tier below what
+      // they EARNED. Every drop is classified against the earned tier
+      // she held going in: at or above it, calibration's placement is
+      // being unwound; exactly one below it, this is ADR-0003's ordinary
+      // struggle-driven drop. Both are information. The gate itself is
+      // the standing invariant — no state may sit under the floor.
       if (persona === "consistent2" || persona === "lowCapability2") {
         for (const p of PATTERNS) {
-          if (profile.patterns[p].tier < before.patterns[p].tier) {
-            g2Regressions++;
+          const prev = before.patterns[p];
+          const after = profile.patterns[p];
+          if (after.tier < regressionFloor(after)) g2BelowFloor++;
+          if (after.tier < prev.tier) {
+            if (after.tier < earnedTierOf(prev)) g2OrdinaryDrops++;
+            else g2CalibrationCorrections++;
           }
         }
       }
 
       // Gate 1: week the 4×/week persona reaches push tier >= 4.
       if (
-        persona === "consistent4" &&
+        (persona === "consistent4" || persona === "experienced") &&
         pushTier4Week === Infinity &&
         profile.patterns.push.tier >= G1_TIER
       ) {
@@ -225,6 +256,7 @@ for (let u = 0; u < USERS; u++) {
   }
 
   if (persona === "consistent4") g1WeekReached.push(pushTier4Week);
+  if (persona === "experienced") experiencedPushTier4.push(pushTier4Week);
   g5ExhaustWeeks.get(persona)?.push(exhaustWeek);
 }
 
@@ -241,9 +273,14 @@ const g1Median =
     : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
 
 const g1Pass = g1ByWeek12 === g1Total;
-const g2Pass = g2Regressions === 0;
+const g2Pass = g2BelowFloor === 0;
 const g3Pass = overBudgetCount === 0;
 const g4Pass = g4MaxAbsence <= G4_LIMIT;
+
+const experiencedTotal = experiencedPushTier4.length;
+const experiencedByWeek12 = experiencedPushTier4.filter(
+  (w) => w <= G1_WEEK_LIMIT,
+).length;
 
 const g5Medians = new Map<PersonaId, number>();
 for (const persona of PERSONAS) {
@@ -265,10 +302,14 @@ console.log(
 );
 console.log(
   `G1 ${mark(g1Pass)}  4x/week push tier >= ${G1_TIER} by week ${G1_WEEK_LIMIT}: ` +
-    `${g1ByWeek12}/${g1Total} users (${g1Pct.toFixed(1)}%), median week ${g1Median}`,
+    `${g1ByWeek12}/${g1Total} users (${g1Pct.toFixed(1)}%), median week ${g1Median}` +
+    `; experienced (info): ${experiencedByWeek12}/${experiencedTotal} by week ${G1_WEEK_LIMIT}, ` +
+    `median week ${fmtExhaust(medianWeek(experiencedPushTier4))}`,
 );
 console.log(
-  `G2 ${mark(g2Pass)}  2x/week tier regressions: ${g2Regressions}; ` +
+  `G2 ${mark(g2Pass)}  2x/week drops more than one tier below earned: ${g2BelowFloor}; ` +
+    `ordinary struggle-driven drops from an earned tier (info): ${g2OrdinaryDrops}; ` +
+    `calibration placement corrections (info): ${g2CalibrationCorrections}; ` +
     `low-capability difficult blocks: ${lowCapabilityDifficultBlocks}/${lowCapabilityBlocks}`,
 );
 console.log(

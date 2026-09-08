@@ -84,6 +84,24 @@ export interface PatternState {
   /** True while in the reduced-volume soft landing. */
   volumeReduced: boolean;
   /**
+   * The highest tier the ORDINARY progression put this pattern at
+   * (ADR-0026, owner decision 2026-09-08): the clean-count + time-floor
+   * rule of ADR-0002/ADR-0008. It is not a ratchet: repeated struggle
+   * may still take her ONE tier below it, exactly as ADR-0003 always
+   * allowed (`regressionFloor` = `max(1, earnedTier - 1)`). What it
+   * buys is that a tier starting-level calibration merely PLACED her at
+   * was never earned, so correcting that placement downwards — all the
+   * way back to this mark — is not taking something away, and does not
+   * count as a regression in gate 2.
+   *
+   * Optional for legacy tolerance: a state persisted before this field
+   * existed reads as `earnedTier = tier` (see `earnedTierOf`), so no
+   * migration ever loses ground — an existing user's current tier is
+   * already hers. Fresh profiles carry no stamp; the first applied
+   * session stamps it, before any calibration placement.
+   */
+  earnedTier?: Tier;
+  /**
    * ISO yyyy-mm-dd date the CURRENT tier was reached (ADR-0008). Set on
    * every tier change — advance and regress alike. Optional for legacy
    * tolerance: a state persisted before this field existed treats the
@@ -148,7 +166,19 @@ export type Adaptation =
   /** Session leads with this pattern because it has gone stale. */
   | { kind: "staleFocus"; pattern: Pattern }
   /** Strong energy earned a one-set taste of the next tier. */
-  | { kind: "tasteBlock"; pattern: Pattern; movementId: string };
+  | { kind: "tasteBlock"; pattern: Pattern; movementId: string }
+  /**
+   * Starting-level calibration (ADR-0026): in the first two sessions of a
+   * profile, every pattern is offered one set of the tier above its
+   * current one, at any energy, right after that pattern's first block.
+   * Progression- and points-neutral like every taste; unlike the
+   * strong-energy `tasteBlock`, completing it cleanly raises where that
+   * pattern STARTS next session (capped at CALIBRATION_MAX_TIER), which
+   * is why the UI needs to tell the two apart — one is a bonus, the
+   * other is the question "is this where you should start?". One
+   * adaptation per offered taste.
+   */
+  | { kind: "calibrationTaste"; pattern: Pattern; movementId: string };
 
 // ---------- Generated session ----------
 
@@ -173,7 +203,8 @@ export interface Session {
   seed: number;
   /**
    * Why today's session fits the prompt, ordered by importance:
-   * soreness, quiet, energy, softLanding, staleFocus, taste.
+   * soreness, quiet, energy, softLanding, staleFocus, taste,
+   * calibrationTaste (one per pattern offered, in session order).
    * Required (ADR-0007). An empty list means today's answers did not alter
    * the generated prescription.
    */
@@ -226,6 +257,23 @@ export const MAX_PATTERN_ABSENCE_DAYS = 7;
 export const DAYS_AT_TIER_TO_ADVANCE: Readonly<
   Record<Exclude<Tier, 6>, number>
 > = { 1: 7, 2: 14, 3: 28, 4: 42, 5: 56 };
+
+/**
+ * Starting-level calibration (ADR-0026, owner decisions 2026-09-08).
+ *
+ * A profile whose history holds fewer than this many sessions is still
+ * calibrating: every pattern that gets a block is offered ONE set of the
+ * next tier straight after it, at any energy. Two sessions — session one
+ * can move a pattern to tier 2, session two to tier 3 — and never again.
+ */
+export const CALIBRATION_MAX_SESSIONS = 2;
+
+/**
+ * The highest tier calibration may hand out (owner answer 3: cap at 3,
+ * not 4, even for push and squat). Above it, only the ordinary
+ * clean-count + time-floor rule advances a pattern.
+ */
+export const CALIBRATION_MAX_TIER: Tier = 3;
 
 /**
  * Points (ADR-0008, owner-revised): a completed session earns base 15

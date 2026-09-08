@@ -18,7 +18,17 @@ export type PersonaId =
   | "lowCapability2"
   | "erratic"
   | "quiet"
-  | "tenMin";
+  | "tenMin"
+  /**
+   * The woman ADR-0026's calibration exists for: 4x/week like
+   * consistent4, but she already trains — her push and squat capability
+   * starts around tier 3, so she completes the calibration tastes on
+   * those two ladders in sessions one and two and answers "Strong". Her
+   * other three patterns are ordinary. Everything about her behaviour
+   * is the same model as every other persona; only the hidden starting
+   * capability differs.
+   */
+  | "experienced";
 
 export interface PersonaDay {
   day: number; // 0..6 within the week
@@ -52,6 +62,7 @@ function pickDays(rng: Rng, count: number): number[] {
 export function weekPlan(persona: PersonaId, rng: Rng): PersonaDay[] {
   switch (persona) {
     case "consistent4":
+    case "experienced":
       return [0, 1, 3, 5].map((day) => ({
         day,
         minutes: rng() < 0.6 ? 30 : 20,
@@ -123,6 +134,15 @@ export const CAPABILITY_START_SPREAD = 0.5;
 // gap is 0.1 x (tier - 1) <= 0.5, inside VOLUME_REDUCED_RELIEF.
 export const CAPABILITY_GAIN_COMPLETED = 0.3;
 export const CAPABILITY_GAIN_STRUGGLED = 0.15;
+/**
+ * The experienced persona's starting capability on push and squat
+ * (ADR-0026): already around tier 3, so a one-set taste of tier 2 and
+ * then tier 3 is comfortably inside her range. Her other patterns start
+ * at the ordinary base.
+ */
+export const EXPERIENCED_START_BASE = 3.0;
+export const EXPERIENCED_START_SPREAD = 0.5;
+export const EXPERIENCED_PATTERNS: readonly Pattern[] = ["push", "squat"];
 export const LOW_CAPABILITY_START_BASE = 0.65;
 export const LOW_CAPABILITY_START_SPREAD = 0.2;
 export const LOW_CAPABILITY_GAIN_COMPLETED = 0.28;
@@ -142,7 +162,22 @@ export function initialCapability(rng: Rng, persona: PersonaId): Capability {
     ? LOW_CAPABILITY_START_SPREAD
     : CAPABILITY_START_SPREAD;
   const one = () => base + rng() * spread;
-  return { push: one(), pull: one(), squat: one(), hinge: one(), core: one() };
+  const capability: Capability = {
+    push: one(),
+    pull: one(),
+    squat: one(),
+    hinge: one(),
+    core: one(),
+  };
+  if (persona === "experienced") {
+    // Drawn after the ordinary five so the RNG stream stays aligned with
+    // every other persona's first draws.
+    for (const pattern of EXPERIENCED_PATTERNS) {
+      capability[pattern] =
+        EXPERIENCED_START_BASE + rng() * EXPERIENCED_START_SPREAD;
+    }
+  }
+  return capability;
 }
 
 export function capabilityGain(

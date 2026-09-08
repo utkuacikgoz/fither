@@ -126,8 +126,15 @@ appended taste block.
 - **Regress (decided, ADR-0003, inputs revised by ADR-0012):** only on
   repeated in-session failure — 2 consecutive sessions with a
   **struggled** block for the pattern reduce volume at the same tier; a
-  3rd consecutive one drops one tier. Any clean session resets the
-  counter. **Absence never regresses.**
+  3rd consecutive one drops one tier — but never below
+  `regressionFloor` = `max(1, earnedTier - 1)` (ADR-0026 as narrowed by
+  the owner 2026-09-08). An earned tier is not a ratchet: the ordinary
+  drop still reaches one tier under it. What earning buys is a hard
+  bottom — she can fall that one tier and no further — and that a tier
+  calibration merely PLACED her at can be corrected all the way back to
+  the earned mark. Once she is on the floor, repeated struggle answers
+  with the volume-reduced soft landing where she stands. Any clean
+  session resets the counter. **Absence never regresses.**
 - **Skip is progression-neutral (decided, ADR-0012):** a skipped block
   counts neither as completed nor as struggled — no clean-session
   credit, no easing or regression signal, no points. A session where
@@ -135,8 +142,11 @@ appended taste block.
   pattern's state exactly as absence would (not even a `tierSince`
   stamp), though the session still enters history and still counts for
   pattern-coverage recency (the pattern was prescribed).
-- A 2×/week user who keeps showing up must never lose a tier — this is a
-  simulation gate, not a preference.
+- A 2×/week user who keeps showing up must never fall more than one tier
+  below one she earned — this is a simulation gate, not a preference
+  (re-scoped 2026-09-08, ADR-0026: a tier calibration placed her at was
+  never earned, and the ordinary one-tier drop of ADR-0003 was never
+  taken away).
 - Tier 6 is terminal; continued progress there is volume and density.
 
 ## Simulation harness (`packages/engine/sim`)
@@ -155,9 +165,42 @@ Report the printed numbers after every engine change; never just "passes".
 | # | Gate |
 |---|---|
 | 1 | A 4×/week user reaches push tier 4 or higher by week 12 |
-| 2 | A 2×/week user never regresses a tier |
+| 2 | A 2×/week user never falls more than one tier below a tier she EARNED (owner decision 2026-09-08, ADR-0026) |
 | 3 | No generated session exceeds its time budget |
 | 4 | No pattern is absent for more than 7 days of a user's training |
+
+**Gate 2, earned tiers (owner decision 2026-09-08, ADR-0026, narrowed
+the same day).** A tier is EARNED when the ordinary clean-count +
+time-floor rule put the pattern there (`earnedTier`, defaulting to the
+current tier for any profile persisted without it, so no migration loses
+ground). Two kinds of tier drop are legitimate and neither counts as a
+regression for this gate:
+
+1. **A calibration placement being corrected.** A tier starting-level
+   calibration merely placed her at was never earned, so unwinding it —
+   all the way down to `earnedTier` — is not taking something away.
+2. **The ordinary struggle-driven drop.** ADR-0003's third consecutive
+   struggled session still drops one tier off an earned one. An earned
+   tier is a bottom, not a ratchet.
+
+The engine enforces both at once with a single floor:
+`regressionFloor(state)` = `max(1, earnedTier - 1)`. So the gate is
+whatever is left over — a pattern sitting MORE than one tier below what
+she earned. Be honest about what that measures: because the floor is
+enforced inside `applySessionResult`, the gate can only fail if the
+engine breaks its own rule. It is an end-to-end invariant assertion over
+the whole run, not a behavioural discovery the sim could make on its
+own. The numbers that carry real signal are the two informational
+counts printed beside it — ordinary struggle-driven drops from an earned
+tier, and calibration placement corrections. `pnpm sim` prints all
+three; the gate is the first and must be 0.
+
+Consequence to keep in view: a pattern that climbed the ladder normally
+can still lose a tier to repeated struggle, and a milestone tier (4, 6)
+can therefore be dropped out of — the milestone itself is remembered for
+life (`unlockedMilestones`) and never re-awarded. Below the floor, the
+response to repeated struggle is the volume-reduced soft landing where
+she stands.
 
 If Gate 1 fails, fix the engine or the movement ladders. Nothing downstream
 gets built until it passes.
