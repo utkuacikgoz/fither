@@ -27,7 +27,7 @@ URL. Do not infer EAS success from GitHub CI or from a local Expo export.
 These actions require the owner's Expo and Apple accounts and cannot be
 completed from an anonymous build environment:
 
-1. Enrol in the Apple Developer Program and confirm that `com.fither.app` is
+1. Enrol in the Apple Developer Program and confirm that `com.fitherfitness.app` is
    available to the owner's team. If it is not, change it once before the
    first uploaded build and update the release validator in the same commit.
 2. From `app/`, authenticate with EAS CLI and run `eas init`. Commit only the

@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["REPLACE_WITH_TEAM_ID.com.fither.app"],
+        "appIDs": ["9D78WTZAD8.com.fitherfitness.app"],
         "components": [
           { "/": "/s/*", "comment": "Recipient page scenarios. The app reads the path segment only." }
         ]

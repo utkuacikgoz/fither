@@ -195,15 +195,15 @@ test("button is the owner's App Store URL or nothing", () => {
   }
 });
 
-test("association file is valid JSON for com.fither.app on /s/*", () => {
+test("association file is valid JSON for com.fitherfitness.app on /s/*", () => {
   const raw = read(path.join(".well-known", "apple-app-site-association"));
   const json = JSON.parse(raw);
   const details = json.applinks.details;
   assert.ok(Array.isArray(details) && details.length === 1);
   const [entry] = details;
   assert.equal(entry.appIDs.length, 1);
-  assert.ok(entry.appIDs[0].endsWith(".com.fither.app"), entry.appIDs[0]);
-  assert.ok(entry.appIDs[0].includes("REPLACE_WITH_TEAM_ID"), "Team ID placeholder must stay marked until set");
+  assert.ok(entry.appIDs[0].endsWith(".com.fitherfitness.app"), entry.appIDs[0]);
+  assert.equal(entry.appIDs[0], "9D78WTZAD8.com.fitherfitness.app", "the registered team and bundle id");
   assert.ok(entry.components.some((c) => c["/"] === "/s/*"));
   assert.ok(!raw.includes("http"), "no hosts in the association file");
 });
