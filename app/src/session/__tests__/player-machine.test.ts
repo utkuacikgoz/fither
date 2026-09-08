@@ -51,6 +51,20 @@ describe("restorePlayerBlocks", () => {
     expect(restored.phase).toMatchObject({ kind: "work", side: "left" });
     expect(restored.outcomes).toEqual([]);
   });
+
+  it("rebuilds blocks persisted before in-set corrections, keeping the position", () => {
+    const blocks = [fixturePlayerBlocks[0]!];
+    const current = run(createPlayer(blocks), { type: "begin" });
+    const legacy = {
+      ...current,
+      blocks: [{ ...blocks[0], inSetCues: undefined }],
+    } as unknown as PlayerState;
+
+    const restored = restorePlayerBlocks(legacy, blocks);
+    expect(restored.blocks).toEqual(blocks);
+    expect(restored.blocks[0]!.inSetCues).toEqual(blocks[0]!.inSetCues);
+    expect(restored.phase).toEqual(current.phase);
+  });
 });
 
 describe("rep work flow", () => {

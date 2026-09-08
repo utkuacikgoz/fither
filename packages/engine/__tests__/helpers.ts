@@ -31,6 +31,7 @@ export function syntheticLibrary(): MovementLibrary {
         unilateral: false,
         timing: { type: "reps", defaultValue: 8, secondsPerRep: 4 },
         cues: ["a", "b"],
+        inSetCues: ["Keep breathing"],
       },
       {
         id: `${pattern}-loud-1`,
@@ -44,6 +45,7 @@ export function syntheticLibrary(): MovementLibrary {
         unilateral: false,
         timing: { type: "reps", defaultValue: 8, secondsPerRep: 4 },
         cues: ["a", "b"],
+        inSetCues: ["Keep breathing"],
       },
       {
         id: `${pattern}-chair-1`,
@@ -57,6 +59,7 @@ export function syntheticLibrary(): MovementLibrary {
         unilateral: false,
         timing: { type: "seconds", defaultValue: 20 },
         cues: ["a", "b"],
+        inSetCues: ["Keep breathing"],
       },
       {
         id: `${pattern}-quiet-2`,
@@ -70,6 +73,7 @@ export function syntheticLibrary(): MovementLibrary {
         unilateral: false,
         timing: { type: "reps", defaultValue: 8, secondsPerRep: 4 },
         cues: ["a", "b"],
+        inSetCues: ["Keep breathing"],
       },
     );
   }

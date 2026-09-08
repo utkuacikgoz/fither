@@ -335,3 +335,25 @@ please flag it.
 - If anything in the library is unsafe for this population as a whole —
   not just a subgroup — say so plainly and first. That single sentence
   is worth more than the rest of the review.
+
+---
+
+## 5. Addendum, 8 September 2026: in-set corrections
+
+Since the packet above, every movement carries a second cue list,
+`inSetCues`: one or two short lines the app speaks and shows DURING a
+set (one per set, rotating), on top of the setup cues read at the
+intro. They name the movement's most common fault as the thing to do
+instead ("If your back rounds, hinge less far"), and where range is the
+lever they ask for less range rather than pushing through.
+
+**9. In-set corrections.** Please read them with the same eye as the
+setup cues, and two things in particular. First, they are the lines
+most likely to touch pelvic floor and diastasis territory — bracing,
+breath holding, rib flare on bridges and hip thrusts — for the users
+who never tell the app they are within a year of giving birth; flag any
+line that should be softened or cut for that reason. Second, a
+correction arrives mid-effort, unsupervised, without a demonstration:
+flag any that could be misread into a worse position than the fault it
+corrects. Same format as before: verdict per movement id, and what you
+would say instead.

@@ -40,6 +40,7 @@ export function toPlayerBlocks(
       movementId: b.movementId,
       name: movement?.name ?? b.movementId,
       cues: movement?.cues ?? [],
+      inSetCues: movement?.inSetCues ?? [],
       unilateral: movement?.unilateral ?? false,
       sets: b.sets,
       amount: b.amount,

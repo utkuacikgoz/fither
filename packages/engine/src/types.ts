@@ -41,7 +41,15 @@ export interface Movement {
   loads: BodyArea[];
   unilateral: boolean;
   timing: MovementTiming;
+  /** Setup cues, read at the block intro (2-4). */
   cues: string[];
+  /**
+   * In-set corrections (1-3), the line she hears and sees DURING a set:
+   * the movement's own failure mode, named as what to do. The engine
+   * never reads these; they are display data joined at session creation
+   * (owner decision 2026-09-08, "pointers on the movements").
+   */
+  inSetCues: string[];
 }
 
 export interface MovementLibrary {

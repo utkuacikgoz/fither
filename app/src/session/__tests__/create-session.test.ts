@@ -53,6 +53,8 @@ describe("createSession boundary (integration)", () => {
       expect(movement).not.toBeNull();
       expect(block.name).toBe(movement!.name);
       expect(block.cues).toEqual(movement!.cues);
+      expect(block.inSetCues).toEqual(movement!.inSetCues);
+      expect(block.inSetCues.length).toBeGreaterThan(0);
       expect(block.unilateral).toBe(movement!.unilateral);
       expect(block.timingType).toBe(movement!.timing.type);
     }
@@ -84,6 +86,7 @@ describe("toPlayerBlocks", () => {
       movementId: "ghost",
       name: "ghost",
       cues: [],
+      inSetCues: [],
       unilateral: false,
     });
   });
