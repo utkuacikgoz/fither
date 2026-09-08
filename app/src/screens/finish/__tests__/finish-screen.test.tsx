@@ -123,7 +123,7 @@ function figureTint(node: ReturnType<typeof render>["getByTestId"] extends (...a
 const hidden = { includeHiddenElements: true } as const;
 
 describe("FinishScreen", () => {
-  it("one point reads '+1 point' — a unit that agrees with its number", async () => {
+  it("one point closes the receipt as '+1' beside the Points label", async () => {
     // pointsEarned is the sum of the result's ledger events, so a
     // one-point session is one session event worth one point.
     mockedApply.mockReturnValue({
@@ -135,8 +135,8 @@ describe("FinishScreen", () => {
     });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     await screen.findByText("+1");
-    expect(screen.getByText(strings.finish.pointsUnit(1))).toBeTruthy();
-    expect(strings.finish.pointsUnit(1)).not.toBe(strings.finish.pointsUnit(2));
+    expect(screen.getByTestId("finish-receipt-points-value").props.children).toBe("+1");
+    expect(screen.getByText(strings.finish.receipt.pointsLabel)).toBeTruthy();
   });
 
   it("shows the faces of what she did — both completed blocks, in block order, in ink", async () => {
@@ -171,7 +171,7 @@ describe("FinishScreen", () => {
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
     expect(screen.queryByText(strings.finish.nothingDone.headline)).toBeNull();
-    expect(screen.queryByTestId("finish-points")).toBeNull();
+    expect(screen.queryByTestId("finish-receipt-points")).toBeNull();
     expect(screen.queryByText("+0")).toBeNull();
     expect(screen.getByTestId("finish-receipt-done-value").props.children).toBe(
       strings.finish.receipt.done(0),
@@ -314,8 +314,13 @@ describe("FinishScreen", () => {
     expect(screen.getByText(strings.finish.savingHeadline)).toBeTruthy();
     await waitFor(() => expect(mockedApply).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(strings.finish.headline)).toBeTruthy();
-    expect(screen.getByText("+35")).toBeTruthy();
-    expect(screen.getByText(strings.finish.pointsUnit(35))).toBeTruthy();
+    // The points are the receipt's last row, the value in the green.
+    expect(screen.getByTestId("finish-receipt-points-value").props.children).toBe("+35");
+    expect(screen.getByText(strings.finish.receipt.pointsLabel)).toBeTruthy();
+    const rowIds = screen
+      .getAllByTestId(/^finish-receipt-(done|hard|length|week|points)$/)
+      .map((row) => row.props.testID);
+    expect(rowIds[rowIds.length - 1]).toBe("finish-receipt-points");
   });
 
   it("a zero-completion session gets the honest close — no 'complete', no points row", async () => {
@@ -333,7 +338,7 @@ describe("FinishScreen", () => {
     expect(screen.queryByText(strings.finish.headline)).toBeNull();
     expect(screen.queryByText(strings.finish.note)).toBeNull();
     expect(screen.queryByText("+0")).toBeNull();
-    expect(screen.queryByText(strings.finish.pointsUnit(0))).toBeNull();
+    expect(screen.queryByTestId("finish-receipt-points")).toBeNull();
     // She still leaves through the same single button.
     expect(screen.getByTestId("finish-continue")).toBeTruthy();
   });
@@ -383,10 +388,10 @@ describe("FinishScreen", () => {
       screen.queryByText(strings.finish.outOfTime.headline(fixtureSession.minutes)),
     ).toBeNull();
     expect(screen.queryByText(strings.finish.endedEarly.headline)).toBeNull();
-    expect(screen.queryByTestId("finish-points")).toBeNull();
+    expect(screen.queryByTestId("finish-receipt-points")).toBeNull();
   });
 
-  it("exactly one point reads '+1 point' — never unitless, never the false plural", async () => {
+  it("exactly one point reads '+1' on the Points row — never '+0', never a second row", async () => {
     const base = fixtureApplyResult();
     mockedApply.mockReturnValue({
       ok: true,
@@ -399,8 +404,8 @@ describe("FinishScreen", () => {
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
 
     expect(await screen.findByText("+1")).toBeTruthy();
-    expect(screen.getByText(strings.finish.pointsUnit(1))).toBeTruthy();
-    expect(screen.queryByText(strings.finish.pointsUnit(2))).toBeNull();
+    expect(screen.getByText(strings.finish.receipt.pointsLabel)).toBeTruthy();
+    expect(screen.getAllByTestId(/^finish-receipt-points/)).toHaveLength(2);
   });
 
   it("carries no streak pill any more — the streak lives on Home and Progress (wave 2)", async () => {
@@ -428,7 +433,6 @@ describe("FinishScreen", () => {
     // Parameterised strings.ts values and dynamic numerals, enumerated.
     allowed.add(strings.finish.outOfTime.headline(fixtureSession.minutes));
     allowed.add("+35");
-    allowed.add(strings.finish.pointsUnit(35));
     // The receipt's values, every shape this close can render.
     for (let n = 0; n <= 2; n += 1) {
       allowed.add(strings.finish.receipt.done(n));
@@ -474,7 +478,7 @@ describe("FinishScreen", () => {
     mockedApply.mockReturnValue({ ok: false, reason: "engineUnavailable" });
     const screen = render(<FinishScreen onContinue={jest.fn()} />);
     expect(await screen.findByText(strings.errors.saveUnavailable)).toBeTruthy();
-    expect(screen.queryByTestId("finish-points")).toBeNull();
+    expect(screen.queryByTestId("finish-receipt-points")).toBeNull();
     expect(screen.getByTestId("finish-retry")).toBeTruthy();
   });
 

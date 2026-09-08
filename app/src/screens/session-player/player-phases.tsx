@@ -38,16 +38,28 @@ export function SkipConfirmPhase({ blockName, onKeepGoing, onSkip }: SkipConfirm
         style={[styles.confirmCard, { backgroundColor: colors.surface, borderColor: colors.line }]}
         testID="player-skip-card"
       >
-        <AppText variant="bodyLarge" accessibilityRole="header">
-          {strings.player.skipConfirm.title(blockName)}
-        </AppText>
-        <AppText variant="bodySoft">{strings.player.skipConfirm.body}</AppText>
-        <PrimaryButton
-          testID="player-skip-keep"
-          label={strings.player.skipConfirm.keepGoing}
-          onPress={onKeepGoing}
-        />
-        <QuietButton testID="player-skip-confirm" label={strings.player.skipConfirm.skipIt} onPress={onSkip} />
+        {/* Two groups, not one even stack (owner feedback 2026-09-08:
+            title, line and buttons sat at one rhythm and read as
+            crowded): the question with its line, a section gap, then
+            the two answers. */}
+        <View style={styles.confirmText}>
+          <AppText variant="title" accessibilityRole="header">
+            {strings.player.skipConfirm.title(blockName)}
+          </AppText>
+          <AppText variant="bodySoft">{strings.player.skipConfirm.body}</AppText>
+        </View>
+        <View style={styles.confirmActions}>
+          <PrimaryButton
+            testID="player-skip-keep"
+            label={strings.player.skipConfirm.keepGoing}
+            onPress={onKeepGoing}
+          />
+          <QuietButton
+            testID="player-skip-confirm"
+            label={strings.player.skipConfirm.skipIt}
+            onPress={onSkip}
+          />
+        </View>
       </View>
     </>
   );
@@ -224,7 +236,13 @@ const styles = StyleSheet.create({
     borderWidth: hairline,
     borderRadius: radius.card,
     padding: spacing.lg,
-    gap: spacing.sm + spacing.xs,
-    marginBottom: spacing.md,
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  confirmText: {
+    gap: spacing.sm,
+  },
+  confirmActions: {
+    gap: spacing.xs,
   },
 });

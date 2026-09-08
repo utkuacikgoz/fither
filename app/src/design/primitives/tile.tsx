@@ -30,6 +30,12 @@ interface TileProps {
   reduceMotion: boolean;
   /** Layout of the tile in its row (e.g. flex: 1 for two side by side). */
   style?: StyleProp<ViewStyle>;
+  /**
+   * The surface fills its slot: two tiles side by side share one height
+   * whatever their lines wrap to (owner feedback 2026-09-08, Progress:
+   * the streak and points tiles ended at different heights).
+   */
+  fill?: boolean;
   /** Set when the tile is one accessible element (a stat read as one line). */
   accessible?: boolean;
   accessibilityLabel?: string;
@@ -42,6 +48,7 @@ export function Tile({
   order = 0,
   reduceMotion,
   style,
+  fill = false,
   accessible,
   accessibilityLabel,
   testID,
@@ -58,6 +65,7 @@ export function Tile({
         style={[
           styles.tile,
           inset === "list" ? styles.listInset : styles.contentInset,
+          fill && styles.fill,
           { backgroundColor: colors.surface, borderColor: colors.line },
         ]}
         accessible={accessible}
@@ -82,5 +90,8 @@ const styles = StyleSheet.create({
   },
   listInset: {
     paddingVertical: 0,
+  },
+  fill: {
+    flex: 1,
   },
 });

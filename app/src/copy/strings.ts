@@ -297,22 +297,34 @@ export const strings = {
     },
     // COPY-WRITER (2026-09-07, owner feedback): the no-session screen
     // recommends, it does not describe. The engine reports which of the
-    // avoided areas would, set aside for today only, let a session build.
-    // Order on screen: `headline` (the situation, count is always 3 or
-    // more), `instruction`, one `setAside` row per unblocking area (the
-    // caller passes the area label lowercased), `settingsNote` only when
-    // at least one avoided area came from Always work around, then
-    // preview.changeAnswers. Setting aside is today only; the Settings
-    // list is never touched, and settingsNote says so in the list's own
-    // name. `none` replaces the rows when no single area unblocks;
-    // errors.noSession stays the fallback below it. No blame: the areas
-    // are named as a count, never as her choices, and nothing is wrong.
+    // avoided areas would, included again for today only, let a session
+    // build. Order on screen: `headline` (the situation, count is always
+    // 3 or more in production), `instruction`, one `setAside` row per
+    // unblocking area (the caller passes the area label lowercased),
+    // `settingsNote`, then preview.changeAnswers. `none` replaces the
+    // rows when no single area unblocks; errors.noSession stays the
+    // fallback below it. No blame: the areas are named as a count, never
+    // as her choices, and nothing is wrong.
+    //
+    // COPY-WRITER (2026-09-08, owner live-device feedback: "why they need
+    // to remove something should be crystal clear, show do not tell").
+    // The rows used to read "Set aside hips today", which reads as the
+    // OPPOSITE of the tap: tapping means hips are worked today after all,
+    // gently, at her tier. Every line is now built on "include", the plain
+    // antonym of "work around" she already knows from the prompt. Rejected
+    // "Work hips today": too close to the preview's "Works around your
+    // hips today" to be safe. The key name `setAside` is unchanged (typed,
+    // tested); only its words are. `instruction` is one line pointing at
+    // the rows ("one of these"), so the rows do the showing. `settingsNote`
+    // is the shortest true line: the tap is today only and never edits
+    // Settings. `headline` keeps its shape and gains a singular guard.
     noSession: {
-      headline: (count: number) => `No session fits around ${count} areas.`,
-      instruction: "Set one aside for today and your session builds.",
-      settingsNote: "Today only. Always work around in Settings stays as it is.",
-      setAside: (area: string) => `Set aside ${area} today`,
-      none: "Set two aside today, from your answers or from Always work around in Settings.",
+      headline: (count: number) =>
+        `No session fits around ${count} ${count === 1 ? "area" : "areas"}.`,
+      instruction: "Include one of these and your session builds.",
+      settingsNote: "Today only. Settings stay as they are.",
+      setAside: (area: string) => `Include ${area} today`,
+      none: "Include two areas today, from your answers or Settings.",
     },
   },
   player: {
@@ -389,28 +401,34 @@ export const strings = {
   // technical fact: the note is written to this phone only, zero network.
   care: {
     acknowledgment: "That's a lot to carry today.",
-    notePrompt: "Want to say what happened?",
-    notePrivacy: "Stays on your phone. Never sent anywhere.",
-    // COPY-WRITER (2026-09-07, redesign mockups): the care moment is now
-    // its own screen before the preview, so it carries two buttons.
-    // `continue` names where the tap goes (the preview, whose headline is
-    // "Your session is ready"), never "Start": nothing starts here.
-    // `skip` (pinned 2026-09-07) skips the note only: the quiet button
-    // goes straight on to the same preview as `continue`, and nothing is
-    // declined. The label names exactly that, so it never reads as
-    // turning down today's session. If the quiet button ever declines
-    // the session instead, this label is wrong and must change.
-    continue: "See today's session",
-    // COPY-WRITER (2026-09-07): the same button when the engine could NOT
-    // build around today's areas. `continue` would be false here: there is
-    // no session yet. The tap goes to daily.noSession ("No session fits
-    // around N areas." with the set-aside rows), a screen that recommends,
-    // so the label promises a next step, not a session. Same "See ..."
-    // shape as `continue` so the two buttons feel like one control.
-    // Rejected "Find a way through": too dramatic for the care beat, and
-    // it promises a way exists when noSession.none may say it does not.
-    continueNoSession: "See what to do",
-    skip: "Skip the note",
+    // COPY-WRITER (2026-09-08, owner live-device feedback: "why should
+    // they do that, they don't trust you"). The old prompt asked without
+    // saying what the note was for. Now it says: her own record, kept for
+    // her to read back (Settings > Your notes). The app never reads it
+    // for anything, so nothing more is promised. Optional stays implied
+    // by `skip` below; the prompt itself stays one line.
+    notePrompt: "Note what happened, for your own record.",
+    // COPY-WRITER (2026-09-08): same fact, two words shorter. "Never sent"
+    // is complete on its own; "anywhere" added nothing. Also read alone
+    // at the foot of Settings > Your notes.
+    notePrivacy: "Stays on your phone. Never sent.",
+    // COPY-WRITER (2026-09-08, owner live-device feedback): "See what to
+    // do" oversold the tap, and the "See ..." pair with it went. Both
+    // primaries are now the plainest honest name for what the tap does:
+    // keep whatever she wrote and move on. `continue` goes to the preview
+    // ("Your session is ready"); `continueNoSession` goes to the
+    // no-session screen, where "Continue" promises nothing. Two keys are
+    // kept so the paths may still diverge. Never "Start": nothing starts
+    // here. Never "Save note": the field may be empty, and the tap still
+    // moves on.
+    continue: "Continue",
+    continueNoSession: "Continue",
+    // COPY-WRITER (2026-09-08): shorter. Skips the note only; the quiet
+    // button goes to the same place as the primary and nothing is
+    // declined. The label names the note, so it never reads as turning
+    // down today's session. If the quiet button ever declines the
+    // session instead, this label is wrong and must change.
+    skip: "Skip note",
   },
   preview: {
     eyebrow: "Made for today",
@@ -815,6 +833,13 @@ export const strings = {
       lengthLabel: "Session length",
       length: (minutes: number) => `${minutes} minutes planned`,
       weekLabel: "This week",
+      // COPY-WRITER (2026-09-08): new key. Left label of the receipt row
+      // whose value is the session's points ("+35", in the accent). One
+      // plain noun, same shape as the labels above it; the value carries
+      // the number, so the label never repeats it. Not "Points earned":
+      // the receipt states what happened, it never frames a reward, and
+      // "earn" sits next to a forbidden phrase.
+      pointsLabel: "Points",
       share: "Share this",
     },
   },

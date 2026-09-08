@@ -9,8 +9,10 @@ import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { SettingsRow } from "../../design/primitives/settings-row";
+import { Tile } from "../../design/primitives/tile";
 import { useTheme } from "../../design/theme";
-import { hairline, spacing } from "../../design/tokens";
+import { spacing } from "../../design/tokens";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 
 // The daily prompt's two outcomes that are not questions — generation
 // failed, or the engine could not build around today's answers. Split
@@ -68,6 +70,7 @@ export function PromptNoSession({
   onAdjust,
 }: PromptNoSessionProps) {
   const colors = useTheme();
+  const reduceMotion = useReducedMotion();
   const [careDone, setCareDone] = useState(false);
 
   if (care && !careDone) {
@@ -91,7 +94,11 @@ export function PromptNoSession({
           value={careNoteText}
           onChangeText={onChangeCareNote}
         />
-        <View style={styles.bottom}>
+        {/* The buttons stay under the field (above the keyboard while
+            she types), a section apart from it and a beat apart from
+            each other — owner feedback 2026-09-08: the filled button
+            sat flush against the note. */}
+        <View style={styles.careActions}>
           <PrimaryButton
             testID="care-continue"
             label={strings.care.continueNoSession}
@@ -132,12 +139,17 @@ export function PromptNoSession({
             ? strings.prompt.noSession.instruction
             : strings.prompt.noSession.none}
         </AppText>
+        {/* The ways out as one grouped tile of choices, not loose rows
+            under a rule (owner feedback 2026-09-08: show, do not tell):
+            the tile is the offer, each row one area she can work today. */}
         {unblocking.length > 0 && (
-          <View
-            style={[styles.rows, { borderTopColor: colors.line }]}
+          <Tile
+            inset="list"
+            reduceMotion={reduceMotion}
+            style={styles.rows}
             testID="no-session-rows"
           >
-            {unblocking.map((area) => (
+            {unblocking.map((area, index) => (
               <SettingsRow
                 key={area}
                 testID={`no-session-set-aside-${area}`}
@@ -145,19 +157,21 @@ export function PromptNoSession({
                   strings.prompt.soreness.areas[area].toLowerCase(),
                 )}
                 chevron
+                divider={index < unblocking.length - 1}
                 onPress={() => onSetAside(area)}
               />
             ))}
-          </View>
+          </Tile>
         )}
         <AppText variant="caption" style={styles.settingsNote}>
           {strings.prompt.noSession.settingsNote}
         </AppText>
       </ScrollView>
+      {/* Quiet, not outlined: the rows above are the decision; this is
+          the other door, and a pill at the bottom competed with them. */}
       <View style={styles.bottom}>
         <QuietButton
           testID="prompt-adjust-answers"
-          outlined
           label={strings.preview.changeAnswers}
           onPress={onAdjust}
         />
@@ -186,13 +200,16 @@ const styles = StyleSheet.create({
   },
   rows: {
     marginTop: spacing.lg,
-    borderTopWidth: hairline,
   },
   settingsNote: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
   },
   scrollContent: {
     paddingBottom: spacing.xl,
+  },
+  careActions: {
+    marginTop: spacing.xl,
+    gap: spacing.xs,
   },
   bottom: {
     paddingBottom: spacing.md,

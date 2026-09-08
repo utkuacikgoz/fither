@@ -64,3 +64,10 @@ it("sets the numeral at the display token and keeps its Dynamic Type cap", () =>
   // keeps a three-digit total on-screen at accessibility sizes.
   expect(value.props.maxFontSizeMultiplier).toBe(numeralMaxFontScale);
 });
+
+it("fills its slot so two side by side share one height whatever their lines wrap to", () => {
+  const screen = render(
+    <StatTile value="0" lines={["a line that wraps", "and another"]} reduceMotion accessibilityLabel="d" testID="stat" />,
+  );
+  expect(StyleSheet.flatten(screen.getByTestId("stat").props.style).flex).toBe(1);
+});

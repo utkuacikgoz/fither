@@ -20,14 +20,18 @@ import type { WeekView } from "../../state/week-view";
 interface ReceiptTileProps {
   receipt: SessionReceipt;
   week: WeekView;
+  /** Points the session earned; 0 draws no row (a struggled session earns nothing). */
+  points: number;
   order: number;
   reduceMotion: boolean;
 }
 
 interface ReceiptRow {
-  key: "done" | "hard" | "length" | "week";
+  key: "done" | "hard" | "length" | "week" | "points";
   label: string;
   value: string;
+  /** The green marks the one row that is earned, not counted. */
+  tone?: "accent";
 }
 
 /**
@@ -44,7 +48,11 @@ function weekValue(week: WeekView): string {
   return line.replace(/\.$/, "");
 }
 
-export function receiptRows(receipt: SessionReceipt, week: WeekView): ReceiptRow[] {
+export function receiptRows(
+  receipt: SessionReceipt,
+  week: WeekView,
+  points = 0,
+): ReceiptRow[] {
   const rows: ReceiptRow[] = [
     {
       key: "done",
@@ -73,12 +81,24 @@ export function receiptRows(receipt: SessionReceipt, week: WeekView): ReceiptRow
       value: weekValue(week),
     },
   );
+  // The points close the receipt as its last line (owner feedback
+  // 2026-09-08: a numeral floating under the tile read as misplaced).
+  // Same row shape as the counts, the value in the green; the unit is
+  // the label, so "+1" never has to agree with it.
+  if (points > 0) {
+    rows.push({
+      key: "points",
+      label: strings.finish.receipt.pointsLabel,
+      value: `+${points}`,
+      tone: "accent",
+    });
+  }
   return rows;
 }
 
-export function ReceiptTile({ receipt, week, order, reduceMotion }: ReceiptTileProps) {
+export function ReceiptTile({ receipt, week, points, order, reduceMotion }: ReceiptTileProps) {
   const colors = useTheme();
-  const rows = receiptRows(receipt, week);
+  const rows = receiptRows(receipt, week, points);
   return (
     <Tile inset="list" order={order} reduceMotion={reduceMotion} testID="finish-receipt">
       {rows.map((row, index) => (
@@ -93,7 +113,11 @@ export function ReceiptTile({ receipt, week, order, reduceMotion }: ReceiptTileP
           testID={`finish-receipt-${row.key}`}
         >
           <AppText variant="body">{row.label}</AppText>
-          <AppText variant="bodySoft" testID={`finish-receipt-${row.key}-value`}>
+          <AppText
+            variant={row.tone === "accent" ? "body" : "bodySoft"}
+            {...(row.tone === "accent" ? { color: colors.accent } : {})}
+            testID={`finish-receipt-${row.key}-value`}
+          >
             {row.value}
           </AppText>
         </View>
