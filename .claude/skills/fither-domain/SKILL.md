@@ -78,7 +78,12 @@ the answer is there, not in a conversation.
 Non-negotiables the spec enforces:
 
 - Six tiers per movement pattern. Progression is per-pattern, not global.
-- A 2×/week user must never regress. Absence alone never causes regression.
+- A 2×/week user must never fall more than one tier below what she EARNED
+  — the tier the ordinary clean-count rule gave her (ADR-0026, narrowed
+  2026-09-08). Repeated struggle may still take her that one tier down,
+  and a tier starting-level calibration merely PLACED her at may be
+  corrected all the way back to the earned mark. Absence alone never
+  causes regression.
 - No pattern disappears for more than 7 days of training.
 - The silent + chair-only + no-gear constraint set must still produce a
   complete session at tiers 1–4 for every pattern.

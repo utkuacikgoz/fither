@@ -55,13 +55,19 @@ describe("PatternState shape (S2 rename guard)", () => {
     const push = result.profile.patterns.push;
     expect(push.cleanCount).toBe(1);
     expect(push.struggleCount).toBe(0);
+    // `earnedTier` joins the persisted set with ADR-0026: the tier the
+    // ordinary progression gave her, which regression may never cross.
+    // Optional on read (absent = the current tier), always stamped on
+    // write — so an app-side profile persisted without it loses nothing.
     expect(Object.keys(push).sort()).toStrictEqual([
       "cleanCount",
+      "earnedTier",
       "struggleCount",
       "tier",
       "tierSince",
       "volumeReduced",
     ]);
+    expect(push.earnedTier).toBe(1);
     expect(push).not.toHaveProperty("cleanStreak");
     expect(push).not.toHaveProperty("struggledStreak");
   });

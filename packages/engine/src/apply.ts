@@ -12,6 +12,8 @@ import type {
   Tier,
 } from "./types";
 import {
+  CALIBRATION_MAX_SESSIONS,
+  CALIBRATION_MAX_TIER,
   CLEAN_SESSIONS_TO_ADVANCE,
   DAYS_AT_TIER_TO_ADVANCE,
   POINTS,
@@ -32,6 +34,36 @@ export function calendarDaysBetween(from: string, to: string): number {
     return Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1);
   };
   return Math.round((utc(to) - utc(from)) / 86_400_000);
+}
+
+/**
+ * The tier this pattern EARNED the ordinary way — the mark
+ * `regressionFloor` is measured from (ADR-0026, owner decision
+ * 2026-09-08). Exported so the UI can name it without re-deriving the
+ * legacy default: a state persisted before `earnedTier` existed reads as
+ * its current tier, so no migration hands an existing user a deeper fall
+ * than the ordinary one-tier drop.
+ */
+export function earnedTierOf(state: PatternState): Tier {
+  return state.earnedTier ?? state.tier;
+}
+
+/**
+ * The lowest tier repeated struggle may ever take this pattern to
+ * (ADR-0026 as narrowed by the owner, 2026-09-08): one tier below what
+ * she EARNED, never below tier 1.
+ *
+ * An earned tier is not a ratchet. ADR-0003's ordinary struggle-driven
+ * drop still applies to it — she may fall one tier below the ground the
+ * clean-count rule gave her, and no further. What `earnedTier` buys is
+ * that a tier calibration merely PLACED her at can be corrected all the
+ * way back down to the earned tier without that being a regression.
+ *
+ * Exported so the UI can say how far the floor is without re-deriving
+ * the rule.
+ */
+export function regressionFloor(state: PatternState): Tier {
+  return Math.max(1, earnedTierOf(state) - 1) as Tier;
 }
 
 /**
@@ -186,12 +218,24 @@ export function applySessionResult(
       next.struggleCount = prev.struggleCount + 1;
       if (next.struggleCount >= STRUGGLED_SESSIONS_TO_REGRESS) {
         // Third consecutive struggle: drop one tier, land softly
-        // (volume-reduced) with fresh counters. Every tier change —
-        // regress included — restarts the time-floor clock (ADR-0008).
-        next.tier = Math.max(1, prev.tier - 1) as Tier;
+        // (volume-reduced) with fresh counters. The drop stops at
+        // `regressionFloor` — one tier below what she EARNED (ADR-0026
+        // as narrowed 2026-09-08), never below tier 1. So the ordinary
+        // struggle-driven drop still reaches an earned tier exactly
+        // once, and a tier calibration merely placed her at can be
+        // corrected all the way back to the earned floor. Below that,
+        // repeated struggle answers with the volume-reduced soft landing
+        // where she stands.
+        const floor = regressionFloor(prev);
+        const target = Math.max(floor, prev.tier - 1) as Tier;
         next.struggleCount = 0;
         next.volumeReduced = true;
-        next.tierSince = session.date;
+        if (target < prev.tier) {
+          next.tier = target;
+          // Every tier change — regress included — restarts the
+          // time-floor clock (ADR-0008).
+          next.tierSince = session.date;
+        }
       } else if (next.struggleCount >= STRUGGLED_SESSIONS_TO_REDUCE_VOLUME) {
         next.volumeReduced = true;
       }
@@ -216,6 +260,9 @@ export function applySessionResult(
         next.tier = (prev.tier + 1) as Tier;
         next.cleanCount = 0;
         next.tierSince = session.date;
+        // The ordinary rule put her here, so this tier is EARNED
+        // (ADR-0026): no later regression may take it back.
+        next.earnedTier = next.tier;
         const alreadyUnlocked = unlockedMilestones.some(
           (milestone) =>
             milestone.pattern === pattern && milestone.tier === next.tier,
@@ -246,7 +293,63 @@ export function applySessionResult(
     // apply and the floor clock starts today. Patterns not in this
     // session are never touched (absence never regresses — nor stamps).
     if (next.tierSince === undefined) next.tierSince = session.date;
+    // Same legacy tolerance for the earned floor (ADR-0026): a state
+    // persisted before the field existed keeps the ground it already
+    // stands on. Stamped here, BEFORE any calibration placement below,
+    // so a placement never counts as earned.
+    if (next.earnedTier === undefined) next.earnedTier = next.tier;
     nextPatterns[pattern] = next;
+  }
+
+  // Starting-level calibration (ADR-0026). Sessions one and two only:
+  // a calibration taste the engine actually offered (it says so in the
+  // session's adaptations) and she completed without struggling raises
+  // where that pattern STARTS next session, by exactly one tier, capped
+  // at CALIBRATION_MAX_TIER. A struggled or skipped taste changes
+  // nothing, and the taste itself stays progression- and points-neutral:
+  // it earns no clean-session credit and no ledger event.
+  if (history.entries.length < CALIBRATION_MAX_SESSIONS) {
+    for (const adaptation of session.adaptations) {
+      if (adaptation.kind !== "calibrationTaste") continue;
+      const { pattern, movementId } = adaptation;
+      const index = session.blocks.findIndex(
+        (block, i) =>
+          block.pattern === pattern &&
+          block.movementId === movementId &&
+          block.sets === 1 &&
+          outcomes[i] !== undefined,
+      );
+      if (index < 0 || outcomes[index] !== "completed") continue;
+      const before = profile.patterns[pattern];
+      const movement = byId.get(movementId);
+      // The taste must be exactly one rung above where she started the
+      // session — the same step the ladder takes anyway.
+      if (!movement || movement.tier !== before.tier + 1) continue;
+      if (before.tier >= CALIBRATION_MAX_TIER) continue;
+      // Never more than one tier per session: a pattern the ordinary
+      // rules already moved today is left alone.
+      const current = nextPatterns[pattern];
+      if (current.tier !== before.tier) continue;
+      // A pattern she struggled at her CURRENT tier in this same session
+      // is not started higher, whatever the taste said. Judgment call
+      // beyond the owner's four answers (flagged in ADR-0026): it can
+      // only ever prevent an unearned jump, never cause one.
+      if (struggled.has(pattern)) continue;
+      nextPatterns[pattern] = {
+        ...current,
+        tier: (before.tier + 1) as Tier,
+        cleanCount: 0,
+        struggleCount: 0,
+        volumeReduced: false,
+        // Placement is not earning (ADR-0026). The earned floor stays
+        // where it was — resolved explicitly, because a pattern whose
+        // own block was skipped never reached the stamp above and would
+        // otherwise read its new, unearned tier as earned.
+        earnedTier: earnedTierOf(current),
+        // A tier change, so the ADR-0008 floor clock restarts here.
+        tierSince: session.date,
+      };
+    }
   }
 
   // History is append-only; inputs are never mutated.

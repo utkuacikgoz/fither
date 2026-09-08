@@ -15,6 +15,7 @@ import { maxBlocksPerPattern } from "../src/generate.js";
 import {
   emptyHistory,
   historyWithPatterns,
+  settledHistory,
   profileAtTier,
   prompt,
   realLibrary,
@@ -178,7 +179,7 @@ describe("generateSession — energy", () => {
     const low = generateSession(
       realLibrary,
       profileAtTier(2),
-      emptyHistory,
+      settledHistory,
       prompt({ energy: "low", minutes: 20 }),
       21,
     );
@@ -192,7 +193,8 @@ describe("generateSession — energy", () => {
     const session = generateSession(
       realLibrary,
       profileAtTier(2),
-      emptyHistory,
+      // Past calibration: the only taste here is the strong-energy one.
+      settledHistory,
       prompt({ energy: "strong", minutes: 30 }),
       31,
     );

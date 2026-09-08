@@ -94,6 +94,20 @@ export function profileAtTier(tier: Tier): Profile {
   return p;
 }
 
+/**
+ * A profile standing at `tier` on every pattern with the earned mark
+ * still at `earned` — the state starting-level calibration leaves behind
+ * (ADR-0026): placed, not earned, so a regression may correct it back
+ * down to `earned`. `profileAtTier` leaves `earnedTier` unset, which
+ * reads as the CURRENT tier, so its regression floor is one tier below
+ * where it stands (`regressionFloor`, narrowed 2026-09-08).
+ */
+export function profilePlacedAtTier(tier: Tier, earned: Tier = 1): Profile {
+  const p = profileAtTier(tier);
+  for (const pattern of PATTERNS) p.patterns[pattern].earnedTier = earned;
+  return p;
+}
+
 export const emptyHistory: History = { entries: [] };
 
 export function historyWithPatterns(patternsPerEntry: Pattern[][]): History {
@@ -109,3 +123,15 @@ export function historyWithPatterns(patternsPerEntry: Pattern[][]): History {
     })),
   };
 }
+
+/**
+ * A history long enough that starting-level calibration is over
+ * (ADR-0026): the engine offers calibration tastes only while fewer than
+ * CALIBRATION_MAX_SESSIONS sessions are on record. Every pattern appears
+ * in every entry, so nothing is stale either — the session under test is
+ * an ordinary one.
+ */
+export const settledHistory: History = historyWithPatterns([
+  [...PATTERNS],
+  [...PATTERNS],
+]);

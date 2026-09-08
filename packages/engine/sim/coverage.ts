@@ -28,6 +28,8 @@ import {
   createRng,
   generateSession,
   unblockingAreas,
+  CALIBRATION_MAX_SESSIONS,
+  CALIBRATION_MAX_TIER,
   PATTERNS,
   TARGET_UTILIZATION,
   TRANSITION_SECONDS,
@@ -294,6 +296,8 @@ export function auditSession(
   profile: Profile,
   prompt: DailyPrompt,
   session: Session,
+  /** History length the session was generated from (ADR-0026 calibration). */
+  historyLength = 0,
 ): Observation {
   const budget = prompt.minutes * 60;
   const pool = library.movements.filter((m) => eligible(m, prompt));
@@ -325,12 +329,30 @@ export function auditSession(
     const state = profile.patterns[b.pattern];
     const isTaste = b.sets === 1;
     if (isTaste) {
-      // A taste block: strong energy only, one set, exactly tier + 1, last.
-      const ok =
-        prompt.energy === "strong" &&
-        m.tier === state.tier + 1 &&
-        i === session.blocks.length - 1 &&
-        !b.atNewTier;
+      const claimed = session.adaptations.some(
+        (a) =>
+          a.kind === "calibrationTaste" &&
+          a.pattern === b.pattern &&
+          a.movementId === b.movementId,
+      );
+      // A calibration taste (ADR-0026): only while calibrating, only
+      // below the calibration cap, one set, exactly tier + 1, announced
+      // as one, and seated directly after a block of its own pattern.
+      // A strong-energy taste (ADR-0007): strong only, one set, exactly
+      // tier + 1, last block, unannounced.
+      const previous = session.blocks[i - 1];
+      const ok = claimed
+        ? historyLength < CALIBRATION_MAX_SESSIONS &&
+          state.tier < CALIBRATION_MAX_TIER &&
+          m.tier === state.tier + 1 &&
+          !b.atNewTier &&
+          previous !== undefined &&
+          previous.pattern === b.pattern &&
+          previous.sets > 1
+        : prompt.energy === "strong" &&
+          m.tier === state.tier + 1 &&
+          i === session.blocks.length - 1 &&
+          !b.atNewTier;
       if (!ok) tierViolations++;
     } else if (m.tier > state.tier || m.pattern !== b.pattern) {
       tierViolations++;
@@ -642,7 +664,14 @@ export function runCoverage(library: MovementLibrary, options: CoverageOptions =
                     fail("noThrow", ref, e instanceof Error ? e.message : String(e), null);
                     continue;
                   }
-                  const obs = auditSession(library, movementById, profile, prompt, session);
+                  const obs = auditSession(
+                    library,
+                    movementById,
+                    profile,
+                    prompt,
+                    session,
+                    history.entries.length,
+                  );
 
                   if (quietBaseline === null) {
                     quietBaseline = JSON.stringify(session);
@@ -726,6 +755,8 @@ export function runCoverage(library: MovementLibrary, options: CoverageOptions =
                     );
                     // Compare against the unpadded main budget (rest padding
                     // happens after coverage, taste reserve before it).
+                    // Calibration tastes (one set) are part of what the
+                    // main phase spent, so they stay in the total.
                     const unpadded = session.blocks.reduce(
                       (acc, b) => acc + (b.estimatedSeconds - (b.sets - 1) * (b.restSeconds - 45)),
                       0,
@@ -850,7 +881,7 @@ export function formatReport(r: CoverageResult, library: MovementLibrary): strin
     ["withinBudget", "estimatedTotalSeconds <= minutes * 60"],
     ["timingRecomputes", "block and total estimates recompute from movement timing"],
     ["honoursConstraints", "no block loads an avoided area / needs missing equipment / is loud when quiet"],
-    ["prescribesAtOrBelowTier", "main blocks at or below the pattern's tier; taste = strong, 1 set, tier+1, last"],
+    ["prescribesAtOrBelowTier", "main blocks at or below the pattern's tier; taste = 1 set, tier+1 (strong: last; calibration: after its own block)"],
     ["neverEmptyWithoutAvoid", "an empty avoid list always gets a session"],
     ["emptyIffPoolEmpty", "a session is empty exactly when no movement survives the filter"],
     ["unblockingNonEmptyWhenEmpty", "empty with avoid.length >= 1 => unblockingAreas non-empty"],
