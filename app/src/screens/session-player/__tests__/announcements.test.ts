@@ -5,7 +5,7 @@ import {
   type PlayerState,
 } from "../../../session/player-machine";
 import { fixturePlayerBlocks } from "../../../test-utils/fixtures";
-import { announcementKey, phaseAnnouncement, workCue } from "../announcements";
+import { announcementKey, countdownLine, phaseAnnouncement, workCue } from "../announcements";
 
 // The pure half of the VoiceOver work (audit P0 #6): one key per machine
 // position so the screen announces transitions exactly once, and every
@@ -129,5 +129,48 @@ describe("phaseAnnouncement", () => {
     });
     expect(done.phase.kind).toBe("done");
     expect(phaseAnnouncement(done)).toBeNull();
+  });
+});
+
+describe("countdownLine", () => {
+  const tick = (state: ReturnType<typeof createPlayer>, times: number) => {
+    let next = state;
+    for (let i = 0; i < times; i += 1) next = reduce(next, { type: "tick" });
+    return next;
+  };
+
+  it("counts the last five seconds of a timed hold, the five as the warning", () => {
+    // Fixture block 1: a 20-second hold.
+    let state = reduce(createPlayer([fixturePlayerBlocks[1]!]), { type: "begin" });
+    expect(countdownLine(state)).toBeNull(); // 20
+    state = tick(state, 14);
+    expect(countdownLine(state)).toBeNull(); // 6
+    state = tick(state, 1);
+    expect(countdownLine(state)).toBe(strings.player.countdown(5));
+    const lines = [countdownLine(state)];
+    for (let i = 0; i < 4; i += 1) {
+      state = tick(state, 1);
+      lines.push(countdownLine(state));
+    }
+    expect(lines).toEqual([5, 4, 3, 2, 1].map((n) => strings.player.countdown(n as 1 | 2 | 3 | 4 | 5)));
+  });
+
+  it("counts the last five seconds of a rest the same way", () => {
+    // Fixture block 0: reps, 30 seconds of rest after set 1.
+    let state = reduce(reduce(createPlayer(fixturePlayerBlocks), { type: "begin" }), { type: "advance" });
+    expect(state.phase.kind).toBe("rest");
+    expect(countdownLine(state)).toBeNull();
+    state = tick(state, 25);
+    expect(countdownLine(state)).toBe(strings.player.countdown(5));
+    state = tick(state, 4);
+    expect(countdownLine(state)).toBe(strings.player.countdown(1));
+  });
+
+  it("says nothing on rep work, and never on a count's first second", () => {
+    expect(countdownLine(reduce(createPlayer(fixturePlayerBlocks), { type: "begin" }))).toBeNull();
+    // A 5-second hold starts at its own warning second: the start cue owns it.
+    const short = reduce(createPlayer([{ ...fixturePlayerBlocks[1]!, amount: 5 }]), { type: "begin" });
+    expect(countdownLine(short)).toBeNull();
+    expect(countdownLine(tick(short, 1))).toBe(strings.player.countdown(4));
   });
 });

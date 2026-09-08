@@ -1,6 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { useSettingsStore } from "../settings-store";
+import { hasVoiceAudio } from "../../session/voice-manifest";
+import { useSettingsStore, voiceAskDue } from "../settings-store";
+
+jest.mock("../../session/voice-manifest", () => ({ hasVoiceAudio: jest.fn(() => true) }));
+const mockedHasVoiceAudio = jest.mocked(hasVoiceAudio);
 
 // The settings store's persistent avoid-list setters. `setAlwaysAvoid`
 // is the first session's "Remember for every session" (owner brief
@@ -46,5 +50,42 @@ describe("setAlwaysAvoid", () => {
     expect(useSettingsStore.getState().alwaysAvoid).toEqual([]);
     useSettingsStore.getState().toggleAlwaysAvoid("hips");
     expect(useSettingsStore.getState().alwaysAvoid).toEqual(["hips"]);
+  });
+});
+
+describe("the one voice ask (owner decision 2026-09-08)", () => {
+  beforeEach(() => {
+    mockedHasVoiceAudio.mockReturnValue(true);
+    useSettingsStore.setState({ voice: false, voiceAsked: false, hydrated: true });
+  });
+
+  it("is owed once: hydrated, unanswered, and a voice bundled", () => {
+    expect(voiceAskDue()).toBe(true);
+    useSettingsStore.getState().answerVoiceAsk(true);
+    expect(voiceAskDue()).toBe(false);
+  });
+
+  it("either answer spends the ask and is the real voice setting", () => {
+    useSettingsStore.getState().answerVoiceAsk(false);
+    expect(useSettingsStore.getState()).toMatchObject({ voice: false, voiceAsked: true });
+    useSettingsStore.setState({ voiceAsked: false });
+    useSettingsStore.getState().answerVoiceAsk(true);
+    expect(useSettingsStore.getState()).toMatchObject({ voice: true, voiceAsked: true });
+  });
+
+  it("fails safe: no ask before hydration, none without bundled audio", () => {
+    useSettingsStore.setState({ hydrated: false });
+    expect(voiceAskDue()).toBe(false);
+    useSettingsStore.setState({ hydrated: true });
+    mockedHasVoiceAudio.mockReturnValue(false);
+    expect(voiceAskDue()).toBe(false);
+  });
+
+  it("persists the answer so a relaunch never asks again", async () => {
+    useSettingsStore.getState().answerVoiceAsk(true);
+    await flushPersistence();
+    const raw = await AsyncStorage.getItem("fither/settings-v1");
+    const persisted = JSON.parse(raw as string) as { state: { voice: boolean; voiceAsked: boolean } };
+    expect(persisted.state).toMatchObject({ voice: true, voiceAsked: true });
   });
 });

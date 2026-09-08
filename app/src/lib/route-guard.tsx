@@ -37,7 +37,7 @@ import { useLedgerStore } from "../state/ledger-store";
 import { useProfileStore } from "../state/profile-store";
 import { useReminderStore } from "../state/reminder-store";
 import { useSessionStore } from "../state/session-store";
-import { useSettingsStore } from "../state/settings-store";
+import { useSettingsStore, voiceAskDue } from "../state/settings-store";
 
 /** What a route needs to be a truthful screen. One name per route. */
 export type RouteRequirement =
@@ -55,6 +55,8 @@ export type RouteRequirement =
   | "generatedSession"
   /** /session: a session and player in flight. */
   | "activeSession"
+  /** /voice-ask: a generated session waiting AND the one voice ask still owed. */
+  | "voiceAsk"
   /** /finish: a finished session to apply, or an applied summary. */
   | "finishedSession"
   /** /unlock: at least one skill actually unlocked this session. */
@@ -134,6 +136,8 @@ function requirementMet(requirement: RouteRequirement): boolean {
     case "generatedSession":
     case "activeSession":
       return session !== null && player !== null;
+    case "voiceAsk":
+      return session !== null && player !== null && voiceAskDue();
     case "finishedSession":
       // Either the workout ran to done and awaits its apply, or the
       // apply already committed and left the summary to show.

@@ -3,6 +3,8 @@ import type { BodyArea, Equipment } from "@fither/engine";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { hasVoiceAudio } from "../session/voice-manifest";
+
 interface SettingsState {
   hydrated: boolean;
   hydrationFailed: boolean;
@@ -55,6 +57,15 @@ interface SettingsState {
    */
   voice: boolean;
   setVoice: (voice: boolean) => void;
+  /**
+   * The one voice ask has run (spoken OR silent chosen). Asked once ever,
+   * on the way into her first session (owner decision 2026-09-08): audio
+   * she did not ask for is the wrong surprise, and a setting nobody finds
+   * is the wrong silence. Persisted; Settings is the way back either way.
+   */
+  voiceAsked: boolean;
+  /** Her answer to the ask: the voice setting, and the ask is spent. */
+  answerVoiceAsk: (voice: boolean) => void;
 }
 
 // The two equipment shapes the product offers — "Just me and the floor"
@@ -81,6 +92,8 @@ export const useSettingsStore = create<SettingsState>()(
       hydrationFailed: false,
       voice: false,
       setVoice: (voice) => set({ voice }),
+      voiceAsked: false,
+      answerVoiceAsk: (voice) => set({ voice, voiceAsked: true }),
       setEquipment: (equipment) => set({ equipment }),
       completeOnboarding: (equipment, alwaysAvoid) =>
         set({ equipment, alwaysAvoid, onboardingCompleted: true }),
@@ -101,6 +114,7 @@ export const useSettingsStore = create<SettingsState>()(
         alwaysAvoid: state.alwaysAvoid,
         sessionSalt: state.sessionSalt,
         voice: state.voice,
+        voiceAsked: state.voiceAsked,
       }),
       onRehydrateStorage: () => (_state, error) => {
         Promise.resolve().then(() =>
@@ -113,3 +127,14 @@ export const useSettingsStore = create<SettingsState>()(
     },
   ),
 );
+
+/**
+ * Whether the voice ask is still owed: settings hydrated (an unhydrated
+ * read fails SAFE toward not asking — a skipped ask costs nothing, a
+ * double ask is a nag), never answered, and a voice actually bundled: an
+ * empty manifest has nothing to offer, so it asks nothing.
+ */
+export function voiceAskDue(): boolean {
+  const { hydrated, voiceAsked } = useSettingsStore.getState();
+  return hydrated && !voiceAsked && hasVoiceAudio();
+}

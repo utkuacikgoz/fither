@@ -102,6 +102,62 @@ describe("SessionPlayerScreen", () => {
       expect(speakCue).toHaveBeenCalledTimes(3);
     });
 
+    it("counts down the last five seconds of a hold and of a rest, once per second", () => {
+      useSessionStore.setState({ player: createPlayer([fixturePlayerBlocks[1]!]) });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      expect(speakCue).toHaveBeenCalledTimes(1); // the in-set cue
+      act(() => {
+        jest.advanceTimersByTime(14000);
+      });
+      expect(speakCue).toHaveBeenCalledTimes(1); // 6 left: nothing yet
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(speakCue).toHaveBeenLastCalledWith(strings.player.countdown(5));
+      // One second per render, as on the phone: each tick commits its own
+      // second, so each line is spoken (a single act over four ticks would
+      // batch them into one render and one line).
+      for (let second = 0; second < 4; second += 1) {
+        act(() => {
+          jest.advanceTimersByTime(1000);
+        });
+      }
+      expect(speakCue).toHaveBeenCalledTimes(6);
+      expect(speakCue).toHaveBeenLastCalledWith(strings.player.countdown(1));
+    });
+
+    it("counts down the last five seconds of a rest the same way", () => {
+      // Fixture block 0: reps, then 30 seconds of rest.
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      fireEvent.press(screen.getByTestId("player-set-done"));
+      expect(speakCue).toHaveBeenCalledTimes(1); // the in-set cue only
+      act(() => {
+        jest.advanceTimersByTime(24000);
+      });
+      expect(speakCue).toHaveBeenCalledTimes(1); // 6 left: nothing yet
+      for (let second = 0; second < 5; second += 1) {
+        act(() => {
+          jest.advanceTimersByTime(1000);
+        });
+      }
+      expect(speakCue).toHaveBeenCalledTimes(6);
+      expect(speakCue).toHaveBeenNthCalledWith(2, strings.player.countdown(5));
+      expect(speakCue).toHaveBeenLastCalledWith(strings.player.countdown(1));
+    });
+
+    it("with the voice off, the countdown is silent too", () => {
+      useSettingsStore.setState({ voice: false });
+      useSessionStore.setState({ player: createPlayer([fixturePlayerBlocks[1]!]) });
+      const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+      fireEvent.press(screen.getByTestId("player-begin"));
+      act(() => {
+        jest.advanceTimersByTime(19000);
+      });
+      expect(speakCue).not.toHaveBeenCalled();
+    });
+
     it("skipping a block stops the voice so it cannot talk over the next intro", () => {
       const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
       fireEvent.press(screen.getByTestId("player-begin"));
