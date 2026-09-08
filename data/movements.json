@@ -283,7 +283,7 @@
       "name": "Fist Kneeling Push-Up",
       "pattern": "push",
       "tier": 3,
-      "progressionTo": "full-push-up",
+      "progressionTo": "fist-push-up",
       "silent": true,
       "equipment": "none",
       "loads": ["shoulders", "elbows"],
@@ -294,6 +294,24 @@
         "Wrists straight and locked, thumbs on the outside",
         "Something soft under your knuckles helps",
         "Lower with control, press up strong"
+      ]
+    },
+    {
+      "id": "fist-push-up",
+      "name": "Fist Push-Up",
+      "pattern": "push",
+      "tier": 4,
+      "progressionTo": "decline-push-up",
+      "silent": true,
+      "equipment": "none",
+      "loads": ["shoulders", "elbows", "core"],
+      "unilateral": false,
+      "timing": { "type": "reps", "defaultValue": 6, "secondsPerRep": 4 },
+      "cues": [
+        "Fold a towel under your knuckles",
+        "Fists under your shoulders, thumbs on the outside",
+        "Wrists straight and locked, one line from head to heels",
+        "Lower slowly, then press the floor away"
       ]
     },
     {
