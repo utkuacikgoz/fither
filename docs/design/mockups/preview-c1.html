@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><title>preview-b1</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
+<!doctype html><html><head><meta charset="utf-8"><title>C1</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
 <style>
 /* B — ONE PROMISE, THEN THE PLAN. A short empowering headline instead of
    "Your session is ready", the three facts folded into one quiet line,
@@ -15,11 +15,12 @@
 .blk .n { font-size: 18px; font-weight: 600; }
 .blk .p { color: var(--ink-soft); font-size: 14px; margin-top: 3px; }
 .bottom { padding-bottom: 8px; gap: 6px; }
-/* B1 — SQUARED. The pill becomes a soft rectangle: less app-generic,
-   more like a card you press. Same green, calmer geometry, and the
-   secondary is plain soft text with no competing outline. */
-.bottom .primary { border-radius: 16px; min-height: 58px; font-size: 19px; font-weight: 700; letter-spacing: -.2px; }
-.bottom .quiet { min-height: 48px; font-size: 16px; color: var(--ink-soft); }
+/* C1 — THE BAR. The action is the floor of the screen: edge to edge, no
+   radius, nothing floating. Unmissable, and the secondary sits above it
+   as plain text so only one thing is a surface. */
+.bottom { padding-bottom: 0; margin: 0 -24px -34px; gap: 0; }
+.bottom .btn-quiet { min-height: 54px; }
+.bottom .btn-primary { border-radius: 0; min-height: 88px; padding-bottom: 26px; }
 </style></head><body><div class="phone">
 <div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
 <div class="screen">
@@ -36,7 +37,7 @@
   </div>
   <div style="flex:1"></div>
   <div class="bottom">
-    <button class="primary">Start session</button>
-    <button class="quiet">Change today's answers</button>
+    <div class="btn btn-quiet">Change today’s answers</div>
+    <div class="btn btn-primary">Start session</div>
   </div>
 </div></div></body></html>
