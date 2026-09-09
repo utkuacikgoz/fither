@@ -1,7 +1,11 @@
 import { fixturePlayerBlocks } from "../../test-utils/fixtures";
 import {
+  advanceCountdownBy,
   completedSets,
   createPlayer,
+  INTRO_SECONDS,
+  remainingSecondsOf,
+  SIDE_SWITCH_SECONDS,
   finishEarly,
   isCountingDown,
   isFinished,
@@ -25,7 +29,7 @@ function ticks(n: number): PlayerEvent[] {
 describe("createPlayer", () => {
   it("starts at the first block intro", () => {
     const state = createPlayer(fixturePlayerBlocks);
-    expect(state.phase).toEqual({ kind: "blockIntro", blockIndex: 0 });
+    expect(state.phase).toEqual({ kind: "blockIntro", blockIndex: 0, remainingSeconds: INTRO_SECONDS });
     expect(state.outcomes).toEqual([]);
   });
 
@@ -33,6 +37,56 @@ describe("createPlayer", () => {
     const state = createPlayer([]);
     expect(isFinished(state)).toBe(true);
     expect(progressFraction(state)).toBe(1);
+  });
+});
+
+describe("the hand-off (owner, device pass 2026-09-09)", () => {
+  it("the block intro starts the work by itself when the countdown runs out", () => {
+    let state = createPlayer(fixturePlayerBlocks);
+    expect(state.phase).toMatchObject({ kind: "blockIntro", remainingSeconds: INTRO_SECONDS });
+    // It counts, second by second, and stays on the intro until zero.
+    for (let i = 1; i < INTRO_SECONDS; i += 1) {
+      state = reduce(state, { type: "tick" });
+      expect(state.phase).toMatchObject({
+        kind: "blockIntro",
+        remainingSeconds: INTRO_SECONDS - i,
+      });
+    }
+    state = reduce(state, { type: "tick" });
+    expect(state.phase).toMatchObject({ kind: "work", blockIndex: 0, setIndex: 0 });
+  });
+
+  it("her tap still starts it sooner, and nothing is skipped by starting early", () => {
+    const tapped = run(createPlayer(fixturePlayerBlocks), { type: "begin" });
+    expect(tapped.phase).toMatchObject({ kind: "work", blockIndex: 0, setIndex: 0 });
+    expect(tapped.outcomes).toEqual([]);
+  });
+
+  it("the side switch starts the right side by itself", () => {
+    const blocks = [{ ...fixturePlayerBlocks[0]!, unilateral: true, sets: 1 }];
+    let state = run(createPlayer(blocks), { type: "begin" }, { type: "advance" });
+    expect(state.phase).toMatchObject({
+      kind: "sideSwitch",
+      remainingSeconds: SIDE_SWITCH_SECONDS,
+    });
+    for (let i = 0; i < SIDE_SWITCH_SECONDS; i += 1) state = reduce(state, { type: "tick" });
+    expect(state.phase).toMatchObject({ kind: "work", side: "right" });
+  });
+
+  it("counts down the intro and the side switch, so the persisted deadline covers them", () => {
+    const intro = createPlayer(fixturePlayerBlocks);
+    expect(isCountingDown(intro)).toBe(true);
+    expect(remainingSecondsOf(intro)).toBe(INTRO_SECONDS);
+    // Rep work is the one phase that waits on her: never a countdown.
+    const working = run(intro, { type: "begin" });
+    expect(remainingSecondsOf(working)).toBeNull();
+    expect(isCountingDown(working)).toBe(false);
+  });
+
+  it("a background long enough to cover the whole intro lands in the work, once", () => {
+    const state = advanceCountdownBy(createPlayer(fixturePlayerBlocks), INTRO_SECONDS + 30);
+    expect(state.phase).toMatchObject({ kind: "work", blockIndex: 0, setIndex: 0 });
+    expect(state.outcomes).toEqual([]);
   });
 });
 
@@ -173,7 +227,7 @@ describe("unilateral work flow", () => {
     expect(state.phase).toMatchObject({ kind: "work", side: "left", setIndex: 0 });
 
     state = reduce(state, { type: "advance" });
-    expect(state.phase).toEqual({ kind: "sideSwitch", blockIndex: 0, setIndex: 0 });
+    expect(state.phase).toEqual({ kind: "sideSwitch", blockIndex: 0, setIndex: 0, remainingSeconds: SIDE_SWITCH_SECONDS });
     expect(completedSets(state)).toBe(0);
 
     state = reduce(state, { type: "advance" });
@@ -186,7 +240,7 @@ describe("unilateral work flow", () => {
 
   it("runs a fresh full countdown on each side of a hold", () => {
     let state = run(createPlayer(unilateralHold), { type: "begin" }, ...ticks(20));
-    expect(state.phase).toEqual({ kind: "sideSwitch", blockIndex: 0, setIndex: 0 });
+    expect(state.phase).toEqual({ kind: "sideSwitch", blockIndex: 0, setIndex: 0, remainingSeconds: SIDE_SWITCH_SECONDS });
 
     state = reduce(state, { type: "advance" });
     expect(state.phase).toMatchObject({
@@ -220,7 +274,7 @@ describe("feedback and outcomes", () => {
       outcome: "completed",
     });
     expect(state.outcomes).toEqual(["completed"]);
-    expect(state.phase).toEqual({ kind: "blockIntro", blockIndex: 1 });
+    expect(state.phase).toEqual({ kind: "blockIntro", blockIndex: 1, remainingSeconds: INTRO_SECONDS });
   });
 
   it("records struggled", () => {
@@ -251,7 +305,7 @@ describe("skip", () => {
   it("records skipped from the intro and moves on", () => {
     const state = reduce(createPlayer(fixturePlayerBlocks), { type: "skipBlock" });
     expect(state.outcomes).toEqual(["skipped"]);
-    expect(state.phase).toEqual({ kind: "blockIntro", blockIndex: 1 });
+    expect(state.phase).toEqual({ kind: "blockIntro", blockIndex: 1, remainingSeconds: INTRO_SECONDS });
   });
 
   it("records skipped mid-work on the last block and finishes", () => {

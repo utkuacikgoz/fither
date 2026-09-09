@@ -21,6 +21,7 @@ import { createInitialProfile } from "@fither/engine";
 import { useProfileStore } from "../profile-store";
 import { useIntentionStore } from "../intention-store";
 import { useReminderStore } from "../reminder-store";
+import { INTRO_SECONDS } from "../../session/player-machine";
 import { useSessionStore } from "../session-store";
 import * as journal from "../completion-journal";
 import {
@@ -29,6 +30,7 @@ import {
   writeCompletionRecord,
 } from "../completion-journal";
 import { useSettingsStore } from "../settings-store";
+import { startPersonSyncForTest } from "../../test-utils/person-sync";
 import {
   fixtureApplyResult,
   fixtureApplyResultOutcomes,
@@ -108,7 +110,7 @@ describe("session store", () => {
     expect(result.ok).toBe(true);
     const state = useSessionStore.getState();
     expect(state.session).toEqual(fixtureSession);
-    expect(state.player?.phase).toEqual({ kind: "blockIntro", blockIndex: 0 });
+    expect(state.player?.phase).toEqual({ kind: "blockIntro", blockIndex: 0, remainingSeconds: INTRO_SECONDS });
   });
 
   it("startSession surfaces failure without touching state", async () => {
@@ -297,7 +299,8 @@ describe("session store", () => {
     });
 
     it("the person's facts are synced once the commit lands, from the committed history", async () => {
-      expect(recordedPerson()).toEqual({});
+      const stop = startPersonSyncForTest();
+      expect(recordedPerson()).toMatchObject({ sessions_completed: 0, last_minutes: null });
       useSessionStore.getState().startSession(fixturePrompt);
       playWholeSession();
       await useSessionStore.getState().completeSession();
@@ -306,6 +309,7 @@ describe("session store", () => {
         last_minutes: 10,
         signed_in: false,
       });
+      stop();
     });
 
     it("a second-ever session is not 'first'; a replayed journal reports once, a committed one never", async () => {
@@ -417,7 +421,7 @@ describe("crash-safe persistence (S3)", () => {
     useSessionStore.getState().startSession(fixturePrompt);
     const snapshot = activeSnapshot();
     expect(snapshot?.session).toEqual(fixtureSession);
-    expect(snapshot?.player?.phase).toEqual({ kind: "blockIntro", blockIndex: 0 });
+    expect(snapshot?.player?.phase).toEqual({ kind: "blockIntro", blockIndex: 0, remainingSeconds: INTRO_SECONDS });
   });
 
   it("persists on phase transitions and outcome captures, never on ticks", async () => {
@@ -584,6 +588,20 @@ describe("restoreActiveSession", () => {
       fixtureSession.date,
     );
     expect(useActiveSessionStore.getState().snapshot).toBeNull();
+  });
+
+  it("the silent commit moves the person's facts too", async () => {
+    const stop = startPersonSyncForTest();
+    seedStaleSnapshotWithCompletedWork();
+    useSessionStore.getState().restoreActiveSession("2099-01-01");
+    await flushStaleApply();
+    // Nothing was said to her, but the same facts moved as on the
+    // visible path — and the subscription saw the profile write.
+    expect(recordedPerson()).toMatchObject({
+      sessions_completed: 1,
+      last_minutes: 10,
+    });
+    stop();
   });
 
   it("a crash mid-apply replays the identical result — no double award", async () => {
@@ -794,6 +812,7 @@ describe("time-budget ceiling (ADR-0012 §2)", () => {
     expect(useSessionStore.getState().player?.phase).toEqual({
       kind: "blockIntro",
       blockIndex: 1,
+      remainingSeconds: INTRO_SECONDS,
     });
     expect(useSessionStore.getState().activeMs).toBe(0);
 
@@ -956,6 +975,7 @@ describe("time-budget ceiling (ADR-0012 §2)", () => {
     expect(useSessionStore.getState().player?.phase).toEqual({
       kind: "blockIntro",
       blockIndex: 1,
+      remainingSeconds: INTRO_SECONDS,
     });
     expect(useSessionStore.getState().pendingClose).toBeNull();
 

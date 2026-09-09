@@ -4,6 +4,7 @@ import React from "react";
 import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { useSettingsStore } from "../../../state/settings-store";
+import { startPersonSyncForTest } from "../../../test-utils/person-sync";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
 import { VoiceAskScreen } from "../voice-ask-screen";
 
@@ -44,11 +45,15 @@ describe("VoiceAskScreen", () => {
     ["voice-ask-allow", true],
     ["voice-ask-decline", false],
   ] as const)("%s reports voice_ask and syncs the person's voice fact", (testID, voice) => {
+    // The screen answers the settings store and nothing else; the person
+    // sync the app root runs watches that store and carries the fact.
+    const stopPersonSync = startPersonSyncForTest();
     const screen = render(<VoiceAskScreen onDone={jest.fn()} />);
     expect(recordedEvents()).toEqual([]);
     fireEvent.press(screen.getByTestId(testID));
     expect(recordedEvents()).toEqual([{ name: "voice_ask", properties: { voice } }]);
     expect(recordedPerson()).toMatchObject({ voice });
+    stopPersonSync();
   });
 
   it("renders no user-facing text outside strings.ts", () => {

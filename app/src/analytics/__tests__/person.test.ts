@@ -1,5 +1,5 @@
-import { clearRecordedEvents, recordedPerson } from "../dev-analytics";
-import { readPersonProperties, syncPersonProperties } from "../person";
+import { clearRecordedEvents, devAnalytics, recordedPerson } from "../dev-analytics";
+import { readPersonProperties, startPersonSync, syncPersonProperties } from "../person";
 import { useEntitlementStore } from "../../state/entitlement-store";
 import { useIdentityStore } from "../../state/identity-store";
 import { useIntentionStore } from "../../state/intention-store";
@@ -18,8 +18,9 @@ function entry(minutes: 10 | 20 | 30, outcome: "completed" | "struggled" | "skip
   };
 }
 
+let sends: jest.SpyInstance;
+
 beforeEach(() => {
-  clearRecordedEvents();
   useEntitlementStore.setState({
     trialStartDate: null,
     purchase: null,
@@ -33,6 +34,15 @@ beforeEach(() => {
   useIntentionStore.setState({ target: null, asked: false, hydrated: true, hydrationFailed: false });
   useSettingsStore.setState({ voice: false, hydrated: true, hydrationFailed: false });
   useIdentityStore.setState({ identity: null, hydrated: true, hydrationFailed: false });
+  // Forget what a previous test sent: the unsubscribe clears the
+  // module's last-sent value, so every test starts able to send.
+  startPersonSync()();
+  clearRecordedEvents();
+  sends = jest.spyOn(devAnalytics, "setPersonProperties");
+});
+
+afterEach(() => {
+  sends.mockRestore();
 });
 
 describe("readPersonProperties", () => {
@@ -101,5 +111,96 @@ describe("syncPersonProperties", () => {
     useProfileStore.setState({ history: { entries: [entry(30, "completed")] } });
     syncPersonProperties();
     expect(recordedPerson()).toMatchObject({ voice: true, sessions_completed: 1, last_minutes: 30 });
+  });
+
+  it("sends nothing a second time for values that have not moved", () => {
+    syncPersonProperties();
+    syncPersonProperties();
+    syncPersonProperties();
+    expect(sends).toHaveBeenCalledTimes(1);
+  });
+
+  it("says nothing about a person whose stores have not hydrated", () => {
+    useProfileStore.setState({ hydrated: false });
+    syncPersonProperties();
+    expect(sends).not.toHaveBeenCalled();
+    expect(recordedPerson()).toEqual({});
+  });
+});
+
+describe("startPersonSync", () => {
+  it("sends nothing while a backing store is still loading, then once when it lands", () => {
+    // A real cold start: the disk has not spoken for the profile yet, so
+    // reading now would push a fresh install's zero at someone who has
+    // trained for months.
+    useProfileStore.setState({
+      history: { entries: [entry(20, "completed")] },
+      hydrated: false,
+    });
+    const stop = startPersonSync();
+    expect(sends).not.toHaveBeenCalled();
+    expect(recordedPerson()).toEqual({});
+
+    useProfileStore.setState({ hydrated: true });
+    expect(sends).toHaveBeenCalledTimes(1);
+    expect(recordedPerson()).toMatchObject({ sessions_completed: 1, last_minutes: 20 });
+    stop();
+  });
+
+  it("sends when a watched fact actually changes, and stays quiet when one does not", () => {
+    const stop = startPersonSync();
+    // Everything is hydrated already: the set goes out at once.
+    expect(sends).toHaveBeenCalledTimes(1);
+
+    // A store write that moves no person property (the intention ask
+    // being marked as asked) says nothing.
+    useIntentionStore.setState({ asked: true });
+    expect(sends).toHaveBeenCalledTimes(1);
+
+    // Each of the five backing stores, in turn.
+    useIntentionStore.setState({ target: 3 });
+    useSettingsStore.setState({ voice: true });
+    useEntitlementStore.setState({ purchase: { plan: "annual", date: "2026-08-01", trial: true } });
+    useIdentityStore.setState({
+      identity: { kind: "apple", date: "2026-08-01", providerUserId: "x" },
+    });
+    useProfileStore.setState({ history: { entries: [entry(10, "completed")] } });
+    expect(sends).toHaveBeenCalledTimes(6);
+    expect(recordedPerson()).toEqual({
+      entitlement: "trial",
+      sessions_completed: 1,
+      last_minutes: 10,
+      intention: "three",
+      voice: true,
+      signed_in: true,
+    });
+    stop();
+  });
+
+  it("a manual sync after a commit and the subscription never both send", () => {
+    const stop = startPersonSync();
+    sends.mockClear();
+    useSettingsStore.setState({ voice: true });
+    syncPersonProperties();
+    expect(sends).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it("the unsubscribe detaches every store and forgets what was sent", () => {
+    const stop = startPersonSync();
+    stop();
+    sends.mockClear();
+    useSettingsStore.setState({ voice: true });
+    useProfileStore.setState({ history: { entries: [entry(30, "completed")] } });
+    useIntentionStore.setState({ target: 2 });
+    useEntitlementStore.setState({ trialUsed: true });
+    useIdentityStore.setState({ identity: { kind: "guest", date: "2026-08-01" } });
+    expect(sends).not.toHaveBeenCalled();
+
+    // Forgotten, not remembered: a restart sends the current set again
+    // even though nothing moved since the last send.
+    const restarted = startPersonSync();
+    expect(sends).toHaveBeenCalledTimes(1);
+    restarted();
   });
 });

@@ -378,6 +378,25 @@ export const strings = {
         ? `${sets} × ${amount}-second hold${side}`
         : `${sets} × ${amount} ${amount === 1 ? "rep" : "reps"}${side}`;
     },
+    // COPY-WRITER (2026-09-09, owner device pass: "I have to manually click
+    // a lot of stuff to get the application going"): the block intro now
+    // starts the work by itself, and this is the line that says so, sitting
+    // under `blockPlan`. It is a hand-off, not a clock. "Starts on its own"
+    // names the app taking the tap off her hands; the seconds are only how
+    // long she has to get into position, never a deadline she is being held
+    // to. Never "left" or "remaining" ("left" turns a count into a clock,
+    // the same reason `countdown` refuses it), never "Get ready", never
+    // "Hurry", never any imperative at all: this line asks her to do
+    // nothing, which is the whole point of it. Numerals, not number words:
+    // the value changes every second and belongs with the player's other
+    // counted captions (setCounter, blockCounter, the rest numeral).
+    // Singular guarded, because the count reaches 1. `begin` above stays
+    // exactly as it is: that button starts the work sooner, and "Begin" is
+    // still the honest name for the tap. If this line ever acquires urgency,
+    // a target, or anything about her body, it has become the thing it was
+    // written against.
+    autoStart: (seconds: number) =>
+      `Starts on its own in ${seconds} ${seconds === 1 ? "second" : "seconds"}.`,
     sides: {
       left: "Left side",
       right: "Right side",
@@ -389,6 +408,19 @@ export const strings = {
       // the right side comes second, so it stays true whichever side led.
       // "Same again" says the set is identical, nothing new to learn.
       switchBody: "Same again on the other side.",
+      // COPY-WRITER (2026-09-09, owner device pass): the side switch hands
+      // off the same way, under `switchBody`. Deliberately the same words as
+      // `player.autoStart` and deliberately its own key: two screens, two
+      // slots, free to diverge later, and one shared key would couple the
+      // intro's pacing to the switch's. Side neutral like the line above it
+      // (it never names which side is next, so it stays true whichever side
+      // led) and equally free of pressure: she is settling into position for
+      // the second side, not racing a timer. Same rules as autoStart. Never
+      // "left", never an imperative, numerals only, singular guarded.
+      // `startRight` below keeps its label: that button starts the second
+      // side sooner, and a countdown beside it makes it no less honest.
+      autoStart: (seconds: number) =>
+        `Starts on its own in ${seconds} ${seconds === 1 ? "second" : "seconds"}.`,
       startRight: "Start right side",
     },
     feedback: {

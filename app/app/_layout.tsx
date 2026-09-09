@@ -6,6 +6,7 @@ import { AppState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useDeepLinkTracking } from "../src/analytics/deep-link";
+import { startPersonSync } from "../src/analytics/person";
 import { useAppFonts } from "../src/design/fonts";
 import { useTheme } from "../src/design/theme";
 import { getMonitoring } from "../src/monitoring/monitoring";
@@ -30,6 +31,13 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsReady) void SplashScreen.hideAsync().catch(() => undefined);
   }, [fontsReady]);
+  // Person properties (ADR-0015): one subscription over the stores her
+  // six facts are read from, started here because the root outlives
+  // every screen. It sends nothing until those stores have hydrated,
+  // then once, and after that only when a value actually changes — so
+  // no store has to call analytics back (that ran both ways and made a
+  // require cycle).
+  useEffect(() => startPersonSync(), []);
   // The daily invitation's body names her week (ADR-0018 as amended by
   // wave 2). Weekly triggers repeat, so a week away would replay a stale count: every
   // return to the foreground reschedules from today's history. Best

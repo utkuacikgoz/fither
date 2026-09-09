@@ -9,6 +9,25 @@
 
 import type { BlockOutcome } from "@fither/engine";
 
+/**
+ * The hand-off (owner, device pass 2026-09-09: "I have to manually click
+ * a lot of stuff — put a cooldown so it automatically moves on"). The
+ * block intro and the side switch count down and start the work
+ * themselves; her button stays, to start sooner.
+ *
+ * Both sit INSIDE the engine's per-block TRANSITION_SECONDS (20), which
+ * is already charged to every block for getting into position, so the
+ * hand-off spends time the session's budget had already spent. Fifteen
+ * seconds is long enough to read four setup cues and get down onto the
+ * floor: starting the work while she is still kneeling down would be a
+ * worse failure than one more tap, and Begin is always there to go now. Nothing
+ * that needs her judgement is automated: a rep set still ends when she
+ * says so (the app cannot know when ten reps are done), and the one
+ * question after each exercise still waits.
+ */
+export const INTRO_SECONDS = 15;
+export const SIDE_SWITCH_SECONDS = 5;
+
 export interface PlayerBlock {
   movementId: string;
   /** Display name resolved from the movement library at session creation. */
@@ -27,7 +46,7 @@ export interface PlayerBlock {
 }
 
 export type PlayerPhase =
-  | { kind: "blockIntro"; blockIndex: number }
+  | { kind: "blockIntro"; blockIndex: number; remainingSeconds: number }
   | {
       kind: "work";
       blockIndex: number;
@@ -37,7 +56,7 @@ export type PlayerPhase =
       /** Null for bilateral work; unilateral work always starts on the left. */
       side: "left" | "right" | null;
     }
-  | { kind: "sideSwitch"; blockIndex: number; setIndex: number }
+  | { kind: "sideSwitch"; blockIndex: number; setIndex: number; remainingSeconds: number }
   | { kind: "rest"; blockIndex: number; setIndex: number; remainingSeconds: number }
   | { kind: "feedback"; blockIndex: number }
   | { kind: "done" };
@@ -59,7 +78,10 @@ export type PlayerEvent =
 export function createPlayer(blocks: PlayerBlock[]): PlayerState {
   return {
     blocks,
-    phase: blocks.length === 0 ? { kind: "done" } : { kind: "blockIntro", blockIndex: 0 },
+    phase:
+      blocks.length === 0
+        ? { kind: "done" }
+        : { kind: "blockIntro", blockIndex: 0, remainingSeconds: INTRO_SECONDS },
     outcomes: [],
   };
 }
@@ -75,7 +97,21 @@ export function restorePlayerBlocks(
   state: PlayerState,
   blocks: PlayerBlock[],
 ): PlayerState {
-  const persistedPhase = state.phase as PlayerPhase & { side?: "left" | "right" | null };
+  const persistedPhase = state.phase as PlayerPhase & {
+    side?: "left" | "right" | null;
+    remainingSeconds?: number;
+  };
+  // A phase persisted before the hand-off carries no countdown. Give it
+  // a full one rather than zero: resuming must never start the work the
+  // instant the screen appears, and NaN would freeze the tick forever.
+  const handOffSeconds =
+    state.phase.kind === "blockIntro"
+      ? INTRO_SECONDS
+      : state.phase.kind === "sideSwitch"
+        ? SIDE_SWITCH_SECONDS
+        : null;
+  const missingCountdown =
+    handOffSeconds !== null && typeof persistedPhase.remainingSeconds !== "number";
   const needsUpgrade =
     state.blocks.some(
       (persisted) =>
@@ -83,10 +119,18 @@ export function restorePlayerBlocks(
         !Array.isArray((persisted as PlayerBlock).inSetCues) ||
         typeof (persisted as PlayerBlock).unilateral !== "boolean",
     ) ||
+    missingCountdown ||
     (state.phase.kind === "work" && persistedPhase.side === undefined);
   if (!needsUpgrade) return state;
   if (blocks.length !== state.blocks.length) return createPlayer(blocks);
   const phase = state.phase;
+  if (missingCountdown && handOffSeconds !== null) {
+    return {
+      ...state,
+      blocks,
+      phase: { ...phase, remainingSeconds: handOffSeconds } as PlayerPhase,
+    };
+  }
   if (phase.kind !== "work") return { ...state, blocks };
   const persisted = phase as typeof phase & { side?: "left" | "right" | null };
   return {
@@ -129,7 +173,12 @@ function startWork(
 function afterWork(state: PlayerState, phase: Extract<PlayerPhase, { kind: "work" }>): PlayerPhase {
   const b = block(state, phase.blockIndex);
   if (b.unilateral && phase.side === "left") {
-    return { kind: "sideSwitch", blockIndex: phase.blockIndex, setIndex: phase.setIndex };
+    return {
+      kind: "sideSwitch",
+      blockIndex: phase.blockIndex,
+      setIndex: phase.setIndex,
+      remainingSeconds: SIDE_SWITCH_SECONDS,
+    };
   }
   return afterSet(state, phase.blockIndex, phase.setIndex);
 }
@@ -138,7 +187,7 @@ function nextBlockPhase(state: PlayerState, finishedBlockIndex: number): PlayerP
   const next = finishedBlockIndex + 1;
   return next >= state.blocks.length
     ? { kind: "done" }
-    : { kind: "blockIntro", blockIndex: next };
+    : { kind: "blockIntro", blockIndex: next, remainingSeconds: INTRO_SECONDS };
 }
 
 function afterSet(state: PlayerState, blockIndex: number, setIndex: number): PlayerPhase {
@@ -169,8 +218,16 @@ export function reduce(state: PlayerState, event: PlayerEvent): PlayerState {
 
   switch (phase.kind) {
     case "blockIntro": {
+      // Her tap starts it now; the countdown starts it for her.
       if (event.type === "begin") {
         return { ...state, phase: startWork(state, phase.blockIndex, 0) };
+      }
+      if (event.type === "tick") {
+        const remaining = phase.remainingSeconds - 1;
+        if (remaining <= 0) {
+          return { ...state, phase: startWork(state, phase.blockIndex, 0) };
+        }
+        return { ...state, phase: { ...phase, remainingSeconds: remaining } };
       }
       return state;
     }
@@ -189,10 +246,16 @@ export function reduce(state: PlayerState, event: PlayerEvent): PlayerState {
       return state;
     }
     case "sideSwitch": {
-      if (event.type === "advance") {
+      if (event.type === "advance" || event.type === "tick") {
+        if (event.type === "advance" || phase.remainingSeconds - 1 <= 0) {
+          return {
+            ...state,
+            phase: startWork(state, phase.blockIndex, phase.setIndex, "right"),
+          };
+        }
         return {
           ...state,
-          phase: startWork(state, phase.blockIndex, phase.setIndex, "right"),
+          phase: { ...phase, remainingSeconds: phase.remainingSeconds - 1 },
         };
       }
       return state;
@@ -325,11 +388,28 @@ export function progressFraction(state: PlayerState): number {
 
 /** True while the phase counts down and the screen should tick each second. */
 export function isCountingDown(state: PlayerState): boolean {
+  return remainingSecondsOf(state) !== null;
+}
+
+/**
+ * The seconds the current phase is counting down, or null when it waits
+ * on her. ONE definition: the screen's tick interval, the persisted
+ * wall-clock deadline (session-store) and the background reconciliation
+ * all read it, so a new counting phase can never be added to the machine
+ * and forgotten by the clock that survives backgrounding.
+ */
+export function remainingSecondsOf(state: PlayerState): number | null {
   const { phase } = state;
-  return (
-    phase.kind === "rest" ||
-    (phase.kind === "work" && phase.remainingSeconds !== null)
-  );
+  switch (phase.kind) {
+    case "rest":
+    case "blockIntro":
+    case "sideSwitch":
+      return phase.remainingSeconds;
+    case "work":
+      return phase.remainingSeconds;
+    default:
+      return null;
+  }
 }
 
 export function isFinished(state: PlayerState): boolean {

@@ -9,7 +9,6 @@ import {
 import { create } from "zustand";
 
 import { track } from "../analytics/analytics";
-import { syncPersonProperties } from "../analytics/person";
 import { firstMovementTracker } from "../lib/first-movement-timer";
 import { applyResult } from "../session/apply-result";
 import {
@@ -28,6 +27,7 @@ import {
   isCountingDown,
   isWrapBoundary,
   reduce,
+  remainingSecondsOf,
   restorePlayerBlocks,
   samePosition,
   sessionCeilingMs,
@@ -58,12 +58,10 @@ function createSessionId(session: Session): string {
   return `${session.date}:${session.seed}:${Date.now().toString(36)}:${sessionSequence.toString(36)}`;
 }
 
-function countdownSeconds(player: PlayerState): number | null {
-  const { phase } = player;
-  if (phase.kind === "rest") return phase.remainingSeconds;
-  if (phase.kind === "work") return phase.remainingSeconds;
-  return null;
-}
+// The machine owns which phases count (player-machine.remainingSecondsOf):
+// the wall-clock deadline that survives backgrounding must cover every
+// one of them, so a phase added there can never be forgotten here.
+const countdownSeconds = remainingSecondsOf;
 
 function deadlineFor(player: PlayerState, now: number): number | null {
   const seconds = countdownSeconds(player);
@@ -219,8 +217,8 @@ async function applyStaleSnapshot(
       trialStartDate: record.trialStartDate,
       purchase: record.purchase,
     });
-    // The silent commit changes the same facts the visible one does.
-    syncPersonProperties();
+    // The silent commit changes the same facts the visible one does; the
+    // person sync watches the profile and entitlement stores written above.
     // The free-session allowance (ADR-0025): a committed session with a
     // completed block counts once per session id, from the journaled
     // result, so a replay never counts twice.
@@ -675,8 +673,8 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           track("skill_unlocked", { pattern: skill.pattern, tier: skill.tier });
         }
       }
-      // The commit moved her facts (sessions, last length, entitlement).
-      syncPersonProperties();
+      // The commit moved her facts (sessions, last length, entitlement);
+      // the person sync sees the profile and entitlement writes above.
     } catch (error) {
       // The active snapshot and journal are deliberately retained. A retry
       // replays the exact result instead of asking the engine to award it again.

@@ -25,15 +25,16 @@ interface SkipConfirmPhaseProps {
 }
 
 /**
- * One calm confirm as a card at the bottom (ADR-0017): the question, the
- * honest line, keeping going as the filled, safe default. The phase
- * behind it is not drawn — the card is the whole decision.
+ * One calm confirm, centred (ADR-0017; owner, device pass 2026-09-09 —
+ * pinned to the bottom it left a screen of dead black above it and read
+ * as an afterthought). The question, the honest line, keeping going as
+ * the filled, safe default. The phase behind it is not drawn: the card
+ * is the whole decision, so it sits where the eye already is.
  */
 export function SkipConfirmPhase({ blockName, onKeepGoing, onSkip }: SkipConfirmPhaseProps) {
   const colors = useTheme();
   return (
-    <>
-      <View style={styles.center} />
+    <View style={styles.confirmStage}>
       <View
         style={[styles.confirmCard, { backgroundColor: colors.surface, borderColor: colors.line }]}
         testID="player-skip-card"
@@ -61,18 +62,26 @@ export function SkipConfirmPhase({ blockName, onKeepGoing, onSkip }: SkipConfirm
           />
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
 interface SideSwitchPhaseProps {
   block: PlayerBlock;
+  /** Seconds until the right side starts on its own (the hand-off). */
+  remainingSeconds: number;
   reduceMotion: boolean;
   onAdvance: () => void;
   onSkip: () => void;
 }
 
-export function SideSwitchPhase({ block, reduceMotion, onAdvance, onSkip }: SideSwitchPhaseProps) {
+export function SideSwitchPhase({
+  block,
+  remainingSeconds,
+  reduceMotion,
+  onAdvance,
+  onSkip,
+}: SideSwitchPhaseProps) {
   return (
     <>
       {/* The same movement, other side: its figure stays with her
@@ -85,6 +94,10 @@ export function SideSwitchPhase({ block, reduceMotion, onAdvance, onSkip }: Side
         </AppText>
         <AppText variant="bodySoft" style={styles.subline}>
           {strings.player.sides.switchBody}
+        </AppText>
+        {/* Starts itself; the button below starts it sooner. */}
+        <AppText variant="caption" style={styles.subline} testID="player-side-auto">
+          {strings.player.sides.autoStart(remainingSeconds)}
         </AppText>
       </FadeIn>
       <View style={styles.bottom}>
@@ -203,6 +216,12 @@ export function FeedbackPhase({ block, reduceMotion, onOutcome }: FeedbackPhaseP
 }
 
 const styles = StyleSheet.create({
+  confirmStage: {
+    // The confirm owns the screen while it is open: centred, not a card
+    // marooned at the bottom of a black field.
+    flex: 1,
+    justifyContent: "center",
+  },
   top: {
     marginTop: spacing.xl,
   },
