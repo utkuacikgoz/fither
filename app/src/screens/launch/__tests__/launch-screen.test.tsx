@@ -3,6 +3,7 @@ import React from "react";
 
 import { clearRecordedEvents, recordedPerson } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
+import { startPersonSync } from "../../../analytics/person";
 import { todayIso } from "../../../lib/dates";
 import { firstMovementTracker } from "../../../lib/first-movement-timer";
 import { createPlayer, reduce } from "../../../session/player-machine";
@@ -97,7 +98,13 @@ describe("LaunchScreen", () => {
     expect(cbs.onResumeFinished).not.toHaveBeenCalled();
   });
 
-  it("syncs the person's facts once the stores have hydrated, from what they hold", () => {
+  it("the person's facts land once the stores have hydrated, from what they hold", () => {
+    // A cold start: the root starts the person sync (app/_layout.tsx)
+    // while the disk is still loading. The launch surface itself says
+    // nothing to analytics about her — it only waits for the same
+    // hydration and gates.
+    useProfileStore.setState({ hydrated: false });
+    const stopPersonSync = startPersonSync();
     expect(recordedPerson()).toEqual({});
     useProfileStore.setState({
       history: {
@@ -106,6 +113,7 @@ describe("LaunchScreen", () => {
           { date: "2026-08-02", minutes: 30, blocks: [{ movementId: "plank", pattern: "core", outcome: "skipped" }] },
         ],
       },
+      hydrated: true,
     });
     const screen = render(<LaunchScreen {...callbacks()} />);
     expect(recordedPerson()).toEqual({
@@ -116,9 +124,10 @@ describe("LaunchScreen", () => {
       voice: false,
       signed_in: false,
     });
-    // Once per launch decision, not per render.
+    // Once per launch, not per render: an unchanged set is never resent.
     screen.rerender(<LaunchScreen {...callbacks()} />);
     expect(recordedPerson()).toMatchObject({ sessions_completed: 1 });
+    stopPersonSync();
   });
 
   it("offers the one calm resume decision for today's in-progress session", () => {

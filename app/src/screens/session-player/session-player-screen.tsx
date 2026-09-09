@@ -40,7 +40,10 @@ import { announcementKey, countdownLine, phaseAnnouncement, workCue } from "./an
  * no session rule hangs off this number. Work and rest keep their skip
  * visible from the start, unchanged.
  */
-export const SKIP_REVEAL_DELAY_MS = 8000;
+// The quiet exit must be visible for most of the intro, not flash up
+// just before the hand-off starts the work (INTRO_SECONDS = 15): at
+// eight seconds it appeared with two to spare.
+export const SKIP_REVEAL_DELAY_MS = 3000;
 
 interface SessionPlayerScreenProps {
   onFinished: () => void;
@@ -237,6 +240,13 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
                 block.unilateral,
               )}
             </AppText>
+            {/* The hand-off, said plainly: she is getting into position,
+                not being timed, and Begin below starts it sooner. Shown,
+                never announced — VoiceOver speaks phase transitions, and
+                a line that changes every second would talk over her. */}
+            <AppText variant="caption" style={styles.subline} testID="player-intro-auto">
+              {strings.player.autoStart(phase.remainingSeconds)}
+            </AppText>
             {block.cues.length > 0 && (
               <View style={styles.cues} testID="player-cues">
                 {block.cues.map((cue) => (
@@ -304,12 +314,22 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
                 ? strings.player.holdLabel
                 : strings.player.repsLabel}
             </AppText>
-            {currentCue !== null && (
+          </View>
+          {/* The in-set correction sits in its own row above the
+              buttons, never inside the centred column: the corrections
+              run to two lines where the setup cues ran to one, and a
+              132pt numeral plus a two-line cue overflowed a centred
+              flex child and clipped the last line off the screen
+              (owner, device pass 2026-09-09). Its own row also holds
+              one position across the sets, so the line changing does
+              not move the number she is reading. */}
+          {currentCue !== null && (
+            <View style={styles.cueRow}>
               <AppText variant="bodyLarge" style={styles.workCue}>
                 {currentCue}
               </AppText>
-            )}
-          </View>
+            </View>
+          )}
           <View style={styles.bottom}>
             {phase.remainingSeconds === null && (
               <PrimaryButton
@@ -330,6 +350,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       {phase.kind === "sideSwitch" && !confirmingSkip && (
         <SideSwitchPhase
           block={block}
+          remainingSeconds={phase.remainingSeconds}
           reduceMotion={reduceMotion}
           onAdvance={() => dispatchPlayer({ type: "advance" })}
           onSkip={() => setConfirmingSkip(true)}
@@ -367,6 +388,7 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
+    flexShrink: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
@@ -389,8 +411,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlign: "center",
   },
+  cueRow: {
+    // Never squeezed by the centred column above it, and never the
+    // thing that gets clipped: the row keeps its content's height.
+    flexShrink: 0,
+    paddingBottom: spacing.md,
+  },
   workCue: {
-    marginTop: spacing.md,
     textAlign: "center",
   },
   cues: {

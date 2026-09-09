@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../analytics/dev-analytics";
+import { startPersonSyncForTest } from "../../test-utils/person-sync";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
 import { entitlementStatus } from "../../monetization/entitlement";
 import { FREE_SESSIONS_EXPERIMENT } from "../../monetization/experiment";
@@ -9,6 +10,7 @@ import { migrateEntitlement, useEntitlementStore } from "../entitlement-store";
 async function flushPersistence() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
+
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -205,12 +207,17 @@ describe("the store's word (ADR-0014 §6)", () => {
   });
 
   it("a grant syncs the person's entitlement: a store trial reads as trial, a restore as active", async () => {
+    // This store no longer calls analytics (that ran both ways and made
+    // a require cycle): the person sync the app root starts watches it,
+    // so the grant below reaches the record through the subscription.
+    const stop = startPersonSyncForTest();
     await useEntitlementStore.getState().purchasePlan("annual");
     expect(recordedPerson()).toMatchObject({ entitlement: "trial" });
     useEntitlementStore.getState().resetForDev();
     useDevReceiptStore.setState({ receipt: { plan: "annual", date: "2026-08-01" } });
     await useEntitlementStore.getState().restorePurchases();
     expect(recordedPerson()).toMatchObject({ entitlement: "active" });
+    stop();
   });
 
   it("a purchase marks the free week as used, and stays used after a lapse", async () => {

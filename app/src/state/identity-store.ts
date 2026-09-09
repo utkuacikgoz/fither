@@ -11,7 +11,6 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { getAnalytics, identify, track } from "../analytics/analytics";
 import { analyticsDistinctId } from "../analytics/identity";
-import { syncPersonProperties } from "../analytics/person";
 import { getAuth, type IdentityRecord } from "../auth/auth";
 import { getBilling } from "../monetization/billing";
 
@@ -71,8 +70,8 @@ export const useIdentityStore = create<IdentityStoreState>()(
         if (!outcome.ok) return outcome.reason;
         set({ identity: outcome.identity });
         identifyIfApple(outcome.identity);
-        // signed_in flips here, not at the next launch.
-        syncPersonProperties();
+        // signed_in flips here, not at the next launch: the person sync
+        // (analytics/person.ts) watches this store and sees the set above.
         return "done";
       },
 

@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Preview A</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
+<style>
+/* A — THE MINUTES OWN IT. One number, one line, the movements as faces.
+   No section labels, no bordered tile, no list rows: the plan is a row
+   of figures she reads in a glance, and the button gets real air. */
+.top { margin-top: 44px; }
+.mins { display: flex; align-items: baseline; gap: 10px; }
+.mins .n { font-size: 96px; line-height: .92; font-weight: 700; letter-spacing: -3px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.mins .u { font-size: 22px; font-weight: 600; color: var(--ink); }
+.lead { margin-top: 18px; font-size: 21px; line-height: 1.35; font-weight: 600; max-width: 300px; }
+.facts { margin-top: 14px; color: var(--ink-soft); font-size: 15px; line-height: 1.5; }
+.faces { display: flex; gap: 10px; margin-top: 40px; }
+.faces .fig { width: 66px; height: 66px; background: var(--ink); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; opacity: .92; }
+.names { margin-top: 12px; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
+.bottom { padding-bottom: 8px; gap: 6px; }
+</style></head><body><div class="phone">
+<div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
+<div class="screen">
+  <div class="rail"><span class="chevron"></span></div>
+  <div class="top">
+    <div class="mins"><span class="n">10</span><span class="u">minutes</span></div>
+    <div class="lead">Four movements, built around today.</div>
+    <div class="facts">Nothing that loads your elbows, knees or core.<br>Just you and the floor.</div>
+    <div class="faces">
+      <span class="fig" style="--m:url('../../../app/assets/movements/wall-push-up.png')"></span>
+      <span class="fig" style="--m:url('../../../app/assets/movements/prone-w-raise.png')"></span>
+      <span class="fig" style="--m:url('../../../app/assets/movements/air-squat.png')"></span>
+      <span class="fig" style="--m:url('../../../app/assets/movements/glute-bridge-hold.png')"></span>
+    </div>
+    <div class="names">Wall Slide · Prone W Raise · Air Squat · Glute Bridge</div>
+  </div>
+  <div style="flex:1"></div>
+  <div class="bottom">
+    <button class="primary">Start session</button>
+    <button class="quiet">Change today's answers</button>
+  </div>
+</div></div></body></html>

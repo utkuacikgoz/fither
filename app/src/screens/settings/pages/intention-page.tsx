@@ -1,7 +1,6 @@
 import type { WeeklyTarget } from "@fither/engine";
 
 import { track } from "../../../analytics/analytics";
-import { syncPersonProperties } from "../../../analytics/person";
 import { strings } from "../../../copy/strings";
 import { OptionRow } from "../../../design/primitives/option-row";
 import { useReducedMotion } from "../../../lib/use-reduced-motion";
@@ -51,7 +50,6 @@ export function IntentionPage() {
             onPress={() => {
               setTarget(option.target);
               track("weekly_intention_set", { target: option.event });
-              syncPersonProperties();
             }}
           />
         ))}

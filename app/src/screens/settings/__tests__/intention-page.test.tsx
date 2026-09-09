@@ -8,6 +8,7 @@ import { glyph } from "../../../design/tokens";
 import { useIntentionStore } from "../../../state/intention-store";
 import { useProfileStore } from "../../../state/profile-store";
 import { weekView } from "../../../state/week-view";
+import { startPersonSyncForTest } from "../../../test-utils/person-sync";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
 import { IntentionPage } from "../pages/intention-page";
 import { flushPersistence, resetSettingsStores } from "./settings-test-setup";
@@ -39,6 +40,9 @@ describe("Settings → Sessions a week", () => {
   });
 
   it("a tap sets the target at once, persists it, and sends weekly_intention_set", async () => {
+    // The page answers the intention store only; the person sync the app
+    // root runs watches it and carries the fact.
+    const stopPersonSync = startPersonSyncForTest();
     const screen = render(<IntentionPage />);
     fireEvent.press(screen.getByTestId("intention-three"));
     expect(useIntentionStore.getState().target).toBe(3);
@@ -61,6 +65,7 @@ describe("Settings → Sessions a week", () => {
     ]);
     // The person's intention fact follows the last answer.
     expect(recordedPerson()).toMatchObject({ intention: "none" });
+    stopPersonSync();
   });
 
   it("changing the target is prospective: history is untouched, only the reading changes", () => {

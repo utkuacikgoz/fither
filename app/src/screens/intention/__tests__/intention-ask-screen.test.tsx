@@ -4,6 +4,7 @@ import React from "react";
 import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { useIntentionStore } from "../../../state/intention-store";
+import { startPersonSyncForTest } from "../../../test-utils/person-sync";
 import {
   collectStringValues,
   renderedTextLeaves,
@@ -42,6 +43,9 @@ describe("IntentionAskScreen", () => {
     ["intention-two", 2, "two"],
     ["intention-three", 3, "three"],
   ] as const)("%s sets the target, reports it, and continues", (testID, target, event) => {
+    // The screen answers the intention store; the person sync the app
+    // root runs watches it and carries the fact (no call from here).
+    const stopPersonSync = startPersonSyncForTest();
     const onDone = jest.fn();
     const screen = render(<IntentionAskScreen onDone={onDone} />);
     // Pressed mid-entrance: rows are hittable from their first frame.
@@ -54,10 +58,12 @@ describe("IntentionAskScreen", () => {
     // The person's intention fact follows the answer.
     expect(recordedPerson()).toMatchObject({ intention: event });
     expect(onDone).toHaveBeenCalledTimes(1);
+    stopPersonSync();
   });
 
   it("'No target' is an answer with the same dignity: nothing set, the ask still ends", () => {
     useIntentionStore.setState({ target: 3 });
+    const stopPersonSync = startPersonSyncForTest();
     const onDone = jest.fn();
     const screen = render(<IntentionAskScreen onDone={onDone} />);
     fireEvent.press(screen.getByTestId("intention-none"));
@@ -68,6 +74,7 @@ describe("IntentionAskScreen", () => {
     ]);
     expect(recordedPerson()).toMatchObject({ intention: "none" });
     expect(onDone).toHaveBeenCalledTimes(1);
+    stopPersonSync();
   });
 
   it("renders no user-facing text outside strings.ts", () => {

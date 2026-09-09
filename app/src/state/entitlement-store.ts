@@ -10,7 +10,6 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { track } from "../analytics/analytics";
-import { syncPersonProperties } from "../analytics/person";
 import { getBilling, type PlanId, type PurchaseRecord } from "../monetization/billing";
 
 /**
@@ -153,7 +152,6 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
         if (outcome.purchase.trial && outcome.purchase.plan !== "lifetime") {
           track("trial_start", { plan: outcome.purchase.plan });
         }
-        syncPersonProperties();
         return "purchased";
       },
 
@@ -167,7 +165,6 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
         track("restore_result", { outcome: result });
         if (!outcome.ok) return result;
         set({ purchase: outcome.purchase, trialUsed: true });
-        syncPersonProperties();
         return result;
       },
 
