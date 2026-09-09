@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><title>preview-b3</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
+<!doctype html><html><head><meta charset="utf-8"><title>C2</title><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="_rows.css">
 <style>
 /* B — ONE PROMISE, THEN THE PLAN. A short empowering headline instead of
    "Your session is ready", the three facts folded into one quiet line,
@@ -15,11 +15,14 @@
 .blk .n { font-size: 18px; font-weight: 600; }
 .blk .p { color: var(--ink-soft); font-size: 14px; margin-top: 3px; }
 .bottom { padding-bottom: 8px; gap: 6px; }
-/* B3 — QUIET GREEN. The accent at low emphasis: the green sits as a
-   tinted surface with green text, so the loudest thing on the screen is
-   still her session, not the button. */
-.bottom .primary { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); border-radius: 16px; min-height: 58px; font-size: 19px; font-weight: 700; letter-spacing: -.2px; }
-.bottom .quiet { min-height: 48px; font-size: 16px; color: var(--ink-soft); }
+/* C2 — PRESS TO BEGIN. One round button, the shape of starting
+   something. The word sits under it and the secondary is a quiet line
+   below that; nothing is full width, so the screen breathes. */
+.bottom { padding-bottom: 4px; gap: 0; align-items: center; }
+.startwrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.start { width: 108px; height: 108px; border-radius: 999px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 36px; }
+.startlabel { font-size: 19px; font-weight: 600; letter-spacing: -.2px; }
+.bottom .btn-quiet { min-height: 48px; margin-top: 12px; }
 </style></head><body><div class="phone">
 <div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
 <div class="screen">
@@ -36,7 +39,7 @@
   </div>
   <div style="flex:1"></div>
   <div class="bottom">
-    <button class="primary">Start session</button>
-    <button class="quiet">Change today's answers</button>
+    <div class="startwrap"><div class="start">&#9654;</div><div class="startlabel">Start session</div></div>
+    <div class="btn btn-quiet">Change today’s answers</div>
   </div>
 </div></div></body></html>
