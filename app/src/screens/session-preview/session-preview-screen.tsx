@@ -10,14 +10,12 @@ import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
-import { SectionCaption } from "../../design/primitives/section-caption";
-import { Tile } from "../../design/primitives/tile";
 import { hairline, spacing } from "../../design/tokens";
 import { useTheme } from "../../design/theme";
 import { needsCareMoment } from "../../lib/care-moment";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { loadLibrary } from "../../session/load-library";
-import { sessionFacts } from "../../session/session-facts";
+import { sessionParagraph } from "../../session/session-facts";
 import { useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 
@@ -66,7 +64,8 @@ export function SessionPreviewScreen({
   // engine emitted, mapped to words in session-facts. Nothing here
   // decides anything; the library is read only to state what the
   // session's movements are.
-  const facts = sessionFacts(session, prompt, loadLibrary());
+  const title = strings.preview.title(session.minutes);
+  const paragraph = sessionParagraph(session, prompt, loadLibrary());
 
   // Optional, local-only note: append-only store on this device, never
   // sent anywhere. Leaving it empty costs nothing. Saved on EVERY way off
@@ -138,36 +137,32 @@ export function SessionPreviewScreen({
         // continues). Shown here; the session player stays clean.
         showsVerticalScrollIndicator
       >
-        <View style={styles.top}>
-          <AppText variant="caption">{strings.preview.eyebrow}</AppText>
-          <AppText variant="display" style={styles.headline} accessibilityRole="header">
-            {strings.preview.headline}
+        {/* One headline, one paragraph, then the plan (owner-approved
+            mockup preview-b, 2026-09-09: the old screen was "too busy,
+            less inspiring"). The three section captions and the bordered
+            facts tile are gone; nothing here is labelled, because
+            nothing here needs a label. The second line takes the accent:
+            the minutes are the fact, the line under them is hers. Both
+            halves come from one copy key so they cannot drift, and the
+            pair reads to VoiceOver as one header, not two fragments. */}
+        <View
+          style={styles.top}
+          accessible
+          accessibilityRole="header"
+          accessibilityLabel={`${title.first} ${title.second}`}
+        >
+          <AppText variant="display" testID="preview-title-first">
+            {title.first}
+          </AppText>
+          <AppText variant="display" color={colors.accent} testID="preview-title-second">
+            {title.second}
           </AppText>
         </View>
-
-        {/* The facts list, plain body lines on the same surface tile as
-            the plan, its caption outside (design ledger, round 5). The
-            count lives here, so the headline carries no summary line. */}
-        <View style={styles.facts}>
-          <SectionCaption label={strings.preview.factsTitle} />
-          <Tile reduceMotion={reduceMotion} testID="preview-fit">
-            {facts.map((fact, index) => (
-              <AppText
-                key={`${index}-${fact}`}
-                variant="body"
-                style={styles.factLine}
-                testID={`preview-fact-${index}`}
-              >
-                {fact}
-              </AppText>
-            ))}
-          </Tile>
-        </View>
+        <AppText variant="bodySoft" style={styles.paragraph} testID="preview-fit">
+          {paragraph}
+        </AppText>
 
         <View style={styles.plan}>
-          <AppText variant="caption" style={styles.planTitle}>
-            {strings.preview.planTitle}
-          </AppText>
           {player.blocks.map((block, index) => (
             <View
               key={`${index}-${block.movementId}`}
@@ -233,20 +228,14 @@ const styles = StyleSheet.create({
     // instead of being sliced mid-word at the scroll edge (owner report).
     paddingBottom: spacing.xxl,
   },
-  headline: {
-    marginTop: spacing.sm,
-  },
-  facts: {
-    marginTop: spacing.xl,
-  },
-  factLine: {
-    paddingVertical: spacing.xs,
+  paragraph: {
+    // The reassurance, as prose under the headline: the tile and its
+    // caption are gone, so the spacing is what separates it now.
+    marginTop: spacing.md + spacing.xs,
+    lineHeight: 24,
   },
   plan: {
     marginTop: spacing.xl,
-  },
-  planTitle: {
-    marginBottom: spacing.sm,
   },
   blockRow: {
     flexDirection: "row",
