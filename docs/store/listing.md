@@ -161,6 +161,35 @@ Sign out and "Erase everything on this phone" are under Settings > Account.
 Notifications are optional. The app asks once, after the first completed session; Settings can turn them off.
 ```
 
+### TestFlight beta review (Guideline 2.1(a), build 1 rejected 2026-09-09)
+
+Build 1 was rejected with "we were unable to successfully access all or
+part of the app". The cause is the gate, not a crash: a fresh install
+gets **one** free session (`freeSessions` control = 1,
+`monetization/entitlement.ts`), and every session after it needs the
+trial or a subscription. A reviewer who finishes one session meets the
+paywall, and until the three products exist in App Store Connect there
+is nothing there to buy — so the rest of the app is unreachable.
+
+Two things fix it, and both are needed before resubmitting for external
+review:
+
+1. Create the products (`yearly`, `monthly`, `lifetime`) in App Store
+   Connect. They do not have to be approved; they have to exist, so the
+   purchase sheet opens in the sandbox.
+2. Paste this into **Beta App Review Information → Review Notes**:
+
+```
+No account is needed. "Continue without an account" is offered beside Sign in with Apple, and every feature works identically either way.
+
+The first session is free. New sessions after it require the 7-day free trial or a subscription, purchased through the App Store. To review the whole app, sign in to a sandbox Apple ID and start the free trial from the plan screen; no payment is taken. Everything is stored on the device, so deleting and reinstalling the app also returns it to a fresh state with a free session.
+
+Everything runs on the device and works in airplane mode: session generation, progress, points and entitlements.
+```
+
+Internal testing needs no review at all: TestFlight > Internal Testing >
+new group > add the tester > attach the build.
+
 ## 9. Privacy nutrition summary
 
 Not for pasting. A working sheet for the App Privacy questionnaire in App
@@ -170,25 +199,7 @@ build that actually ships that SDK with its key set. Facts from
 
 | Apple data type | Category | Collected via | Linked to identity | Used for tracking | Purpose | Notes |
 |---|---|---|---|---|---|---|
-| Product Interaction | Usage Data | PostHog | No | No | Analytics | Thirteen events only: `deep_link_open` (path), `first_use_entry`, `onboarding_complete` (equipment), `session_preview` (minutes, blocks), `workout_start` (minutes), `workout_complete` (minutes, close, first, streak), `weekly_intention_set` (target), `share_eligible` (source), `share_start` (source, context), `paywall_view` (surface), `scenario_entry` (allowlisted scenario id), `experiment_exposure` (experiment, variant), `trial_start` (plan). No screen views, lifecycle, device model or locale. Autocapture, session replay, surveys and GeoIP are off. Events queue offline. Ships only when `EXPO_PUBLIC_POSTHOG_KEY` is set in the production build. |
-| Device ID | Identifiers | PostHog | No | No | Analytics | PostHog's anonymous distinct id. `identify()` is never called; the id is reset on sign-out. |
+| Product Interaction | Usage Data | PostHog | Yes, when signed in | No | Analytics | The funnel and the exit events, defined only in `app/src/analytics/events.ts` (ADR-0015, ADR-0024, ADR-0027): arrival, onboarding, preview, start, finish, intention, share, paywall, trial, plus one event per place she can leave — sign-in, each daily-prompt answer, the dead end, the care note, each block's outcome, a skill reached, the voice and reminder asks, the plan tapped, purchase and restore outcomes, the lifetime offer, share completion, sign-out and erase. Payloads are closed unions or small numbers: never a note, never which areas she works around, never anything about her body. PostHog's Application Opened / Backgrounded are on; autocapture, session replay, surveys and GeoIP are off. Person properties: entitlement, sessions completed, last length, intention, voice, signed in. Events queue offline. Ships only when `EXPO_PUBLIC_POSTHOG_KEY` is set in the production build. |
+| Device ID | Identifiers | PostHog | Yes, when signed in | No | Analytics | PostHog's anonymous distinct id until she signs in with Apple; from then on a salted one-way SHA-256 of the Apple user id (`app/src/analytics/identity.ts`, ADR-0027), so she counts once across a reinstall or a second iPhone. The Apple id itself never leaves the phone. Sign-out and "Erase everything" reset the id. Declare the row as linked to identity for signed-in users. |
 | Crash Data | Diagnostics | Sentry | No | No | App Functionality | Sentry is still Planned (feature-set). Add this row in the build that wires it, after the deliberate test crash on the launch checklist. |
-| Purchase History | Purchases | RevenueCat / App Store | No | No | App Functionality | Entitlement `fither_pro`; products yearly, monthly, lifetime. RevenueCat holds an anonymous app user id with the receipt. Confirm the row against RevenueCat's current App Privacy guidance before submitting; it may also ask for a User ID row under Identifiers, anonymous and not linked. |
-
-Not collected, and worth being able to say so if asked: name, email
-(Sign in with Apple is requested with no scopes; only an opaque user id
-is kept, to notice a revoked credential), health and fitness data,
-location, contacts, photos, browsing or search history, financial
-information, any body metric. Training history, points, skills, care
-notes and settings live on the phone only, and "Erase everything on this
-phone" removes them; there is no copy anywhere else.
-
-One judgement for the owner: `workout_start` / `workout_complete` carry a
-session length (10/20/30). It is declared here as Product Interaction, as
-`docs/posthog-setup.md` decided. If Apple's reviewer reads a session
-length as "Fitness" data, the honest answer is the same row moved to
-Health & Fitness with identical not-linked / not-tracking answers.
-
-"Used for tracking" is No on every row: nothing is shared with a data
-broker or joined with third-party data, and the app never shows the App
-Tracking Transparency prompt.
+| Purchase History | Purchases | RevenueCat / App Store | Yes, when signed in | No | App Functionality | Entitlement `fither_pro`; products yearly, monthly, lifetime. RevenueCat holds an anonymous app user id with the receipt, and that customer is tied to the analytics person (ADR-0027 §3): the store's anonymous id is aliased at configure time, and on Sign in with Apple the customer is logged in under the same salted hash. Confirm the row against RevenueCat's current App Privacy guidance before submitting; it may also ask for a User ID row under Identifiers. |
