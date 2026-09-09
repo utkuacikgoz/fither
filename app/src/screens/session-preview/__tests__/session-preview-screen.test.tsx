@@ -33,14 +33,21 @@ describe("SessionPreviewScreen", () => {
       <SessionPreviewScreen onStart={onStart} onChangeAnswers={jest.fn()} />,
     );
 
-    expect(screen.getByText(strings.preview.headline)).toBeTruthy();
-    expect(screen.getByText(strings.preview.factsTitle)).toBeTruthy();
-    expect(screen.getByTestId("preview-fit")).toBeTruthy();
-    expect(screen.getByText(facts.minutes(10, 2))).toBeTruthy();
-    expect(screen.getByText(facts.lowEnergy)).toBeTruthy();
-    // The old single line and the headline's summary are gone: one count.
-    expect(screen.queryByText(strings.preview.adaptations.lowEnergy)).toBeNull();
-    expect(screen.queryByText(strings.preview.summary(10, 2))).toBeNull();
+    // The headline is the minutes she chose, in two halves (owner-approved
+    // mockup preview-b): the fact, then the line that is hers.
+    const title = strings.preview.title(10);
+    expect(screen.getByText(title.first)).toBeTruthy();
+    expect(screen.getByText(title.second)).toBeTruthy();
+    // One paragraph, not a labelled tile of rows.
+    const paragraph = screen.getByTestId("preview-fit").props.children as string;
+    expect(paragraph).toContain(facts.opening(2, []));
+    expect(paragraph).toContain(facts.lowEnergy);
+    // Every label the rebuild removed stays gone.
+    expect(screen.queryByText(strings.preview.factsTitle)).toBeNull();
+    expect(screen.queryByText(strings.preview.planTitle)).toBeNull();
+    expect(screen.queryByText(strings.preview.eyebrow)).toBeNull();
+    expect(screen.queryByText(strings.preview.headline)).toBeNull();
+    expect(screen.queryByTestId("preview-fact-0")).toBeNull();
     fireEvent.press(screen.getByTestId("preview-start"));
     expect(onStart).toHaveBeenCalledTimes(1);
   });
@@ -68,12 +75,13 @@ describe("SessionPreviewScreen", () => {
     const screen = render(
       <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
     );
-    expect(screen.getByText(facts.minutes(10, 2))).toBeTruthy();
-    expect(screen.getByText(facts.quiet)).toBeTruthy();
-    expect(screen.getByText(facts.floorOnly)).toBeTruthy();
-    expect(screen.queryByText(strings.preview.defaultFit)).toBeNull();
-    expect(screen.queryByText(facts.lowEnergy)).toBeNull();
-    expect(screen.queryByTestId("preview-fact-3")).toBeNull();
+    const paragraph = screen.getByTestId("preview-fit").props.children as string;
+    expect(paragraph).toContain(facts.opening(2, []));
+    expect(paragraph).toContain(facts.quiet);
+    expect(paragraph).toContain(facts.floorOnly);
+    expect(paragraph).not.toContain(facts.lowEnergy);
+    // The equipment sentence closes the paragraph (copy's ORDER AND STOP).
+    expect(paragraph.endsWith(facts.floorOnly)).toBe(true);
   });
 
   it("changing an answer changes the explanation", () => {
@@ -81,11 +89,13 @@ describe("SessionPreviewScreen", () => {
     const screen = render(
       <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
     );
-    expect(screen.getByText(facts.avoid("knees"))).toBeTruthy();
+    expect(screen.getByTestId("preview-fit").props.children).toContain(
+      facts.opening(2, ["knees"]),
+    );
 
     // The store drives the screen: a new session re-renders it in place.
     act(() => seedPreview([]));
-    expect(screen.queryByText(facts.avoid("knees"))).toBeNull();
+    expect(screen.getByTestId("preview-fit").props.children).not.toContain("knees");
   });
 
   it("shows the actual block contract with every adaptation the engine reported", () => {
@@ -94,12 +104,13 @@ describe("SessionPreviewScreen", () => {
       <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
     );
 
-    expect(screen.getByText(strings.preview.planTitle)).toBeTruthy();
     expect(screen.getByText("Wall Push-Up")).toBeTruthy();
     expect(screen.getByText("Plank")).toBeTruthy();
     expect(screen.getByText(strings.player.blockPlan(2, 8, false))).toBeTruthy();
-    expect(screen.getByText(facts.lowEnergy)).toBeTruthy();
-    expect(screen.getByText(facts.staleFocus("push"))).toBeTruthy();
+    // Both adaptations survive the fold, in the copy's order of keeping.
+    const paragraph = screen.getByTestId("preview-fit").props.children as string;
+    expect(paragraph).toContain(facts.lowEnergy);
+    expect(paragraph).toContain(facts.staleFocus("push"));
   });
 
   it("discards the unplayed plan but keeps today's answers for editing", () => {

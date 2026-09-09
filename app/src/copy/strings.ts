@@ -40,6 +40,25 @@ const PLACE_LABELS = {
 // is also the key of its own bundled audio file, which is why this is a
 // table and not arithmetic on NUMBER_WORDS: whoever records the voice
 // reads the exact text here. player.countdown reads from it.
+// COPY-WRITER (2026-09-09, preview rebuild): the work-around areas as a
+// spoken list, "elbows, knees and core". Commas, "and" before the last,
+// no serial comma, no dashes. Areas arrive lower case from the caller,
+// the same contract preview.facts.avoid already used.
+//
+// Four or more areas stop being a list a person can hear in one breath,
+// so the phrase names the first two and counts the rest: "shoulders,
+// wrists and two more". Every area is still accounted for, none is
+// singled out, and the sentence keeps its length whatever she picked.
+// Never called with an empty list: preview.facts.opening drops the whole
+// clause when there is nothing to work around.
+const areaPhrase = (areas: string[]): string => {
+  const [first = "", second = "", ...rest] = areas;
+  if (areas.length === 1) return first;
+  if (areas.length <= 3) {
+    return `${areas.slice(0, -1).join(", ")} and ${areas[areas.length - 1] ?? ""}`;
+  }
+  return `${first}, ${second} and ${numberWord(rest.length)} more`;
+};
 const COUNTDOWN_WORDS = {
   5: "Five seconds",
   4: "Four",
@@ -485,14 +504,59 @@ export const strings = {
     skip: "Skip note",
   },
   preview: {
-    eyebrow: "Made for today",
-    headline: "Your session is ready",
-    summary: (minutes: SessionMinutes, movements: number) =>
-      `${minutes} minutes · ${movements} ${movements === 1 ? "block" : "blocks"}`,
-    defaultFit: "Built around your time and current level.",
-    planTitle: "Today's plan",
+    // COPY-WRITER (2026-09-09, preview rebuild; mockup preview-b, owner
+    // approved: "too busy, less inspiring — make it exciting, easier,
+    // empowering"). The screen is now one headline, one paragraph, and
+    // the plan. Three labelled sections are gone: `eyebrow`, `factsTitle`
+    // and `planTitle` below are dead, and so are the facts lines the
+    // bordered tile carried on separate rows.
+    //
+    // `title` is the whole top of the screen: two lines built on the one
+    // thing she just chose, her minutes. First line is the fact, second
+    // line is hers, and the screen colours the second in the accent.
+    // "All yours" is the coach's own phrase from fither-voice ("Short and
+    // steady today. Ten minutes, all yours."), not a new slogan coined
+    // here. Minutes in words, sentence-cased, because this is spoken
+    // scale, not a readout: "Ten minutes." reads as a fact she owns,
+    // "10 minutes" as a status. The pair replaces "Your session is
+    // ready", which described the app's state rather than her day.
+    //
+    // Second line is invariant across 10, 20 and 30 on purpose: ten
+    // minutes is complete (domain rule), so a shorter session may never
+    // earn a smaller second line, and a longer one may never earn a
+    // prouder one. It still returns from this function so the two halves
+    // live in one key and can never drift apart on screen.
+    //
+    // What the second line must never become: a slogan (no tagline
+    // variants, no "Own it", no exclamation), a promise about her body,
+    // or a command. It is a statement about the time, and nothing else.
+    // If it ever tells her to do something, it has become the thing it
+    // was written against.
+    title: (minutes: SessionMinutes) => ({
+      first: `${capitalised(numberWord(minutes))} minutes.`,
+      second: "All yours.",
+    }),
     changeAnswers: "Change today's answers",
     start: "Start session",
+    // DEAD (2026-09-09, preview rebuild): the caption above the old
+    // headline. The rebuilt screen opens on `title`; nothing labels it.
+    eyebrow: "Made for today",
+    // DEAD (2026-09-09, preview rebuild): replaced by `title`. Kept until
+    // the rebuilt screen and its test stop reading it.
+    headline: "Your session is ready",
+    // DEAD (2026-09-09): unused before the rebuild, and the minutes now
+    // live in `title`, the count in `facts.opening`.
+    summary: (minutes: SessionMinutes, movements: number) =>
+      `${minutes} minutes · ${movements} ${movements === 1 ? "block" : "blocks"}`,
+    // DEAD (2026-09-09): the old fallback fit line, unused since the
+    // facts list landed.
+    defaultFit: "Built around your time and current level.",
+    // DEAD (2026-09-09, preview rebuild): the plan is the only list left
+    // on the screen, so it needs no caption to name it.
+    planTitle: "Today's plan",
+    // DEAD (2026-09-09): the pre-facts adaptation lines. Nothing has
+    // rendered them since `facts` landed (2026-09-07); kept only because
+    // docs/copy/draft-strings.md §0 still cites the key shape.
     // Replacements from docs/copy/draft-strings.md §0 (2026-08-31): each
     // line reads as "Cause: effect", matching the domain file's examples.
     adaptations: {
@@ -503,6 +567,46 @@ export const strings = {
       staleFocus: "A movement you haven't seen lately is back today.",
       tasteBlock: "Ends with a first look at your next level. Optional.",
     },
+    // COPY-WRITER (2026-09-09, preview rebuild; mockup preview-b): the
+    // same engine facts, no longer rows in a bordered tile. They are now
+    // ONE PARAGRAPH of soft body text under `title`, run together with a
+    // single space, in the display order set out below (which keeps
+    // sessionFacts' own order, with the two rules that follow it). Every
+    // line is still a fact the engine actually reports; the UI maps, it
+    // never re-derives, and this block stays the only source of the words.
+    //
+    // Written to be read aloud as continuous prose, so every line is now
+    // exactly one sentence ending in a full stop. Two lines changed for
+    // that reason (`staleFocus`, `taste` — see below); the rest already
+    // read as prose and are untouched.
+    //
+    // ORDER AND STOP (the paragraph's shape, so it never becomes the wall
+    // of text the owner rejected):
+    //   1. `opening` always comes first, and always renders.
+    //   2. Then at most TWO of the middle sentences, in this order of
+    //      keeping: lowEnergy, softLanding, quiet, staleFocus, taste.
+    //      Anything past the second is dropped, not squeezed in. The
+    //      order is what she most needs to hear first: her own answer
+    //      about energy, then why today is lighter, then the room.
+    //   3. The equipment sentence (floorOnly / withChair) always closes,
+    //      as it does in the approved mockup. It is the settling note,
+    //      and it is the one sentence that may be absent instead: when
+    //      the library has not loaded, no claim about the room is made
+    //      and the paragraph simply ends earlier.
+    // Four sentences is the ceiling. That is two to four lines in the
+    // mockup's column, and it is where I would stop: a fifth sentence
+    // pushes the plan below the fold and turns the reassurance back into
+    // a list she has to read.
+    //
+    // Plainest case, nothing adapted at all:
+    //   "Four movements. Just you and the floor."
+    // Heavy case, areas plus low energy plus an eased pattern:
+    //   "Four movements, around your elbows, knees and core. Two sets
+    //    instead of three, for low energy. Lighter on push, since last
+    //    time was hard. Just you and the floor."
+    //
+    // The old per-line notes still hold and are kept below.
+    //
     // COPY-WRITER (2026-09-07, wave 1 "first use"): the preview explains
     // today's session as a short list of engine facts, one line each,
     // under `factsTitle`. Every line is a fact the engine actually
@@ -532,20 +636,70 @@ export const strings = {
     //     never in days away (rule 3: absence is never named).
     //   · taste: `movement` is the library name ("Full Push-Up"). One set,
     //     optional, both stated; "first look" as in adaptations.tasteBlock.
-    // No dashes; each line under 50 characters at any input.
+    // No dashes; each line was under 50 characters at any input.
+    // COPY-WRITER (2026-09-09): that 50-character rule was the tile's
+    // row width and no longer binds. The paragraph's budget is the
+    // four-sentence ceiling above; the longest single sentence is now
+    // `taste` at 57 characters with the longest library name.
+    // DEAD (2026-09-09, preview rebuild): the list has no caption now.
+    // The paragraph explains itself in her own words.
     factsTitle: "Why it fits",
     facts: {
+      // COPY-WRITER (2026-09-09, preview rebuild): the paragraph's first
+      // sentence, and the owner-approved words from the mockup: "Four
+      // movements, around your elbows, knees and core." It replaces BOTH
+      // `minutes` (the headline says the minutes now, so repeating them
+      // here would be a duplicate) and `avoid` (whose clause is folded in
+      // with a comma, exactly as the mockup reads).
+      //
+      // Count in words, singular guarded, sentence-cased: it opens the
+      // paragraph and matches the headline's spoken register. With no
+      // areas the sentence is the count alone, "Four movements." — a
+      // complete sentence, never a stub waiting for a clause.
+      //
+      // "around your knees" over the old "Nothing that loads your knees":
+      // in a paragraph the old line read as a warning, and it named the
+      // area as something to be protected FROM the session. The areas are
+      // what the session respects, never a weakness, never an injury,
+      // never a problem area. Never "despite", never "even with", never
+      // any word that makes her list a cost. `areas` arrives lower case
+      // from the caller, as it always has; four or more collapse to
+      // "your shoulders, wrists and two more" (see areaPhrase above), so
+      // the sentence stays one breath long whatever she picked.
+      opening: (movements: number, areas: string[]) => {
+        const count = `${capitalised(numberWord(movements))} ${
+          movements === 1 ? "movement" : "movements"
+        }`;
+        return areas.length === 0
+          ? `${count}.`
+          : `${count}, around your ${areaPhrase(areas)}.`;
+      },
+      // DEAD (2026-09-09, preview rebuild): minutes moved to `title`, the
+      // count and the areas moved into `opening`.
       minutes: (minutes: number, blocks: number) =>
         `${minutes} minutes, ${blocks} ${blocks === 1 ? "movement" : "movements"}.`,
+      // DEAD (2026-09-09, preview rebuild): folded into `opening` as
+      // "around your knees", the mockup's approved wording.
       avoid: (areas: string) => `Nothing that loads your ${areas}.`,
       lowEnergy: "Two sets instead of three, for low energy.",
       quiet: "Every movement stays quiet.",
       floorOnly: "Just you and the floor.",
       withChair: "You, the floor and a chair.",
       softLanding: (pattern: string) => `Lighter on ${pattern}, since last time was hard.`,
-      staleFocus: (pattern: string) =>
-        `${pattern.charAt(0).toUpperCase()}${pattern.slice(1)} is back today. It's been a few sessions.`,
-      taste: (movement: string) => `Ends with a first look at ${movement}. One set, optional.`,
+      // COPY-WRITER (2026-09-09, preview rebuild): one sentence, was two.
+      // "It's been a few sessions." was a tile row; read inside a
+      // paragraph its "It's" reaches for whatever sentence sits before it.
+      // Same two facts, joined by the comma that always meant "because":
+      // the pattern is back, and how long it has been. Still counted in
+      // her sessions, never in days away (rule 3: absence is never named).
+      staleFocus: (pattern: string) => `${capitalised(pattern)} is back today, after a few sessions.`,
+      // COPY-WRITER (2026-09-09, preview rebuild): one sentence, was two.
+      // "One set, optional." is a column entry, not prose. The colon does
+      // the same work in running text and keeps both facts: it is a first
+      // look (as in adaptations.tasteBlock), it is one set, and it is
+      // hers to decline. "Optional" stays in the sentence, never in a
+      // footnote: the paragraph must never imply she owes the last set.
+      taste: (movement: string) => `Ends with a first look at ${movement}: one optional set.`,
     },
   },
   // Onboarding — docs/copy/draft-strings.md §1, wired verbatim. Three

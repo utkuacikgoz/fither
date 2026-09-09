@@ -6,7 +6,7 @@ import {
   fixturePrompt,
   fixtureSession,
 } from "../../test-utils/fixtures";
-import { sessionFacts } from "../session-facts";
+import { sessionFacts, sessionParagraph } from "../session-facts";
 
 const facts = strings.preview.facts;
 
@@ -140,5 +140,58 @@ describe("sessionFacts", () => {
   it("without a library, makes no claim about quiet or the room", () => {
     const lines = sessionFacts(fixtureSession, fixturePrompt, null);
     expect(lines).toEqual([facts.minutes(10, 2)]);
+  });
+});
+
+// The preview's paragraph obeys the copy surface's ORDER AND STOP
+// contract (strings.preview.facts): the opening always renders, at most
+// TWO middle sentences survive, and the equipment sentence closes.
+describe("sessionParagraph", () => {
+  const facts = strings.preview.facts;
+
+  it("opens with the movement count and the areas, folded into one sentence", () => {
+    const session = {
+      ...fixtureSession,
+      adaptations: [{ kind: "soreness" as const, areas: ["knees" as const] }],
+    };
+    const paragraph = sessionParagraph(session, fixturePrompt, fixtureLibrary);
+    expect(paragraph.startsWith(facts.opening(session.blocks.length, ["knees"]))).toBe(true);
+    // The minutes moved to the headline: never repeated here.
+    expect(paragraph).not.toContain(`${session.minutes} minutes`);
+  });
+
+  it("keeps at most two middle sentences, and drops the rest rather than squeezing them in", () => {
+    const session = {
+      ...fixtureSession,
+      adaptations: [
+        { kind: "lowEnergy" as const },
+        { kind: "softLanding" as const, pattern: "push" as const },
+        { kind: "staleFocus" as const, pattern: "core" as const },
+      ],
+    };
+    const paragraph = sessionParagraph(session, fixturePrompt, fixtureLibrary);
+    expect(paragraph).toContain(facts.lowEnergy);
+    expect(paragraph).toContain(facts.softLanding("push"));
+    // Third middle is past the ceiling.
+    expect(paragraph).not.toContain(facts.staleFocus("core"));
+    expect(paragraph.split(". ").length).toBeLessThanOrEqual(4);
+  });
+
+  it("closes on the room, and says nothing about it when the library cannot vouch", () => {
+    const withLibrary = sessionParagraph(fixtureSession, fixturePrompt, fixtureLibrary);
+    expect(withLibrary.endsWith(facts.floorOnly) || withLibrary.endsWith(facts.withChair)).toBe(
+      true,
+    );
+    const without = sessionParagraph(fixtureSession, fixturePrompt, null);
+    expect(without).not.toContain(facts.floorOnly);
+    expect(without).not.toContain(facts.withChair);
+  });
+
+  it("with nothing adapted it is two sentences, the plainest case", () => {
+    const session = { ...fixtureSession, adaptations: [] };
+    const paragraph = sessionParagraph(session, { ...fixturePrompt, quiet: false }, fixtureLibrary);
+    expect(paragraph).toBe(
+      `${facts.opening(session.blocks.length, [])} ${facts.floorOnly}`,
+    );
   });
 });
