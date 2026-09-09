@@ -65,6 +65,29 @@ xcodebuild -workspace FITHER.xcworkspace -scheme FITHER -configuration Release \
   | grep -E "error:|warning: .*sentry|SUCCEEDED|FAILED" || true
 [ -d "$BUILD_DIR/FITHER.xcarchive" ] || { echo "ship: archive failed"; exit 1; }
 
+# What actually got baked into the bundle. Expo inlines EXPO_PUBLIC_* at
+# bundle time, inside the Xcode build phase, so the only honest check is
+# to read the bundle the archive carries. A build 1.0.0 (1) shipped to
+# TestFlight with RevenueCat's Test Store key and App Review rejected it
+# (2.1(a), no purchase sheet); that must not happen twice.
+BUNDLE="$BUILD_DIR/FITHER.xcarchive/Products/Applications/FITHER.app/main.jsbundle"
+if [ -f "$BUNDLE" ]; then
+  if grep -q "appl_" "$BUNDLE"; then
+    echo "ship: store key OK (appl_ in the bundle)"
+  elif grep -q "test_" "$BUNDLE"; then
+    echo "ship: STOP — the bundle carries a RevenueCat test_ key, so no real"
+    echo "ship: purchase sheet opens and App Review will reject it."
+    echo "ship: put the appl_ key in app/.env.production and run again."
+    exit 1
+  else
+    echo "ship: no RevenueCat key in the bundle — the app ships the dev store"
+    echo "ship: adapter and nothing can be bought. Check app/.env.production."
+    exit 1
+  fi
+else
+  echo "ship: no bundle at $BUNDLE — cannot verify which keys shipped"
+fi
+
 xcodebuild -exportArchive -archivePath "$BUILD_DIR/FITHER.xcarchive" \
   -exportOptionsPlist "$BUILD_DIR/ExportOptions.plist" \
   -exportPath "$BUILD_DIR/export" -allowProvisioningUpdates 2>&1 \
