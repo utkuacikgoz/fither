@@ -1175,6 +1175,11 @@ export const strings = {
     // which owns the full-sentence form; this is the bare unit only.
     pointsUnit: (points: number) => (points === 1 ? "point" : "points"),
     continueLabel: "Continue",
+    first: {
+      title: "Your starting point is set.",
+      next: (skill: string, tiers: number) =>
+        `${skill} is ${tiers === 1 ? "1 tier" : `${tiers} tiers`} ahead.`,
+    },
     // COPY-WRITER: honest close states (2026-09-02, ADR-0012 §2 and the
     // audit's wave 2). Three distinct truths, zero guilt in any of them.
     // She chose to stop. Completed work is saved and counts — full stop,
@@ -1640,6 +1645,7 @@ export const strings = {
     },
     skills: {
       title: "Skills",
+      from: (movement: string) => `From ${movement}`,
       // COPY-WRITER (2026-09-07): caption above the Progress tab's
       // next-skill tile (the movement she is climbing toward, with the
       // tile's own "N tiers ahead" line). Was reusing `title`, which

@@ -259,6 +259,7 @@ describe("session store", () => {
       playWholeSession();
       await useSessionStore.getState().completeSession();
       await useSessionStore.getState().completeSession();
+      expect(useSessionStore.getState().finish?.first).toBe(true);
       expect(recordedEvents()).toEqual([
         {
           name: "workout_complete",
@@ -317,6 +318,7 @@ describe("session store", () => {
       useSessionStore.getState().startSession(fixturePrompt);
       playWholeSession();
       await useSessionStore.getState().completeSession();
+      expect(useSessionStore.getState().finish?.first).toBe(false);
       expect(recordedEvents()[0]?.properties).toMatchObject({ first: false });
 
       clearRecordedEvents();

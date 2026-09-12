@@ -7,7 +7,6 @@ import {
   milestoneMovement,
   PATTERNS,
   type HistoryEntry,
-  type LedgerEvent,
   type Pattern,
   type Profile,
   type Tier,
@@ -18,7 +17,6 @@ import { glyph } from "../../../design/tokens";
 import { todayIso } from "../../../lib/dates";
 import { loadLibrary } from "../../../session/load-library";
 import { movementFigure } from "../../../session/movement-figures";
-import { useLedgerStore } from "../../../state/ledger-store";
 import { useProfileStore } from "../../../state/profile-store";
 import {
   collectStringValues,
@@ -91,11 +89,6 @@ beforeEach(() => {
     hydrated: true,
     hydrationFailed: false,
   });
-  useLedgerStore.setState({
-    events: [],
-    hydrated: true,
-    hydrationFailed: false,
-  });
 });
 
 describe("ProgressScreen — patterns", () => {
@@ -164,6 +157,9 @@ describe("ProgressScreen — next skill", () => {
     const tile = screen.getByTestId("progress-next-skill", hidden);
     expect(screen.getByText(ladderName("push", 4))).toBeTruthy();
     expect(screen.getByText(strings.home.skills.away(3))).toBeTruthy();
+    expect(screen.getByTestId("progress-current-skill")).toHaveTextContent(
+      strings.profile.skills.from(ladderName("push", 1)),
+    );
     const images = tile.findAllByType(Image);
     expect(images).toHaveLength(1);
     expect(images[0]?.props.source).toEqual(
@@ -254,35 +250,11 @@ describe("ProgressScreen — hero numerals", () => {
     expect(screen.queryByText(strings.streak.label(0))).toBeNull();
   });
 
-  it("totals the ledger through the ledger module's own sum", () => {
-    const events: LedgerEvent[] = [
-      { type: "session", points: 20, date: "2026-08-30" },
-      { type: "session", points: 25, date: "2026-08-31" },
-      {
-        type: "skillUnlock",
-        points: 25,
-        date: "2026-08-31",
-        pattern: "push",
-        movementId: "full-push-up",
-      },
-    ];
-    useLedgerStore.setState({ events });
+  it("keeps capability and consistency primary, without an unexplained points total", () => {
     const screen = render(<ProgressScreen />);
-    // The bare unit beneath the numeral; the full sentence is the spoken
-    // reading, so VoiceOver hears "70 points earned", not "70" "points".
-    expect(screen.getByTestId("progress-points-value").props.children).toBe("70");
-    expect(screen.getByText(strings.finish.pointsUnit(70))).toBeTruthy();
-    expect(screen.getByTestId("progress-points").props.accessibilityLabel).toBe(
-      strings.profile.points.total(70),
-    );
-  });
-
-  it("renders zero points honestly for a brand-new profile", () => {
-    const screen = render(<ProgressScreen />);
-    expect(screen.getByTestId("progress-points-value").props.children).toBe("0");
-    expect(screen.getByTestId("progress-points").props.accessibilityLabel).toBe(
-      strings.profile.points.total(0),
-    );
+    expect(screen.getByTestId("progress-next-skill")).toBeTruthy();
+    expect(screen.getByTestId("progress-streak")).toBeTruthy();
+    expect(screen.queryByTestId("progress-points")).toBeNull();
   });
 });
 
@@ -290,9 +262,6 @@ it("renders no user-facing text outside strings.ts (plus library data)", () => {
   useProfileStore.setState({
     profile: tier4Profile(),
     history: { entries: [0, 1, 3].map((n) => trained(daysAgo(n))) },
-  });
-  useLedgerStore.setState({
-    events: [{ type: "session", points: 20, date: "2026-08-31" }],
   });
 
   const allowed = collectStringValues(strings);
@@ -308,18 +277,16 @@ it("renders no user-facing text outside strings.ts (plus library data)", () => {
     // Tier numerals on the pattern rows; the sentence is spoken, not drawn.
     allowed.add(String(n));
   }
-  // Numerals set bare (the sentence lives in the accessibility label).
-  allowed.add("20");
-  allowed.add(strings.finish.pointsUnit(20));
   // Library-sourced movement names are data, like the player's.
   for (const movement of library!.movements) {
     allowed.add(movement.name);
+    allowed.add(strings.profile.skills.from(movement.name));
   }
   // Decorative glyph token (hidden from accessibility), not copy.
   allowed.add(glyph.check);
 
   const screen = render(<ProgressScreen />);
   for (const leaf of renderedTextLeaves(screen.toJSON())) {
-    expect(allowed.has(leaf)).toBe(true);
+    expect(allowed.has(leaf) ? true : leaf).toBe(true);
   }
 });

@@ -1,11 +1,16 @@
 import { useEffect, useRef } from "react";
 import { AccessibilityInfo, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import type { HistoryEntry } from "@fither/engine";
+import {
+  nextMilestone,
+  tiersToMilestone,
+  type HistoryEntry,
+} from "@fither/engine";
 
 import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
+import { Card } from "../../design/primitives/card";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { PrimaryButton } from "../../design/primitives/primary-button";
@@ -15,6 +20,8 @@ import { minTouchTarget, motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useTodayIso } from "../../lib/use-today";
 import { sessionReceipt } from "../../session/receipt";
+import { loadLibrary } from "../../session/load-library";
+import { skillFigureId, skillLabel } from "../../session/skill-name";
 import { useIntentionStore } from "../../state/intention-store";
 import { useProfileStore } from "../../state/profile-store";
 import { useSessionStore, type FinishSummary } from "../../state/session-store";
@@ -97,6 +104,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   // known. The session's own date is the date the engine stamped on it;
   // today is the fallback only for a summary with no session behind it.
   const historyEntries = useProfileStore((s) => s.history.entries);
+  const profile = useProfileStore((s) => s.profile);
   const target = useIntentionStore((s) => s.target);
   const sessionDate = session?.date ?? today;
   const entry = settled && !nothingDone ? committedEntry(historyEntries, sessionDate) : null;
@@ -107,6 +115,17 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
   const figures = entry
     ? entry.blocks.filter((block) => block.outcome !== "skipped")
     : [];
+  const library = loadLibrary();
+  // A skill earned in this session gets its own unlock screen next. Do
+  // not point past it here; the starting-path card is for a first close
+  // whose next capability has not already arrived.
+  const firstUpcoming =
+    finish?.first && finish.unlockedSkills.length === 0
+      ? nextMilestone(profile)
+      : null;
+  const firstTiersAway = firstUpcoming
+    ? tiersToMilestone(profile, firstUpcoming)
+    : 0;
 
   // A session of struggled blocks earns nothing: no "+0" row on the
   // receipt, the day still counts (the headline, the figures and the
@@ -149,9 +168,9 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
     completeSession();
   }, [completeSession]);
 
-  // Three beats once the close is known — the headline, the movements
-  // she did, then the receipt with the points as its last line — in the
-  // unlock's own rhythm. The saving and failed states are waiting states
+  // Once the close is known: the headline, the one-time starting path
+  // when due, the movements she did, then the receipt with the points as
+  // its last line. The saving and failed states are waiting states
   // and get no choreography; the buttons sit outside it and are tappable
   // the moment they render. The points rise in with the receipt and do
   // not count up: a ticking total is slot-machine energy, and points buy
@@ -182,6 +201,42 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
             {note}
           </AppText>
         </FadeIn>
+        {firstUpcoming && (
+          <View style={styles.firstPath}>
+            <Card
+              reduceMotion={reduceMotion}
+              order={1}
+              testID="finish-first-path"
+            >
+              <View style={styles.firstPathRow}>
+                <MovementFigure
+                  movementId={skillFigureId(
+                    library,
+                    firstUpcoming.pattern,
+                    firstUpcoming.tier,
+                  )}
+                  size={spacing.xxxl}
+                  tone="accent"
+                />
+                <View style={styles.firstPathCopy}>
+                  <AppText variant="bodyLarge">
+                    {strings.finish.first.title}
+                  </AppText>
+                  <AppText variant="bodySoft" style={styles.firstPathLine}>
+                    {strings.finish.first.next(
+                      skillLabel(
+                        library,
+                        firstUpcoming.pattern,
+                        firstUpcoming.tier,
+                      ),
+                      firstTiersAway,
+                    )}
+                  </AppText>
+                </View>
+              </View>
+            </Card>
+          </View>
+        )}
         {figures.length > 0 && (
           <FadeIn {...beat(1)}>
             <View style={styles.figures} testID="finish-figures">
@@ -251,6 +306,20 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.lg - spacing.xs,
+  },
+  firstPath: {
+    marginTop: spacing.lg,
+  },
+  firstPathRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  firstPathCopy: {
+    flex: 1,
+  },
+  firstPathLine: {
+    marginTop: spacing.xs,
   },
   receipt: {
     marginTop: spacing.lg - spacing.xs,
