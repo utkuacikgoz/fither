@@ -15,6 +15,7 @@ import { WORDMARK } from "../../design/primitives/wordmark";
 import { useTheme } from "../../design/theme";
 import { hairline, radius, spacing, trackingWide } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
+import { openLegalPage } from "../../lib/legal-links";
 import { getBilling, type PlanId } from "../../monetization/billing";
 import { entitlementStatus } from "../../monetization/entitlement";
 import { useFreeSessionsAllowance } from "../../monetization/experiment";
@@ -276,11 +277,18 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
         <AppText variant="caption" style={styles.legal}>
           {strings.paywall.legal.autoRenew}
         </AppText>
-        {/* Terms / Privacy actions return here when the real legal-page
-            URLs exist (launch checklist: privacy policy). Until then no
-            control renders — a button that can't act is a constraints
-            violation, not a placeholder (audit S3). The labels stay in
-            strings.paywall.legal for that day. */}
+        <View style={styles.legalActions}>
+          <QuietButton
+            testID="paywall-terms"
+            label={strings.paywall.legal.termsLabel}
+            onPress={() => void openLegalPage("terms")}
+          />
+          <QuietButton
+            testID="paywall-privacy"
+            label={strings.paywall.legal.privacyLabel}
+            onPress={() => void openLegalPage("privacy")}
+          />
+        </View>
 
         {__DEV__ && (
           // Dev-only control (ADR-0009): resets the app-side entitlement
@@ -382,6 +390,12 @@ const styles = StyleSheet.create({
   },
   legal: {
     textAlign: "center",
+  },
+  legalActions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   devReset: {
     marginTop: spacing.xl,
