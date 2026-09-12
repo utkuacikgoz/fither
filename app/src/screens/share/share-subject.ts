@@ -109,7 +109,13 @@ export function shareSubject(
   };
 }
 
-/** Which recipient page a subject links to. The context never changes it (this wave). */
-export function shareLinkKind(subject: ShareSubject): ShareLinkKind {
-  return subject.kind;
+/** Which recipient page keeps the story selected on the share card. */
+export function shareLinkKind(
+  subject: ShareSubject,
+  context: ShareContext | null,
+): ShareLinkKind {
+  if (subject.kind === "week") return "week";
+  if (context === "hotel") return "away_from_home";
+  if (context === "meetings") return "between_meetings";
+  return "session";
 }

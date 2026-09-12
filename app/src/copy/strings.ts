@@ -1288,17 +1288,18 @@ export const strings = {
       notNow: "Not now",
     },
     // COPY-WRITER (2026-09-07, weekly rhythm; mockup share-receipt): share
-    // from a finish receipt or a recap, with one optional public context.
+    // from a finish receipt or a recap. A session has one optional public
+    // context; a week does not ask a place question that cannot change it.
     // The card says where, how long, and that it was complete: three
     // fragments, each a fact, nothing about the body. Minutes in words
     // (Ten, Twenty, Thirty) because the card is read, not tallied. `skip`
     // is the fourth context chip: it passes over the question, which is
-    // exactly what it does. `message` is hers, first person, and names
-    // no minutes because the card beside it already does; the app appends
-    // the URL. `card.week` is the recap card's headline, same words as
-    // recap.headline so the page and its card agree.
+    // exactly what it does. Each message is hers, first person, and the
+    // session and week describe their own subject; the app appends the
+    // context-specific URL. `card.week` is the recap card's headline,
+    // same words as recap.headline so the page and its card agree.
     context: {
-      question: "Where were you?",
+      question: "Where did this one fit?",
       home: "Home",
       hotel: "Hotel",
       meetings: "Between meetings",
@@ -1320,8 +1321,10 @@ export const strings = {
             : `${capitalised(numberWord(movements))} movements, no equipment.`,
         week: (count: number) => sessionsThisWeek(count),
       },
-      message: (url: string) =>
+      sessionMessage: (url: string) =>
         `Built for the room I was in. No equipment. Try yours: ${url}`,
+      weekMessage: (url: string) =>
+        `I made strength fit this week. See what yours could look like: ${url}`,
       notNow: "Not now",
     },
   },

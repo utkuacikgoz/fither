@@ -25,11 +25,11 @@ import {
 } from "./share-subject";
 
 // Share from a receipt or a recap (wave 3; mockup share-receipt,
-// owner-approved 2026-09-07). One decision: the card she sends, an
-// optional public context beneath it that rewrites the card's headline,
-// Share this, Not now. The context is the ONLY thing she adds, and it is
-// a place kind, never a place: nothing about her health, her notes or
-// her restrictions is on the card, in the text or in the event.
+// owner-approved 2026-09-07; referral handoff wave 3). A session offers
+// one optional public context that rewrites both its card and recipient
+// path. A weekly recap has no place question because a place cannot
+// change its story. Context is a place kind, never a place: nothing about
+// her health, notes or restrictions is on the card, text or event.
 
 interface ShareScreenProps {
   source: ShareSource;
@@ -66,11 +66,17 @@ export function ShareScreen({ source, date }: ShareScreenProps) {
     // whose sheet UIKit silently refuses to present.
     if (sharing.current) return;
     sharing.current = true;
-    track("share_start", { source, context: context ?? "none" });
-    const url = shareUrl(shareLinkKind(subject));
+    const effectiveContext = subject.kind === "session" ? context : null;
+    track("share_start", { source, context: effectiveContext ?? "none" });
+    const url = shareUrl(shareLinkKind(subject, effectiveContext));
     // No destination configured means no link at all — the card line is
     // the whole message, never a placeholder address.
-    const message = url === null ? headline : strings.share.context.message(url);
+    const message =
+      url === null
+        ? headline
+        : subject.kind === "week"
+          ? strings.share.context.weekMessage(url)
+          : strings.share.context.sessionMessage(url);
     void shareReceipt({ message, card: cardRef }).finally(() => {
       sharing.current = false;
     });
@@ -90,22 +96,24 @@ export function ShareScreen({ source, date }: ShareScreenProps) {
           host={host}
           testID="share-card"
         />
-        <View style={styles.context}>
-          <SectionCaption label={strings.share.context.question} />
-          {CONTEXTS.map((option) => (
-            <RowButton
-              key={option}
-              testID={`share-context-${option}`}
-              label={strings.share.context[option]}
-              selected={context === option}
-              // Not a multi-select: the check glyph marks a row that
-              // stays chosen (no auto-advance here), and the same tap
-              // clears it back to the plain card.
-              multiSelect
-              onPress={() => setContext((current) => (current === option ? null : option))}
-            />
-          ))}
-        </View>
+        {subject.kind === "session" && (
+          <View style={styles.context}>
+            <SectionCaption label={strings.share.context.question} />
+            {CONTEXTS.map((option) => (
+              <RowButton
+                key={option}
+                testID={`share-context-${option}`}
+                label={strings.share.context[option]}
+                selected={context === option}
+                // Not a multi-select: the check glyph marks a row that
+                // stays chosen (no auto-advance here), and the same tap
+                // clears it back to the plain card.
+                multiSelect
+                onPress={() => setContext((current) => (current === option ? null : option))}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
       <View style={styles.bottom}>
         <PrimaryButton

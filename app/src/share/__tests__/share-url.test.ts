@@ -47,6 +47,8 @@ describe("shareBaseUrl", () => {
     process.env[ENV] = "https://fither.app";
     expect(shareUrl("session")).toBe("https://fither.app/s/session");
     expect(shareUrl("week")).toBe("https://fither.app/s/week");
+    expect(shareUrl("away_from_home")).toBe("https://fither.app/s/away_from_home");
+    expect(shareUrl("between_meetings")).toBe("https://fither.app/s/between_meetings");
   });
 
   it("prints the host alone for the card", () => {

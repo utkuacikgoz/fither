@@ -136,6 +136,8 @@ describe("ShareScreen", () => {
       expect(screen.getByText(strings.recap.headline(2))).toBeTruthy();
       expect(screen.getByText(strings.share.context.card.sub(3))).toBeTruthy();
       expect(screen.queryByText(PLAIN)).toBeNull();
+      expect(screen.queryByText(strings.share.context.question)).toBeNull();
+      expect(screen.queryByTestId("share-context-home")).toBeNull();
     });
 
     it("an explicit date shows that day's session", () => {
@@ -193,13 +195,12 @@ describe("ShareScreen", () => {
       expect(screen.getByTestId("share-card-headline").props.children).toBe(PLAIN);
     });
 
-    it("on a recap the week line stays; the context is recorded, not written", () => {
+    it("a recap asks no irrelevant place question and records no context", () => {
       const screen = render(<ShareScreen source="recap" />);
-      fireEvent.press(screen.getByTestId("share-context-hotel"));
       expect(screen.getByText(strings.share.context.card.week(1))).toBeTruthy();
       fireEvent.press(screen.getByTestId("share-send"));
       expect(recordedEvents()).toEqual([
-        { name: "share_start", properties: { source: "recap", context: "hotel" } },
+        { name: "share_start", properties: { source: "recap", context: "none" } },
       ]);
     });
   });
@@ -218,21 +219,22 @@ describe("ShareScreen", () => {
       expect(shareSpy).toHaveBeenCalledTimes(1);
       expect(shareSpy).toHaveBeenCalledWith({
         url: "file:///tmp/skill-card.png",
-        message: strings.share.context.message("https://fither.app/s/session"),
+        message: strings.share.context.sessionMessage(
+          "https://fither.app/s/away_from_home",
+        ),
       });
       // The file goes through the one sheet that carries text beside it.
       expect(Sharing.shareAsync).not.toHaveBeenCalled();
     });
 
-    it("a recap links to the week page; the chosen context does not change the path", async () => {
+    it("a recap links to the week page with a message about the week", async () => {
       process.env[ENV] = "https://fither.app";
       const screen = render(<ShareScreen source="recap" />);
-      fireEvent.press(screen.getByTestId("share-context-meetings"));
       fireEvent.press(screen.getByTestId("share-send"));
       await flushShare();
       expect(shareSpy).toHaveBeenCalledWith({
         url: "file:///tmp/skill-card.png",
-        message: strings.share.context.message("https://fither.app/s/week"),
+        message: strings.share.context.weekMessage("https://fither.app/s/week"),
       });
     });
 
@@ -243,7 +245,7 @@ describe("ShareScreen", () => {
       fireEvent.press(screen.getByTestId("share-send"));
       await flushShare();
       expect(shareSpy).toHaveBeenCalledWith({
-        message: strings.share.context.message("https://fither.app/s/session"),
+        message: strings.share.context.sessionMessage("https://fither.app/s/session"),
       });
     });
 
@@ -399,7 +401,7 @@ describe("ShareScreen", () => {
     allowed.add("fither.app");
     for (const source of ["finish", "receipt", "recap"] as const) {
       const screen = render(<ShareScreen source={source} />);
-      fireEvent.press(screen.getByTestId("share-context-hotel"));
+      if (source !== "recap") fireEvent.press(screen.getByTestId("share-context-hotel"));
       for (const leaf of renderedTextLeaves(screen.toJSON())) {
         expect(allowed.has(leaf) ? true : leaf).toBe(true);
       }
