@@ -229,12 +229,13 @@ export const strings = {
   // sessions and says so; it is a different number and must not share
   // these lines.
   //   · progress: the tile's first sentence, and the receipt's "This
-  //     week" value. Full stop on purpose: the tile follows it with
-  //     `nextLine`. Count may pass the target ("4 of 3 days trained."),
+  //     week" value. Full stop on purpose: the tile may follow it with
+  //     `remaining`. Count may pass the target ("4 of 3 days trained."),
   //     which is honest and reads as pride, not error.
   //   · progressNoTarget: same slot with no target set. "so far" faces
   //     forward; 0 is a plain state with the smallest possible invitation.
-  //   · nextLine: only while a target remains. Names the day, not the gap.
+  //   · remaining: only while a target remains. Names the small weekly
+  //     commitment without assigning a calendar day she never chose.
   //   · met: target reached. States the count and stops; a further day
   //     is still counted by `progress`, and this line never says "enough"
   //     or "stop".
@@ -244,13 +245,16 @@ export const strings = {
     title: "This week",
     daysLabel: "Days trained",
     progress: (count: number, target: 2 | 3) => `${count} of ${target} days trained.`,
+    remaining: (count: number) =>
+      count === 1
+        ? "One more session completes your week."
+        : `${capitalised(numberWord(count))} sessions still fit this week.`,
     progressNoTarget: (count: number) =>
       count === 0
         ? "Nothing yet. Any day counts."
         : count === 1
           ? "1 day trained so far."
           : `${count} days trained so far.`,
-    nextLine: (weekday: string) => `${weekday}'s is next.`,
     met: (target: 2 | 3) => `${capitalised(numberWord(target))} days this week. Done.`,
     dayLetters: ["M", "T", "W", "T", "F", "S", "S"],
     dayNames: [
@@ -1239,7 +1243,7 @@ export const strings = {
     movementsLabel: "Movements done",
     tierLabel: (pattern: string) => pattern,
     tierValue: (tier: number) => `Tier ${tier} reached`,
-    noChange: "No new tier this week. Each session counts.",
+    noChange: "Every session added to your training.",
     share: "Share this week",
     settingsRow: "Weekly recaps",
   },

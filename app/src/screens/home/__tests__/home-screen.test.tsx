@@ -306,18 +306,18 @@ describe("this week", () => {
         true, false, true, false, true, false, false,
       ]);
       // Days she did not train are not named anywhere.
-      expect(screen.queryByText(new RegExp(strings.week.nextLine("Saturday")))).toBeNull();
+      expect(screen.queryByText(new RegExp("Saturday"))).toBeNull();
       screen.unmount();
     }
   });
 
-  it("mid-week with a target remaining: the count, the next day's name, today ringed", () => {
+  it("mid-week with a target remaining: the count, the remaining rhythm, today ringed", () => {
     useIntentionStore.setState({ target: 3, asked: true });
     seedHistory([todayEntry(10, ["completed"], MON)]);
     mockToday.iso = WED;
     const screen = render(<HomeScreen />);
     expect(screen.getByTestId("home-week-line").props.children).toBe(
-      `${strings.week.progress(1, 3)} ${strings.week.nextLine("Wednesday")}`,
+      `${strings.week.progress(1, 3)} ${strings.week.remaining(2)}`,
     );
     expect(dot(screen, 0)).toEqual({ filled: true, ringed: true });
     expect(dot(screen, 2)).toEqual({ filled: false, ringed: true });
@@ -343,7 +343,7 @@ describe("this week", () => {
     mockToday.iso = MON;
     const screen = render(<HomeScreen />);
     expect(screen.getByTestId("home-week-line").props.children).toBe(
-      `${strings.week.progress(1, 2)} ${strings.week.nextLine("Tuesday")}`,
+      `${strings.week.progress(1, 2)} ${strings.week.remaining(1)}`,
     );
     expect([0, 1, 2, 3, 4, 5, 6].filter((i) => dot(screen, i).filled)).toEqual([0]);
   });
@@ -370,15 +370,12 @@ describe("this week", () => {
     expect(day(4).accessibilityState).toEqual({ selected: true });
   });
 
-  it("the tile is information, not a door: a press goes nowhere", () => {
+  it("opens the current week's recap from the tile", () => {
     seedHistory([todayEntry(10, ["completed"], MON)]);
     mockToday.iso = MON;
     const screen = render(<HomeScreen />);
     fireEvent.press(screen.getByTestId("home-week-tile"));
-    fireEvent.press(screen.getByTestId("home-week"));
-    fireEvent.press(screen.getByTestId("home-week-day-0"));
-    expect(router.push).not.toHaveBeenCalled();
-    expect(router.replace).not.toHaveBeenCalled();
+    expect(router.push).toHaveBeenCalledWith(`/recap?week=${MON}&source=home`);
   });
 });
 
@@ -490,8 +487,8 @@ describe("copy", () => {
       allowed.add(strings.week.progressNoTarget(n));
       for (const target of [2, 3] as const) {
         allowed.add(strings.week.progress(n, target));
-        for (const day of strings.week.dayNames) {
-          allowed.add(`${strings.week.progress(n, target)} ${strings.week.nextLine(day)}`);
+        for (let remaining = 1; remaining <= 3; remaining += 1) {
+          allowed.add(`${strings.week.progress(n, target)} ${strings.week.remaining(remaining)}`);
         }
       }
     }
