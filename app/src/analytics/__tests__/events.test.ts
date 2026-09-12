@@ -26,6 +26,8 @@ describe("analytics events", () => {
       "workout_complete",
       "weekly_intention_set",
       "weekly_recap_view",
+      "weekly_recap_eligible",
+      "weekly_recap_dismiss",
       "share_eligible",
       "share_start",
       "paywall_view",

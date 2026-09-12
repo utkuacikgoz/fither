@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { computeStreak, nextMilestone, tiersToMilestone } from "@fither/engine";
@@ -16,13 +17,16 @@ import { loadLibrary } from "../../session/load-library";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { skillFigureId, skillLabel } from "../../session/skill-name";
 import { useProfileStore } from "../../state/profile-store";
+import { previousWeekRecapDue, useRecapStore } from "../../state/recap-store";
 import { useSessionStore } from "../../state/session-store";
+import { track } from "../../analytics/analytics";
 import { todaySessionState } from "../../state/today-session";
 import { useLifetimeOffer } from "../../state/use-lifetime-offer";
 import { todayTraining } from "../../state/today-training";
 import { useWeekView } from "../../state/week-view";
 import { StreakLine } from "./streak-line";
 import { WeekTile } from "./week-tile";
+import { PreviousWeekCard } from "./previous-week-card";
 
 // The home hub (ADR-0013 §4, rehung in ADR-0017; the week added by the
 // owner brief of 2026-09-07, wave 2): the app's face between sessions.
@@ -53,6 +57,9 @@ export function HomeScreen() {
   const historyEntries = useProfileStore((s) => s.history.entries);
   const session = useSessionStore((s) => s.session);
   const player = useSessionStore((s) => s.player);
+  const recapHydrated = useRecapStore((s) => s.hydrated);
+  const handledWeekStart = useRecapStore((s) => s.handledWeekStart);
+  const handleRecap = useRecapStore((s) => s.handle);
 
   const training = todayTraining(historyEntries, today);
   // The run she is on (ADR-0018): the engine's own count, read from the
@@ -66,6 +73,16 @@ export function HomeScreen() {
   const inFlight = todaySession === "inFlight";
   // The week she is in, against the intention she set (or none).
   const week = useWeekView();
+  const previousWeek = recapHydrated
+    ? previousWeekRecapDue(historyEntries, today, handledWeekStart)
+    : null;
+
+  const eligibilitySentFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!previousWeek || eligibilitySentFor.current === previousWeek.start) return;
+    eligibilitySentFor.current = previousWeek.start;
+    track("weekly_recap_eligible", { sessions: previousWeek.sessions });
+  }, [previousWeek]);
 
   const library = loadLibrary();
   // What she is working toward — the engine decides which milestone is
@@ -169,6 +186,21 @@ export function HomeScreen() {
             )}
           </View>
         </FadeIn>
+
+        {previousWeek && (
+          <PreviousWeekCard
+            sessions={previousWeek.sessions}
+            reduceMotion={reduceMotion}
+            onOpen={() => {
+              handleRecap(previousWeek.start);
+              router.push(`/recap?week=${previousWeek.start}&source=home`);
+            }}
+            onDismiss={() => {
+              handleRecap(previousWeek.start);
+              track("weekly_recap_dismiss", {});
+            }}
+          />
+        )}
 
         <View style={styles.week}>
           <WeekTile
