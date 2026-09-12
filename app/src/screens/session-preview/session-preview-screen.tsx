@@ -16,7 +16,7 @@ import { needsCareMoment } from "../../lib/care-moment";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { loadLibrary } from "../../session/load-library";
 import { sessionParagraph } from "../../session/session-facts";
-import { useCareNoteStore } from "../../state/care-note-store";
+import { careMomentDue, useCareNoteStore } from "../../state/care-note-store";
 import { useSessionStore } from "../../state/session-store";
 
 interface SessionPreviewScreenProps {
@@ -35,11 +35,23 @@ export function SessionPreviewScreen({
   const prompt = useSessionStore((state) => state.prompt);
   const prepareSessionEdit = useSessionStore((state) => state.prepareSessionEdit);
   const appendCareNote = useCareNoteStore((state) => state.append);
+  const markCareMomentShown = useCareNoteStore(
+    (state) => state.markCareMomentShown,
+  );
   const [careNoteText, setCareNoteText] = useState("");
   // The care moment is its own beat (owner review 2026-09-07: never two
   // headlines on one screen): acknowledged or skipped once, then the
-  // ordinary preview.
-  const [careDone, setCareDone] = useState(false);
+  // ordinary preview. "Once" spans the whole day and BOTH screens that
+  // can open with it — the daily prompt's dead end may already have
+  // shown it before the engine built this session (owner report
+  // 2026-09-12), so the memory is the care-note store's, keyed by the
+  // session's own date: the same local date this screen stamps her note
+  // with. Read above the early return — hooks never move.
+  const careSessionDate = session?.date ?? null;
+  const careMomentStillDue = useCareNoteStore(
+    (state) =>
+      careSessionDate !== null && careMomentDue(state, careSessionDate),
+  );
 
   // session_preview (ADR-0024): a built session was on screen, once per
   // session, whatever she does next. Above the early return: hooks
@@ -84,7 +96,7 @@ export function SessionPreviewScreen({
     onStart();
   };
 
-  if (care && !careDone) {
+  if (care && careMomentStillDue) {
     return (
       <Screen>
         <View style={styles.careMark}>
@@ -110,8 +122,10 @@ export function SessionPreviewScreen({
             testID="care-continue"
             label={strings.care.continue}
             onPress={() => {
+              // The note saves exactly as before, then the day
+              // remembers the beat: neither screen asks again today.
               saveCareNote();
-              setCareDone(true);
+              markCareMomentShown(session.date);
             }}
           />
           <QuietButton
@@ -119,7 +133,7 @@ export function SessionPreviewScreen({
             label={strings.care.skip}
             onPress={() => {
               setCareNoteText("");
-              setCareDone(true);
+              markCareMomentShown(session.date);
             }}
           />
         </View>

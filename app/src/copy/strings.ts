@@ -148,8 +148,49 @@ export const strings = {
     // Hub and Progress, compact. Hyphenated compound, so 1 reads cleanly.
     label: (days: number) => `${days}-day streak`,
     best: (days: number) => (days === 1 ? "Best: 1 day" : `Best: ${days} days`),
-    // Under the label once this run's one rest day is spent. "Taken", as
-    // in hers to take — a fact, not a warning that the next one counts.
+    // COPY-WRITER (2026-09-12, owner decision, approved mockup): the ONE
+    // caption line under the Progress streak tile's numeral, carrying both
+    // facts where `label` and `best` used to stack two lines. Two lines made
+    // the pair lopsided beside the points tile's single "points"; one line
+    // per tile is what the mockup always had.
+    //
+    // The numeral above is the current run, so this line never repeats it:
+    // "day streak" is the bare unit, the same shape and the same lower case
+    // as the points tile's `finish.pointsUnit`. The compound is invariant, so
+    // a run of 1 reads "1 / day streak" and needs no singular guard.
+    //
+    // `best` is only named when it is a HIGHER number than the run, because
+    // that is the only case where it is a fact she cannot already read off
+    // the numeral. When her best IS this run (every day she extends her
+    // record, which for a new user is most days) the line is the unit alone:
+    // honest, and it keeps the proudest case free of a duplicated number.
+    // No superlative there either ("your best yet" every other day stops
+    // meaning anything, and at a run of 1 it is hollow); the finish screen
+    // owns pride, this tile is a readout. Numerals on both halves, as the
+    // mockup reads and as the other counted captions do. Middle dot, not a
+    // dash (owner rule).
+    //
+    // It must never name a run that ended, a gap, or what a missed day would
+    // cost: no "was 9", no "9 to beat", no "best ever". The best is a thing
+    // she has done, never a target set for her.
+    //
+    // VOICE-OVER NOTE for the callsite: StatTile speaks only the
+    // accessibilityLabel the caller builds, never the numeral, so this line
+    // must not be the spoken reading on its own ("day streak · best 9" has
+    // no count in it). Keep the spoken label built from `streak.title` plus
+    // `label(current)` plus `best(best)` when best is higher. Both those
+    // keys stay live for that, and for the hub (home/streak-line.tsx).
+    tileCaption: (days: number, best: number) =>
+      best > days ? `day streak · best ${best}` : "day streak",
+    // RETIRED (COPY-WRITER 2026-09-12, owner: "rest-day taken is
+    // unnecessary"). It was the third caption line on the Progress streak
+    // tile, which made the two stat tiles lopsided, and it reported a
+    // mechanic she never asked about. Progress is its only callsite
+    // (progress-screen.tsx streakLines, plus two assertions in
+    // progress-screen.test.tsx), so this key is dead copy the moment the
+    // ui-engineer drops that line and its tests. Do not render it
+    // anywhere new, and do not replace it with a warmer version: the rest
+    // day needs no caption at all.
     restDayUsed: "Rest day taken.",
     // Hub, streak alive, nothing trained yet today. Names what today does,
     // never what a miss would cost.
@@ -363,10 +404,92 @@ export const strings = {
     begin: "Begin",
     setDone: "Done",
     skipBlock: "Skip exercise",
+    // COPY-WRITER (2026-09-12, owner decision: the skip confirmation screen
+    // is deleted). The quiet skip button is now a two-tap control. At rest
+    // it reads `skipBlock`; the first tap swaps in this label, the second
+    // tap skips, and the button returns to `skipBlock` by itself after a
+    // few seconds. No dialog, no paragraph, nothing else on screen moves.
+    //
+    // This label is therefore the ONLY warning she gets, which is why it
+    // spends a fourth word: it names the exact gesture that does the thing
+    // ("again") and the thing itself ("skip"), so the consequence of the
+    // second tap cannot be misread. Shorter candidates all lost something
+    // load-bearing: "Tap to skip" does not say a second tap, "Again to
+    // skip" is not a sentence, "Skip: tap again" reads like an app
+    // explaining itself rather than a coach.
+    //
+    // What it must never become: a countdown ("Tap again within 3 seconds",
+    // "3..."), because the disarm is a convenience, never a clock she is
+    // racing; a threat or a cost ("You'll lose this exercise", "This won't
+    // count"), because skipping costs her nothing and a warning label is
+    // the worst possible place to imply otherwise; a question ("Sure?"),
+    // because the deleted screen was the question and the owner rejected
+    // it twice; or a plea ("Keep going?"), because the armed state must not
+    // argue with her. It states the gesture and stops.
+    skipBlockArmed: "Tap again to skip",
+    // COPY-WRITER (2026-09-12, owner decision, owner's own phrase): the
+    // brief toast after a skip lands, a couple of seconds, then gone. It
+    // confirms what happened by naming where she is now, which is all a
+    // toast can usefully do. Forward only: it never congratulates her for
+    // skipping (nothing was achieved) and never marks it as a loss
+    // (nothing was). It does not name the movement she skipped, so the
+    // line never reads as a record of what she did not do.
+    //
+    // `skipped` is the owner's wording verbatim, with the full stop the
+    // sentence already had; it survives the voice filter unchanged.
+    // `skippedLast` exists because the toast also fires on the final
+    // exercise, where "the next one" would be false: the only thing after
+    // it is the close of the session. It states that plainly, in the past
+    // tense, and claims nothing about the session itself. The finish
+    // screen that follows owns the honest close (finish.endedEarly.note /
+    // finish.nothingDone.note) and may say "Today didn't fit", so this
+    // line must never imply completion ("All done", "That's the session
+    // complete") and never imply a shortfall either.
+    skipped: "Onto the next one.",
+    skippedLast: "That was the last one.",
     repsLabel: "reps",
     holdLabel: "seconds",
     rest: "Rest",
     restNote: "Breathe.",
+    // COPY-WRITER (2026-09-12, owner decision: the rest screen loses both
+    // its buttons). The rest has always counted itself down and started the
+    // next set by itself (player-machine: rest ticks to zero and work
+    // begins), so "I'm ready" and the quiet skip were offering her a tap for
+    // something already on its way. This one quiet line at the foot of the
+    // screen replaces them: a promise being kept, stated once.
+    //
+    // Deliberately the same "starts on its own" as `player.autoStart` and
+    // `player.sides.autoStart`, so the three hand-offs in the session speak
+    // one phrase and she learns it once. Its own key, because this slot has
+    // no seconds in it: the big numeral above is already the count, and
+    // repeating it in words would turn a reassurance into a clock. The next
+    // set is the grammatical subject, not the object, because the subject is
+    // the true one here: the set arrives, she does nothing. Rest only ever
+    // precedes another set of the same movement (the last set goes straight
+    // to the feedback question, no trailing rest), so "the next set" is
+    // always true and never has to guard a final case.
+    //
+    // What it must never become: a countdown or anything with "in", "left"
+    // or "remaining" (the numeral is the clock; this line is the promise, and
+    // `countdown` refuses "left" for the same reason); an instruction or any
+    // imperative ("Get ready", "Stay down", "Breathe until it starts") — she
+    // is breathing, and this line asks nothing of her; permission framing
+    // ("No need to tap", "You can just rest"), which names the buttons that
+    // were removed and hands her back the decision the owner took away; or a
+    // nudge out of the rest ("Almost time", "Nearly there"). It states what
+    // happens next and stops.
+    restAutoStart: "The next set starts on its own.",
+    // DEAD (COPY-WRITER 2026-09-12, owner decision: the rest screen shows no
+    // buttons). This was the outlined "I'm ready" that ended the rest early.
+    // Its one and only callsite is the rest phase (player-phases.tsx
+    // RestPhase, `player-end-rest`); no test and no other screen reads it,
+    // so it is dead copy the moment the ui-engineer drops that button.
+    // `player.skipBlock` above is NOT dead: the same rest screen stops
+    // rendering it, but the block intro and the work phase still do.
+    // Do not revive this label anywhere: ending the rest early is still
+    // allowed by the machine, but it is no longer something the screen asks
+    // her to decide, and a button that says she is ready would put the
+    // decision back on the calmest screen in the app.
     restDone: "I'm ready",
     // COPY-WRITER (2026-09-08, owner decision): the recorded voice counts
     // down the last five seconds of every timed hold and every rest. Five
@@ -455,11 +578,25 @@ export const strings = {
         hard: "Hard today",
       },
     },
-    // COPY-WRITER: one calm confirm when she taps the quiet exit on a
-    // block — shown in every active phase, never a lecture. The body is
-    // honest AND mechanically true (ADR-0012 §1: skip is progression-
-    // neutral): it doesn't count as completed, it also costs her nothing,
-    // and it is never mentioned again afterwards.
+    // DEAD (COPY-WRITER 2026-09-12, owner decision: the skip confirmation
+    // screen is deleted, rejected twice). All four keys below are dead copy
+    // the moment the ui-engineer removes that phase. Replaced by the
+    // two-tap control above: `skipBlockArmed` carries the warning,
+    // `skipped` / `skippedLast` carry the confirmation. Kept, not deleted,
+    // until player-phases.tsx and session-player-screen.test.tsx stop
+    // reading the key shape.
+    //
+    // The old body's reassurance ("it won't set you back") is NOT moved
+    // anywhere. It is still true of progression (ADR-0012 §1: skip is
+    // progression-neutral) but it is no longer true without qualification:
+    // a skipped block is not training for the day streak (ADR-0018), so a
+    // session she skips end to end does not count as a training day. A
+    // one-line reassurance cannot hold both facts, and the screen that had
+    // room for the distinction is the screen being deleted. The honest
+    // close still says what is kept, after the fact and without a claim:
+    // finish.endedEarly.note, "Everything you completed is saved. It
+    // counts." Do not revive any of these four strings as a caption, a
+    // subtitle under the armed button, or a first-skip one-time note.
     skipConfirm: {
       title: (movement: string) => `Skip ${movement}?`,
       body: "It won't count as completed, and it won't set you back. Either way is fine.",
@@ -1505,14 +1642,32 @@ export const strings = {
       // named the earned list, not the one ahead. Capability framing:
       // it is a skill she reaches, never a goal she is behind on.
       nextTitle: "Next skill",
-      // Forward-looking, zero guilt: says where skills come from,
-      // never when, and never what's absent. "counts" echoes
-      // finish.note ("That counts.").
-      empty: "Named skills land here as you reach new tiers. Every session counts toward the first.",
-      // COPY-WRITER TO REVIEW (ui-engineer, 2026-09-07): the name of a
-      // milestone when the movement library is absent (a degraded build
-      // only). Says the ladder and the rung in her own vocabulary
-      // ("Push", "Tier 4 of 6") instead of a raw pattern id.
+      // COPY-WRITER (2026-09-12, owner): one line UNDER the named skill in
+      // the Progress next-skill tile, shown until her first skill lands.
+      // It says what the climb is made of, in the engine's real terms:
+      // three clean sessions per tier (CLEAN_SESSIONS_TO_ADVANCE), clean
+      // meaning she finished and did not answer "Hard today"
+      // (player.feedback.options.hard). Scales honestly whether the skill
+      // is one tier ahead or five: it prices ONE tier, she can do the
+      // arithmetic.
+      //
+      // What it must never become: a description of the tile. The figure,
+      // the eyebrow ("2 tiers ahead") and the skill's name are already on
+      // screen, so never name the skill, never restate the distance,
+      // never explain that skills "land here as you reach new tiers" —
+      // that was the line the owner called slop, and it explained the
+      // interface where a fact about her training belongs. Also never
+      // promise a date or a number of weeks: advancement also waits on
+      // ADR-0008's time floor, which this line deliberately does not
+      // price. "takes" states what is needed, never "and then you're up".
+      // No "in a row", no "keep it up": three sessions, stated plainly,
+      // so there is nothing here she can be told she broke.
+      empty: "Every tier takes three sessions that don't feel hard.",
+      // COPY-WRITER (reviewed 2026-09-12): the name of a milestone when
+      // the movement library is absent (a degraded build only). Says the
+      // ladder and the rung in her own vocabulary ("Push", "Tier 4 of 6")
+      // instead of a raw pattern id. Approved as written: it is a fact,
+      // not an apology, and it must never become an error message.
       unnamed: (pattern: string, tier: string) => `${pattern}, ${tier}`,
     },
     points: {

@@ -45,14 +45,31 @@ const ORDER = { streak: 0, points: 1, skills: 2, patterns: 3 } as const;
 
 /**
  * The soft lines under the streak numeral, each an existing string: the
- * run and her best while a run is alive (plus the spent rest day when
- * it is), or how one begins when none is.
+ * run and her best while a run is alive, or how one begins when none is.
+ *
+ * The spent rest day used to be a third line here. The owner cut it
+ * (2026-09-12, device pass: "rest-day taken is unnecessary"): it told
+ * her nothing she could act on, and a third line beside the points
+ * tile's one made the pair lopsided. `streak.restDayUsed` is retired,
+ * not deleted; nothing renders it.
  */
 function streakLines(streak: StreakState): string[] {
   if (streak.current === 0) return [strings.streak.none];
-  const lines = [strings.streak.label(streak.current), strings.streak.best(streak.best)];
-  if (streak.graceUsed) lines.push(strings.streak.restDayUsed);
-  return lines;
+  return [strings.streak.tileCaption(streak.current, streak.best)];
+}
+
+/**
+ * What VoiceOver says for the streak tile. NOT the visible caption: the
+ * tile shows one line beside the numeral, and StatTile speaks only this
+ * label and never the numeral itself, so reading the caption aloud would
+ * lose the count entirely ("Streak. day streak, best 9"). The spoken
+ * reading keeps the full sentences.
+ */
+function streakSpoken(streak: StreakState): string {
+  if (streak.current === 0) return [strings.streak.title, strings.streak.none].join(". ");
+  const parts = [strings.streak.title, strings.streak.label(streak.current)];
+  if (streak.best > streak.current) parts.push(strings.streak.best(streak.best));
+  return parts.join(". ");
 }
 
 export function ProgressScreen() {
@@ -93,7 +110,7 @@ export function ProgressScreen() {
             tone="accent"
             order={ORDER.streak}
             reduceMotion={reduceMotion}
-            accessibilityLabel={[strings.streak.title, ...streakText].join(". ")}
+            accessibilityLabel={streakSpoken(streak)}
             testID="progress-streak"
           />
           {/* Points are a record of work done, never a balance

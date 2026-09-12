@@ -15,6 +15,17 @@ interface QuietButtonProps {
    * enough never to compete with the screen's one decision.
    */
   outlined?: boolean;
+  /**
+   * The second state of a two-tap control — the player's skip (owner
+   * decision 2026-09-12, after the confirmation screen was deleted). The
+   * same quiet button, visibly changed: the accentSoft fill this product
+   * already uses for a chosen row (row-button, area-grid, plan-row) with
+   * the label in the accent. It reads as changed from the floor without a
+   * new colour and without becoming the loudest thing on the screen. The
+   * caller swaps the label too — the look alone never carries the
+   * meaning.
+   */
+  armed?: boolean;
 }
 
 /** A deliberately quiet text action (skip, secondary paths). Never competes. */
@@ -23,6 +34,7 @@ export function QuietButton({
   onPress,
   testID,
   outlined = false,
+  armed = false,
 }: QuietButtonProps) {
   const colors = useTheme();
   return (
@@ -37,10 +49,14 @@ export function QuietButton({
         // vanished exactly where it is used (reviewer should-fix). The
         // accent hairline is 3:1+ on wash, surface and bone alike.
         outlined && [styles.outlined, { borderColor: colors.accent }],
+        armed && [
+          styles.outlined,
+          { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+        ],
         { opacity: pressed ? 0.6 : 1 },
       ]}
     >
-      <AppText variant="body" color={colors.inkSoft}>
+      <AppText variant="body" color={armed ? colors.accent : colors.inkSoft}>
         {label}
       </AppText>
     </Pressable>

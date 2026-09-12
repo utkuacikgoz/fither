@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import type { BodyArea } from "@fither/engine";
 
@@ -43,10 +42,19 @@ export function PromptError({ onRetry }: PromptErrorProps) {
 }
 
 interface PromptNoSessionProps {
-  /** Lead with care: body areas were part of what the engine refused. */
+  /**
+   * Lead with care: body areas were part of what the engine refused AND
+   * the moment has not been shown yet today. Both halves are the
+   * screen's to decide — the threshold from lib/care-moment, the
+   * once-a-day memory from the care-note store — so this component never
+   * holds a flag of its own (owner report 2026-09-12: the beat and its
+   * note field could appear twice in one pass through the flow).
+   */
   care: boolean;
   careNoteText: string;
   onChangeCareNote: (text: string) => void;
+  /** The beat was dismissed, whichever way she dismissed it. */
+  onCareDismissed: () => void;
   /** How many areas today's session had to work around, in total. */
   areaCount: number;
   /** Areas which, set aside alone for today, let the engine build. */
@@ -65,6 +73,7 @@ export function PromptNoSession({
   care,
   careNoteText,
   onChangeCareNote,
+  onCareDismissed,
   areaCount,
   unblocking,
   onSetAside,
@@ -72,9 +81,8 @@ export function PromptNoSession({
 }: PromptNoSessionProps) {
   const colors = useTheme();
   const reduceMotion = useReducedMotion();
-  const [careDone, setCareDone] = useState(false);
 
-  if (care && !careDone) {
+  if (care) {
     return (
       <>
         <View style={styles.careMark}>
@@ -107,7 +115,7 @@ export function PromptNoSession({
               // care_note: whether a note stays on the phone — never
               // the note. Continue with an empty field kept nothing.
               track("care_note", { saved: careNoteText.trim().length > 0 });
-              setCareDone(true);
+              onCareDismissed();
             }}
           />
           <QuietButton
@@ -116,7 +124,7 @@ export function PromptNoSession({
             onPress={() => {
               track("care_note", { saved: false });
               onChangeCareNote("");
-              setCareDone(true);
+              onCareDismissed();
             }}
           />
         </View>

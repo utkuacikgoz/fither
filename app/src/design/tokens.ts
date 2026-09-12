@@ -160,6 +160,12 @@ export const glyph = {
 // ease-out envelope. Reduce Motion renders the final state instead.
 export const motion = {
   fadeMs: 300,
+  /**
+   * How long a toast stays before it fades itself out. Long enough to
+   * read four words mid-session without looking away from the floor,
+   * short enough that it is gone before the next set begins.
+   */
+  toastMs: 2200,
   /** Gap between staggered siblings (cards entering a screen). */
   staggerMs: 70,
   /** How far an entering element rises, in points. Small on purpose. */

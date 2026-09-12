@@ -13,9 +13,9 @@ import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { ProgressLine } from "../../design/primitives/progress-line";
-import { QuietButton } from "../../design/primitives/quiet-button";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { Screen } from "../../design/primitives/screen";
+import { Toast } from "../../design/primitives/toast";
 import { minTouchTarget, motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import {
@@ -27,7 +27,7 @@ import {
 } from "../../session/player-machine";
 import { useSessionStore } from "../../state/session-store";
 import { speakCue, stopVoice } from "../../session/voice";
-import { FeedbackPhase, RestPhase, SideSwitchPhase, SkipConfirmPhase } from "./player-phases";
+import { FeedbackPhase, RestPhase, SideSwitchPhase, SkipControl } from "./player-phases";
 import { useSettingsStore } from "../../state/settings-store";
 import { announcementKey, countdownLine, phaseAnnouncement, workCue } from "./announcements";
 
@@ -37,13 +37,30 @@ import { announcementKey, countdownLine, phaseAnnouncement, workCue } from "./an
 /**
  * On a block intro she sees the movement first; the quiet exit appears
  * only after this long (2026-09-01 live-testing pass). UI pacing only —
- * no session rule hangs off this number. Work and rest keep their skip
- * visible from the start, unchanged.
+ * no session rule hangs off this number. The work phase and the side
+ * switch keep their exit visible from the start; the rest has none at all
+ * (owner decision 2026-09-12).
  */
 // The quiet exit must be visible for most of the intro, not flash up
 // just before the hand-off starts the work (INTRO_SECONDS = 15): at
 // eight seconds it appeared with two to spare.
 export const SKIP_REVEAL_DELAY_MS = 3000;
+
+/**
+ * The quiet exit is a two-tap control (owner decision 2026-09-12: the
+ * skip confirmation screen was rejected twice and deleted). After the
+ * first tap it waits this long for the second, then returns to rest on
+ * its own.
+ *
+ * Four seconds, chosen between two hard edges: far longer than a double
+ * tap or a fumbled thumb (iOS treats ~0.3s as one gesture, so this is an
+ * order of magnitude clear of an accidental second tap), and clearly
+ * shorter than the intro's own 15-second hand-off, so an armed button can
+ * never still be sitting there when the work starts by itself. It is a
+ * convenience, never a clock she is racing — nothing counts down on
+ * screen, and re-arming costs one tap.
+ */
+export const SKIP_ARM_TIMEOUT_MS = 4000;
 
 interface SessionPlayerScreenProps {
   onFinished: () => void;
@@ -54,7 +71,6 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const player = useSessionStore((s) => s.player);
   const dispatchPlayer = useSessionStore((s) => s.dispatchPlayer);
   const reconcileTimer = useSessionStore((s) => s.reconcileTimer);
-  const rebaseCountdown = useSessionStore((s) => s.rebaseCountdown);
   const reduceMotion = useReducedMotion();
   // The voice setting ALONE decides whether the cue is spoken. Quiet
   // movements and the coaching voice are separate (owner brief
@@ -67,20 +83,38 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
   const finished = player !== null && isFinished(player);
 
   // Which block intro we're on, or null outside intros. Drives the skip
-  // reveal timer and resets the confirm when the intro changes.
+  // reveal timer.
   const introBlockIndex =
     player !== null && player.phase.kind === "blockIntro"
       ? player.phase.blockIndex
       : null;
   const [introSkipVisible, setIntroSkipVisible] = useState(false);
-  const [confirmingSkip, setConfirmingSkip] = useState(false);
+  // The quiet exit's two-tap state, and the one line she gets after a
+  // skip lands. Both are presentation only: the machine records the skip
+  // the moment the second tap dispatches, and nothing ever waits on the
+  // toast.
+  const [skipArmed, setSkipArmed] = useState(false);
+  const [skipToast, setSkipToast] = useState<string | null>(null);
 
-  const confirmSkip = () => {
+  const pressSkip = () => {
+    if (!skipArmed) {
+      setSkipArmed(true);
+      return;
+    }
+    setSkipArmed(false);
     // A skipped block keeps no voice: the cue must not talk over the
     // next block's intro.
     stopVoice();
     dispatchPlayer({ type: "skipBlock" });
-    setConfirmingSkip(false);
+    // Which line she gets is the MACHINE's answer, not arithmetic here:
+    // a skip that leaves the machine finished was the last block. The
+    // view never counts blocks to decide it.
+    const after = useSessionStore.getState().player;
+    setSkipToast(
+      after !== null && isFinished(after)
+        ? strings.player.skippedLast
+        : strings.player.skipped,
+    );
   };
 
   // Leaving the session (finish, or the OS swiping it away) releases
@@ -89,7 +123,6 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
   useEffect(() => {
     setIntroSkipVisible(false);
-    setConfirmingSkip(false);
     if (introBlockIndex === null) return;
     const timer = setTimeout(
       () => setIntroSkipVisible(true),
@@ -98,25 +131,26 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     return () => clearTimeout(timer);
   }, [introBlockIndex]);
 
+  // One tick per second whenever the MACHINE says the phase counts
+  // (isCountingDown — intros and the side-switch hand-off included).
+  // Nothing in the UI pauses it any more: the skip is a control in place,
+  // so there is no screen sitting on top of the session holding its
+  // clock.
   useEffect(() => {
-    if (!counting || confirmingSkip) return;
+    if (!counting) return;
     const interval = setInterval(() => dispatchPlayer({ type: "tick" }), 1000);
     return () => clearInterval(interval);
-  }, [confirmingSkip, counting, dispatchPlayer]);
+  }, [counting, dispatchPlayer]);
 
   useEffect(() => {
     // Native timers pause or drift while the app is backgrounded. The
-    // persisted wall-clock deadline is authoritative when we return —
-    // except while the skip confirm holds the count: reconciling then
-    // would eat the pause the confirm promised. The rebase on "Keep
-    // going" re-anchors the deadline the moment the pause ends.
-    if (confirmingSkip) return;
+    // persisted wall-clock deadline is authoritative when we return.
     reconcileTimer();
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") reconcileTimer();
     });
     return () => subscription.remove();
-  }, [confirmingSkip, reconcileTimer]);
+  }, [reconcileTimer]);
 
   useEffect(() => {
     if (finished) onFinished();
@@ -124,14 +158,13 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
 
   // VoiceOver hears each phase TRANSITION exactly once (audit P0 #6):
   // the key ignores countdown seconds, so ticks and re-renders repeat a
-  // key and stay silent. While the skip confirm is open nothing is
-  // announced — its copy owns the screen; "Keep going" returns to the
-  // same key, so nothing repeats, and a confirmed skip lands on the next
-  // block's fresh key.
+  // key and stay silent. Arming the quiet exit is not a transition — the
+  // key is unchanged, so nothing is re-announced; the skip itself lands
+  // on the next block's fresh key.
   const phaseKey = player === null ? null : announcementKey(player);
   const announcedKey = useRef<string | null>(null);
   useEffect(() => {
-    if (phaseKey === null || confirmingSkip) return;
+    if (phaseKey === null) return;
     if (announcedKey.current === phaseKey) return;
     announcedKey.current = phaseKey;
     const announcement =
@@ -150,22 +183,57 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     // player is intentionally read, not depended on: ticks change it
     // without changing the position the key names.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmingSkip, phaseKey, voiceOn]);
+  }, [phaseKey, voiceOn]);
+
+  // An armed exit never carries over: the moment the machine moves to
+  // another phase — her tap, a hand-off, a countdown running out — the
+  // button is back at rest, so a tap meant for the set she just left can
+  // never skip the next exercise or the next set. Keyed on the machine
+  // POSITION, so a countdown tick does not disarm it.
+  useEffect(() => {
+    setSkipArmed(false);
+  }, [phaseKey]);
+
+  // ...and it disarms itself if the second tap never comes.
+  useEffect(() => {
+    if (!skipArmed) return;
+    const timer = setTimeout(() => setSkipArmed(false), SKIP_ARM_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [skipArmed]);
 
   // The last five seconds of a rest or a timed hold, counted down by the
   // voice (owner decision 2026-09-08): one line per second, the five a
   // warning. Spoken only — VoiceOver keeps its one announcement per
   // transition (audit P0 #6). Keyed on the line and the position, so a
-  // re-render inside one second never repeats it, and the paused count
-  // under the skip confirm says nothing.
-  const countdown = player === null || confirmingSkip ? null : countdownLine(player);
+  // re-render inside one second never repeats it.
+  const countdown = player === null ? null : countdownLine(player);
   useEffect(() => {
     if (countdown === null || !voiceOn) return;
     void speakCue(countdown);
   }, [countdown, phaseKey, voiceOn]);
 
+  // The skip's one line, over whatever phase she is on. It is a
+  // confirmation, never a decision: it takes no touches, nothing waits on
+  // it, and it leaves by itself well before the next exercise starts.
+  const skipToastLayer = (
+    <View
+      style={styles.toastLayer}
+      pointerEvents="none"
+      testID="player-toast-layer"
+    >
+      <Toast
+        testID="player-toast"
+        message={skipToast}
+        reduceMotion={reduceMotion}
+        onHidden={() => setSkipToast(null)}
+      />
+    </View>
+  );
+
   if (!player || player.phase.kind === "done") {
-    return <Screen>{null}</Screen>;
+    // Skipping the LAST block lands here: her line stays up over the
+    // closing player while the finish screen takes over.
+    return <Screen>{skipToastLayer}</Screen>;
   }
 
   const { phase } = player;
@@ -183,21 +251,6 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
         reduceMotion={reduceMotion}
       />
 
-      {confirmingSkip && (
-        <SkipConfirmPhase
-          blockName={block.name}
-          onKeepGoing={() => {
-            // The confirm paused the visible count; re-anchor the
-            // wall-clock deadline so the seconds she saw are the seconds
-            // she gets (audit polish — the stale deadline would eat the
-            // pause on the next reconcile).
-            rebaseCountdown();
-            setConfirmingSkip(false);
-          }}
-          onSkip={confirmSkip}
-        />
-      )}
-
       {/* The one line of chrome inside a session (ADR-0017): which
           movement, and where she is in it — never a header, never a bar.
           At floor distance (the work phase, mockup player-work-floor) the
@@ -214,7 +267,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
         </AppText>
       </View>
 
-      {phase.kind === "blockIntro" && !confirmingSkip && (
+      {phase.kind === "blockIntro" && (
         <>
           {/* The setup reading scrolls at large Dynamic Type sizes: the
               name + full cue sequence is the one unbounded text stack in
@@ -265,11 +318,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
             />
             {introSkipVisible ? (
               <FadeIn reduceMotion={reduceMotion}>
-                <QuietButton
-                  testID="player-skip"
-                  label={strings.player.skipBlock}
-                  onPress={() => setConfirmingSkip(true)}
-                />
+                <SkipControl armed={skipArmed} onPress={pressSkip} />
               </FadeIn>
             ) : (
               // Reserve the quiet control's space so Begin never jumps
@@ -280,7 +329,7 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
         </>
       )}
 
-      {phase.kind === "work" && !confirmingSkip && (
+      {phase.kind === "work" && (
         <>
           <View style={styles.center}>
             <MovementFigure
@@ -338,41 +387,38 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
                 onPress={() => dispatchPlayer({ type: "advance" })}
               />
             )}
-            <QuietButton
-              testID="player-skip"
-              label={strings.player.skipBlock}
-              onPress={() => setConfirmingSkip(true)}
-            />
+            <SkipControl armed={skipArmed} onPress={pressSkip} />
           </View>
         </>
       )}
 
-      {phase.kind === "sideSwitch" && !confirmingSkip && (
+      {phase.kind === "sideSwitch" && (
         <SideSwitchPhase
           block={block}
           remainingSeconds={phase.remainingSeconds}
           reduceMotion={reduceMotion}
+          skipArmed={skipArmed}
           onAdvance={() => dispatchPlayer({ type: "advance" })}
-          onSkip={() => setConfirmingSkip(true)}
+          onSkip={pressSkip}
         />
       )}
 
-      {phase.kind === "rest" && !confirmingSkip && (
+      {phase.kind === "rest" && (
         <RestPhase
           remainingSeconds={phase.remainingSeconds}
           reduceMotion={reduceMotion}
-          onAdvance={() => dispatchPlayer({ type: "advance" })}
-          onSkip={() => setConfirmingSkip(true)}
         />
       )}
 
-      {phase.kind === "feedback" && !confirmingSkip && (
+      {phase.kind === "feedback" && (
         <FeedbackPhase
           block={block}
           reduceMotion={reduceMotion}
           onOutcome={(outcome) => dispatchPlayer({ type: "feedback", outcome })}
         />
       )}
+
+      {skipToastLayer}
     </Screen>
   );
 }
@@ -433,5 +479,20 @@ const styles = StyleSheet.create({
   },
   skipPlaceholder: {
     minHeight: minTouchTarget,
+  },
+  toastLayer: {
+    // The toast primitive lifts itself clear of a single quiet button;
+    // the player's tallest bottom stack is a primary button ABOVE the
+    // quiet exit (minTouchTarget + spacing.md, a gap, minTouchTarget, and
+    // the row's own padding = 128pt), which is taller than that lift. So
+    // the layer the toast lives in stops short of the controls instead of
+    // the primitive being special-cased for this screen: the line never
+    // covers the button she is reaching for. pointerEvents passes her
+    // touches straight through the layer to the phase underneath.
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: spacing.xxl,
   },
 });
