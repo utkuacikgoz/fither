@@ -10,59 +10,39 @@ import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { RowButton } from "../../design/primitives/row-button";
 import { useTheme } from "../../design/theme";
-import { hairline, motion, radius, spacing } from "../../design/tokens";
+import { motion, spacing } from "../../design/tokens";
 import type { PlayerBlock } from "../../session/player-machine";
 
-// The player's quiet phases — skip confirm, side switch, rest, feedback — split
-// out of session-player-screen.tsx (brief rule: a screen over 400 lines
-// is split). Behaviour unchanged: the screen owns the machine and the
-// skip confirm; these render a phase and hand back her taps.
+// The player's quiet phases — side switch, rest, feedback — split out of
+// session-player-screen.tsx (brief rule: a screen over 400 lines is
+// split). The screen owns the machine; these render a phase and hand back
+// her taps.
 
-interface SkipConfirmPhaseProps {
-  blockName: string;
-  onKeepGoing: () => void;
-  onSkip: () => void;
+interface SkipControlProps {
+  /** True after the first tap: the next tap skips. */
+  armed: boolean;
+  onPress: () => void;
 }
 
 /**
- * One calm confirm, centred (ADR-0017; owner, device pass 2026-09-09 —
- * pinned to the bottom it left a screen of dead black above it and read
- * as an afterthought). The question, the honest line, keeping going as
- * the filled, safe default. The phase behind it is not drawn: the card
- * is the whole decision, so it sits where the eye already is.
+ * The quiet exit, in place (owner decision 2026-09-12, after the skip
+ * confirmation screen was rejected twice and deleted): two taps, no
+ * dialog, nothing else on the screen moves. The first tap arms it and
+ * swaps the label; the second skips. One component so all four phases
+ * that carry the exit — block intro, work, side switch, rest — read and
+ * behave identically. The screen owns the armed state and its disarm,
+ * because only the screen knows when the phase changed underneath it.
  */
-export function SkipConfirmPhase({ blockName, onKeepGoing, onSkip }: SkipConfirmPhaseProps) {
-  const colors = useTheme();
+export function SkipControl({ armed, onPress }: SkipControlProps) {
   return (
-    <View style={styles.confirmStage}>
-      <View
-        style={[styles.confirmCard, { backgroundColor: colors.surface, borderColor: colors.line }]}
-        testID="player-skip-card"
-      >
-        {/* Two groups, not one even stack (owner feedback 2026-09-08:
-            title, line and buttons sat at one rhythm and read as
-            crowded): the question with its line, a section gap, then
-            the two answers. */}
-        <View style={styles.confirmText}>
-          <AppText variant="title" accessibilityRole="header">
-            {strings.player.skipConfirm.title(blockName)}
-          </AppText>
-          <AppText variant="bodySoft">{strings.player.skipConfirm.body}</AppText>
-        </View>
-        <View style={styles.confirmActions}>
-          <PrimaryButton
-            testID="player-skip-keep"
-            label={strings.player.skipConfirm.keepGoing}
-            onPress={onKeepGoing}
-          />
-          <QuietButton
-            testID="player-skip-confirm"
-            label={strings.player.skipConfirm.skipIt}
-            onPress={onSkip}
-          />
-        </View>
-      </View>
-    </View>
+    <QuietButton
+      testID="player-skip"
+      armed={armed}
+      // The label IS the warning she gets, so it changes with the state:
+      // VoiceOver reads the same two words the eye does.
+      label={armed ? strings.player.skipBlockArmed : strings.player.skipBlock}
+      onPress={onPress}
+    />
   );
 }
 
@@ -71,6 +51,8 @@ interface SideSwitchPhaseProps {
   /** Seconds until the right side starts on its own (the hand-off). */
   remainingSeconds: number;
   reduceMotion: boolean;
+  /** The quiet exit's two-tap state, owned by the screen. */
+  skipArmed: boolean;
   onAdvance: () => void;
   onSkip: () => void;
 }
@@ -79,6 +61,7 @@ export function SideSwitchPhase({
   block,
   remainingSeconds,
   reduceMotion,
+  skipArmed,
   onAdvance,
   onSkip,
 }: SideSwitchPhaseProps) {
@@ -106,7 +89,7 @@ export function SideSwitchPhase({
           label={strings.player.sides.startRight}
           onPress={onAdvance}
         />
-        <QuietButton testID="player-skip" label={strings.player.skipBlock} onPress={onSkip} />
+        <SkipControl armed={skipArmed} onPress={onSkip} />
       </View>
     </>
   );
@@ -115,16 +98,17 @@ export function SideSwitchPhase({
 interface RestPhaseProps {
   remainingSeconds: number;
   reduceMotion: boolean;
-  onAdvance: () => void;
-  onSkip: () => void;
 }
 
-export function RestPhase({
-  remainingSeconds,
-  reduceMotion,
-  onAdvance,
-  onSkip,
-}: RestPhaseProps) {
+/**
+ * The rest has nothing to press (owner decision 2026-09-12, the version
+ * with neither button). It already counts down and starts the next set
+ * itself, so "I'm ready" and the quiet exit were both offering what was
+ * about to happen anyway. The skip lives on the block intro, the work
+ * phase and the side switch; a rest is at most a minute, and the next
+ * work phase brings it straight back.
+ */
+export function RestPhase({ remainingSeconds, reduceMotion }: RestPhaseProps) {
   const colors = useTheme();
   return (
     <>
@@ -150,14 +134,12 @@ export function RestPhase({
         <AppText variant="bodySoft">{strings.player.restNote}</AppText>
       </FadeIn>
       <View style={styles.bottom}>
-        {/* Outlined, not filled: the rest never nags her out of it. */}
-        <QuietButton
-          outlined
-          testID="player-end-rest"
-          label={strings.player.restDone}
-          onPress={onAdvance}
-        />
-        <QuietButton testID="player-skip" label={strings.player.skipBlock} onPress={onSkip} />
+        {/* Where the two buttons were: one soft line, centred, stating
+            what happens next. Not a control and never styled as one —
+            nothing on the calmest screen in the app asks her to decide. */}
+        <AppText variant="bodySoft" style={styles.restAutoStart} testID="player-rest-auto">
+          {strings.player.restAutoStart}
+        </AppText>
       </View>
     </>
   );
@@ -216,12 +198,6 @@ export function FeedbackPhase({ block, reduceMotion, onOutcome }: FeedbackPhaseP
 }
 
 const styles = StyleSheet.create({
-  confirmStage: {
-    // The confirm owns the screen while it is open: centred, not a card
-    // marooned at the bottom of a black field.
-    flex: 1,
-    justifyContent: "center",
-  },
   top: {
     marginTop: spacing.xl,
   },
@@ -251,17 +227,11 @@ const styles = StyleSheet.create({
   restNumeral: {
     marginTop: spacing.sm,
   },
-  confirmCard: {
-    borderWidth: hairline,
-    borderRadius: radius.card,
-    padding: spacing.lg,
-    gap: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  confirmText: {
-    gap: spacing.sm,
-  },
-  confirmActions: {
-    gap: spacing.xs,
+  restAutoStart: {
+    textAlign: "center",
+    // Breathing room where the two buttons stood, so the count above it
+    // is not left sitting on the bottom edge. No touch-target height: it
+    // is a line, not a control, and must not be sized like one.
+    paddingVertical: spacing.md,
   },
 });

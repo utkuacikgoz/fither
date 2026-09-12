@@ -6,6 +6,15 @@
 // delete them; the UI states "stays on your phone" because this file
 // makes it true. Entries are date-stamped, one per save; an edit changes
 // the text only — the date keeps saying when the heavy day was.
+//
+// This file also owns the day's memory of the care moment itself — which
+// local day the "that's a lot to carry" beat was already shown on. Two
+// screens can open with that beat (the daily prompt's can't-build dead
+// end and the session preview), and before this memory existed each kept
+// its own flag, so one heavy pass through the flow could ask for the same
+// note twice (owner report 2026-09-12). Whether the beat is warranted at
+// all stays where it was: lib/care-moment.ts. This store only remembers
+// that it already happened today.
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
@@ -32,6 +41,12 @@ interface CareNoteState {
   hydrationFailed: boolean;
   /** Oldest first. Appended, edited in place (text only) and deleted. */
   entries: CareNoteEntry[];
+  /**
+   * The local date (YYYY-MM-DD) the care moment was last shown AND
+   * dismissed, or null if never. Read through `careMomentDue`, written by
+   * `markCareMomentShown` — never by a screen directly.
+   */
+  careMomentShownDate: string | null;
   /** Append one entry. Buffered if hydration hasn't landed yet. */
   append: (entry: CareNoteInput) => void;
   /**
@@ -51,6 +66,41 @@ interface CareNoteState {
    * effect of saving. Updating what isn't there is a no-op too.
    */
   update: (entry: CareNoteEntry, text: string) => void;
+  /**
+   * The care moment was shown and dismissed on `date` — however she
+   * dismissed it (continued with a note, continued with an empty field,
+   * or skipped). Called by whichever screen showed it; the other screen
+   * then reads `careMomentDue` as false for the rest of that day.
+   */
+  markCareMomentShown: (date: string) => void;
+}
+
+/**
+ * Whether the care moment is still owed on `date` — the one rule both
+ * screens ask, so "at most once a day" cannot drift between them. A new
+ * day asks again by design: the beat belongs to a heavy day, not to an
+ * install.
+ *
+ * Pure over a state snapshot (like place-store's selectors), so it works
+ * as a subscription — `useCareNoteStore((s) => careMomentDue(s, date))`
+ * re-renders the screen the moment the beat is marked shown.
+ *
+ * Before hydration it fails SAFE toward NOT showing: a beat that is
+ * skipped on a cold launch costs her nothing, while showing it twice is
+ * exactly the bug this memory exists to prevent. A store whose storage
+ * ERRORED still answers from memory — within one run that is all the
+ * two screens need, and a broken disk must not bring the double ask
+ * back.
+ */
+export function careMomentDue(
+  state: Pick<
+    CareNoteState,
+    "hydrated" | "hydrationFailed" | "careMomentShownDate"
+  >,
+  date: string,
+): boolean {
+  if (!state.hydrated && !state.hydrationFailed) return false;
+  return state.careMomentShownDate !== date;
 }
 
 // Ids only need to be unique within this one on-device list. Wall-clock
@@ -65,6 +115,12 @@ function nextNoteId(date: string): string {
 // An append that beats hydration waits here instead of racing the
 // rehydrate merge (same pattern as the first-movement store).
 const pendingBeforeHydration: CareNoteEntry[] = [];
+
+// A "shown" mark that beats hydration waits here for the same reason.
+// Unreachable through the screens — careMomentDue answers "not due"
+// while unhydrated, so the beat is never on screen to dismiss — but a
+// mark is buffered rather than dropped: losing one would ask twice.
+let pendingShownDate: string | null = null;
 
 /**
  * The one target-matching rule, shared by remove and update so the two
@@ -86,6 +142,7 @@ export const useCareNoteStore = create<CareNoteState>()(
   persist(
     (set, get) => ({
       entries: [],
+      careMomentShownDate: null,
       hydrated: false,
       hydrationFailed: false,
 
@@ -126,11 +183,26 @@ export const useCareNoteStore = create<CareNoteState>()(
           ),
         });
       },
+
+      markCareMomentShown: (date) => {
+        const { hydrated, hydrationFailed } = get();
+        if (!hydrated && !hydrationFailed) {
+          pendingShownDate = date;
+          return;
+        }
+        set({ careMomentShownDate: date });
+      },
     }),
     {
       name: "fither/care-notes-v1",
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ entries: state.entries }),
+      // `careMomentShownDate` is additive, so the envelope version does
+      // NOT move: an older payload simply lacks the key, and an absent
+      // key means "never shown" — a heavy day still gets its one beat.
+      partialize: (state) => ({
+        entries: state.entries,
+        careMomentShownDate: state.careMomentShownDate,
+      }),
       // v0 → v1: entries gained stable ids for the journal's delete path.
       // Additive only — legacy notes keep their date and text untouched
       // and receive a deterministic id from their stored position.
@@ -140,15 +212,22 @@ export const useCareNoteStore = create<CareNoteState>()(
         const entries = (previous.entries ?? []).map((entry, index) =>
           entry.id === undefined ? { ...entry, id: `legacy:${index}` } : entry,
         );
-        return { entries };
+        // A v0 envelope predates the care-moment memory: nothing was
+        // shown as far as it knows, so today still gets its one beat.
+        return { entries, careMomentShownDate: null };
       },
       onRehydrateStorage: () => (_state, error) => {
         Promise.resolve().then(() => {
           const flushed = pendingBeforeHydration.splice(0);
+          const flushedShown = pendingShownDate;
+          pendingShownDate = null;
           useCareNoteStore.setState((state) => ({
             hydrated: !error,
             hydrationFailed: Boolean(error),
             entries: [...state.entries, ...flushed],
+            // A mark made in THIS run wins over the stored one: it is
+            // the day the beat was actually just shown on.
+            careMomentShownDate: flushedShown ?? state.careMomentShownDate,
           }));
         });
       },

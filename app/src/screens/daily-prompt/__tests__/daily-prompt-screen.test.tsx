@@ -31,6 +31,7 @@ import {
   FLOOR_ONLY_EQUIPMENT,
   WITH_CHAIR_EQUIPMENT,
 } from "../../../state/settings-store";
+import { SessionPreviewScreen } from "../../session-preview/session-preview-screen";
 import { DailyPromptScreen } from "../daily-prompt-screen";
 
 jest.mock("../../../session/create-session", () => ({ createSession: jest.fn() }));
@@ -66,6 +67,19 @@ function seedTodayHistory(entries: Array<ReturnType<typeof todayEntry>>) {
   useProfileStore.setState({ history: { entries } });
 }
 
+/**
+ * A new morning, as far as the care moment is concerned: the beat is
+ * shown at most once per local day across this screen AND the preview
+ * (care-note store), so a test that needs a second beat needs a second
+ * day. The memory is dated into the past rather than cleared, because
+ * that is what waking up the next day actually looks like.
+ */
+function careMomentLastShownLongAgo() {
+  act(() => {
+    useCareNoteStore.setState({ careMomentShownDate: "2026-01-01" });
+  });
+}
+
 beforeEach(() => {
   useLedgerStore.setState({ hydrated: true, hydrationFailed: false });
   useProfileStore.setState({
@@ -97,6 +111,10 @@ beforeEach(() => {
   });
   useCareNoteStore.setState({
     entries: [],
+    // Each test is its own day: the care moment is shown at most once per
+    // local day, and that memory is persisted, so a test that dismissed
+    // it would otherwise suppress the beat for every test after it.
+    careMomentShownDate: null,
     hydrated: true,
     hydrationFailed: false,
   });
@@ -468,15 +486,87 @@ describe("DailyPromptScreen", () => {
     // And she is back at the start, with the moment behind her.
     expect(screen.getByText(strings.prompt.time.question)).toBeTruthy();
 
-    // Leaving the field empty saves nothing — completely skippable. Her
-    // answers were preserved, so she re-walks the prefilled questions;
-    // "back" is still picked, so confirm is already live.
+    // Leaving the field empty saves nothing — completely skippable. A
+    // new day, because today's beat is behind her now (it is asked once
+    // a day, never twice in one pass). Her answers were preserved, so
+    // she re-walks the prefilled questions; "back" is still picked, so
+    // confirm is already live.
+    careMomentLastShownLongAgo();
     fireEvent.press(screen.getByTestId("time-10"));
     fireEvent.press(screen.getByTestId("energy-low"));
     fireEvent.press(screen.getByTestId("quiet-yes"));
     fireEvent.press(screen.getByTestId("soreness-confirm"));
     fireEvent.press(screen.getByTestId("care-skip"));
     fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
+    expect(useCareNoteStore.getState().entries).toHaveLength(1);
+  });
+
+  it("asks for the note once a day: the dead end asks, the session it leads to does not ask again", () => {
+    // The reported bug, end to end (owner, 2026-09-12: "do not ask the
+    // notes twice, once I remove a training"). Heavy soreness — seven
+    // areas — so the engine refuses; the dead end leads with care and its
+    // note field. She sets hips aside, the engine builds, and the SIX
+    // areas left still clear the care threshold: the preview used to
+    // greet her with the same acknowledgment and an empty field.
+    mockedCreate.mockReturnValueOnce({ ok: false, reason: "noSession" });
+    mockedUnblocking.mockReturnValueOnce(["hips"]);
+    const onSessionReady = jest.fn();
+    const screen = render(<DailyPromptScreen onSessionReady={onSessionReady} />);
+
+    fireEvent.press(screen.getByTestId("time-10"));
+    fireEvent.press(screen.getByTestId("energy-low"));
+    fireEvent.press(screen.getByTestId("quiet-yes"));
+    for (const area of [
+      "shoulders",
+      "wrists",
+      "elbows",
+      "back",
+      "hips",
+      "knees",
+      "ankles",
+    ]) {
+      fireEvent.press(screen.getByTestId(`soreness-${area}`));
+    }
+    fireEvent.press(screen.getByTestId("soreness-confirm"));
+
+    expect(screen.getByTestId("care-acknowledgment")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("care-note"), "everything aches");
+    fireEvent.press(screen.getByTestId("care-continue"));
+    expect(useCareNoteStore.getState().careMomentShownDate).toBe(todayIso());
+
+    // The way out the engine named. The rebuilt session is dated today,
+    // exactly as the engine dates it (generate.ts echoes prompt.date).
+    mockedCreate.mockReturnValueOnce({
+      ok: true,
+      value: {
+        session: { ...fixtureSession, date: todayIso() },
+        playerBlocks: fixturePlayerBlocks,
+      },
+    });
+    fireEvent.press(screen.getByTestId("no-session-set-aside-hips"));
+    expect(onSessionReady).toHaveBeenCalledTimes(1);
+    expect(useSessionStore.getState().prompt?.avoid).toEqual([
+      "shoulders",
+      "wrists",
+      "elbows",
+      "back",
+      "knees",
+      "ankles",
+    ]);
+
+    // Navigating on saves the words she wrote on the dead end, once.
+    screen.unmount();
+    expect(useCareNoteStore.getState().entries).toMatchObject([
+      { date: todayIso(), text: "everything aches" },
+    ]);
+
+    // The preview of that session: the plan, and no second ask.
+    const preview = render(
+      <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
+    );
+    expect(preview.queryByTestId("care-acknowledgment")).toBeNull();
+    expect(preview.queryByTestId("care-note")).toBeNull();
+    expect(preview.getByTestId("preview-start")).toBeTruthy();
     expect(useCareNoteStore.getState().entries).toHaveLength(1);
   });
 
@@ -1024,16 +1114,20 @@ describe("analytics — the prompt funnel (drop-off pass, 2026-09-08)", () => {
       if (pickBack) fireEvent.press(screen.getByTestId("soreness-back"));
       fireEvent.press(screen.getByTestId("soreness-confirm"));
     };
+    // Three ways to dismiss the beat, so three days: within one day it
+    // is shown once, so each pass is its own morning.
     walkToCare(true);
     fireEvent.changeText(screen.getByTestId("care-note"), "  knee felt sharp  ");
     fireEvent.press(screen.getByTestId("care-continue"));
     fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
 
+    careMomentLastShownLongAgo();
     walkToCare(false);
     fireEvent.changeText(screen.getByTestId("care-note"), "   ");
     fireEvent.press(screen.getByTestId("care-continue"));
     fireEvent.press(screen.getByTestId("prompt-adjust-answers"));
 
+    careMomentLastShownLongAgo();
     walkToCare(false);
     fireEvent.changeText(screen.getByTestId("care-note"), "something");
     fireEvent.press(screen.getByTestId("care-skip"));

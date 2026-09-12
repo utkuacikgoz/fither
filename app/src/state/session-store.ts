@@ -272,15 +272,6 @@ interface SessionFlowState {
   dispatchPlayer: (event: PlayerEvent) => void;
   /** Catch a suspended countdown up to wall-clock time. */
   reconcileTimer: (now?: number) => void;
-  /**
-   * Re-anchor the wall-clock deadline to the player's CURRENT remaining
-   * seconds (audit polish: the skip confirm pauses ticking, so the
-   * seconds shown while she decides must be the seconds she gets back —
-   * the stale deadline would silently eat the pause on the next
-   * reconcile). Also persists, so a background during the pause can't
-   * resurrect the old deadline.
-   */
-  rebaseCountdown: (now?: number) => void;
   /** Apply the finished session through the engine boundary. Idempotent. */
   completeSession: () => Promise<void>;
   /**
@@ -470,24 +461,6 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
         pendingClose: nextPendingClose,
       });
     }
-  },
-
-  rebaseCountdown: (now = Date.now()) => {
-    const { prompt, sessionId, session, player, finish, activeMs, workResumedAt, pendingClose } =
-      get();
-    if (!prompt || !sessionId || !session || !player || finish) return;
-    const nextDeadline = deadlineFor(player, now);
-    if (nextDeadline === null) return;
-    set({ countdownEndsAt: nextDeadline });
-    useActiveSessionStore.getState().save({
-      sessionId,
-      prompt,
-      session,
-      player,
-      countdownEndsAt: nextDeadline,
-      activeMs: elapsedActiveMs(activeMs, workResumedAt, now),
-      pendingClose,
-    });
   },
 
   reconcileTimer: (now = Date.now()) => {

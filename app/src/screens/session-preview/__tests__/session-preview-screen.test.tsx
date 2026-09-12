@@ -1,11 +1,13 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
+import type { BodyArea } from "@fither/engine";
 
 import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { toPlayerBlocks } from "../../../session/create-session";
 import { loadLibrary } from "../../../session/load-library";
 import { createPlayer } from "../../../session/player-machine";
+import { useCareNoteStore } from "../../../state/care-note-store";
 import { useSessionStore } from "../../../state/session-store";
 import {
   fixturePlayerBlocks,
@@ -155,5 +157,120 @@ describe("SessionPreviewScreen", () => {
     const previews = recordedEvents().filter((e) => e.name === "session_preview");
     expect(previews).toHaveLength(1);
     expect(previews[0]?.properties).toEqual({ minutes: 10, blocks: 2 });
+  });
+});
+
+// The care moment, once per local day, across BOTH screens that can open
+// with it (owner report 2026-09-12: "do not ask the notes twice, once I
+// remove a training"). The memory is the care-note store's; this screen
+// keys it to the session's own date — the same date its note is stamped
+// with, and the date the engine echoed back from her prompt.
+describe("SessionPreviewScreen — the care moment", () => {
+  const DAY = "2026-09-12";
+  /** Enough areas to clear the care threshold on a session that DID build. */
+  const heavyAreas: BodyArea[] = [
+    "shoulders",
+    "wrists",
+    "elbows",
+    "back",
+    "hips",
+    "knees",
+  ];
+
+  function seedHeavyPreview() {
+    useSessionStore.setState({
+      prompt: { ...fixturePrompt, avoid: heavyAreas, date: DAY },
+      session: { ...fixtureSession, date: DAY, adaptations: [] },
+      player: createPlayer(fixturePlayerBlocks),
+      finish: null,
+    });
+  }
+
+  function seedCareDay(shown: string | null, hydrated = true) {
+    useCareNoteStore.setState({
+      entries: [],
+      careMomentShownDate: shown,
+      hydrated,
+      hydrationFailed: false,
+    });
+  }
+
+  it("leads with care while it is still due, and never asks twice that day", () => {
+    seedHeavyPreview();
+    seedCareDay(null);
+    const screen = render(
+      <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
+    );
+
+    expect(screen.getByTestId("care-acknowledgment")).toBeTruthy();
+    expect(screen.getByText(strings.care.acknowledgment)).toBeTruthy();
+    expect(screen.getByText(strings.care.notePrompt)).toBeTruthy();
+
+    fireEvent.changeText(screen.getByTestId("care-note"), "  shoulder all day  ");
+    fireEvent.press(screen.getByTestId("care-continue"));
+
+    // The note saves exactly as it did before, stamped with the session's
+    // date and kept on this phone.
+    expect(useCareNoteStore.getState().entries).toMatchObject([
+      { date: DAY, text: "shoulder all day" },
+    ]);
+    // And the day now remembers the beat.
+    expect(useCareNoteStore.getState().careMomentShownDate).toBe(DAY);
+    expect(screen.queryByTestId("care-acknowledgment")).toBeNull();
+    expect(screen.getByTestId("preview-start")).toBeTruthy();
+
+    // Even arriving at the screen again — the plan is all that is left.
+    screen.unmount();
+    const again = render(
+      <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
+    );
+    expect(again.queryByTestId("care-acknowledgment")).toBeNull();
+    expect(again.queryByTestId("care-note")).toBeNull();
+    expect(again.getByTestId("preview-start")).toBeTruthy();
+  });
+
+  it("stays silent when the day already showed it (the prompt's dead end did)", () => {
+    seedHeavyPreview();
+    seedCareDay(DAY);
+    const screen = render(
+      <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
+    );
+
+    expect(screen.queryByTestId("care-acknowledgment")).toBeNull();
+    expect(screen.queryByTestId("care-note")).toBeNull();
+    expect(screen.getByTestId("preview-fit")).toBeTruthy();
+    expect(screen.getByTestId("preview-start")).toBeTruthy();
+  });
+
+  it("asks again on a new day, and skipping it saves nothing", () => {
+    seedHeavyPreview();
+    seedCareDay("2026-09-11");
+    const screen = render(
+      <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
+    );
+
+    expect(screen.getByTestId("care-acknowledgment")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("care-note"), "typed then skipped");
+    fireEvent.press(screen.getByTestId("care-skip"));
+
+    expect(useCareNoteStore.getState().entries).toEqual([]);
+    expect(useCareNoteStore.getState().careMomentShownDate).toBe(DAY);
+    expect(screen.queryByTestId("care-acknowledgment")).toBeNull();
+  });
+
+  it("before the store hydrates, errs toward not asking — then asks once it lands", () => {
+    seedHeavyPreview();
+    seedCareDay(null, false);
+    const screen = render(
+      <SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />,
+    );
+
+    // Nothing is known yet about today, so the beat waits rather than
+    // risking the second ask.
+    expect(screen.queryByTestId("care-acknowledgment")).toBeNull();
+    expect(screen.getByTestId("preview-start")).toBeTruthy();
+
+    act(() => seedCareDay(null, true));
+    expect(screen.getByTestId("care-acknowledgment")).toBeTruthy();
   });
 });

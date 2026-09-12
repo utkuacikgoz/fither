@@ -1,6 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { useCareNoteStore, type CareNoteEntry } from "../care-note-store";
+import {
+  careMomentDue,
+  useCareNoteStore,
+  type CareNoteEntry,
+} from "../care-note-store";
 
 const STORAGE_KEY = "fither/care-notes-v1";
 
@@ -12,6 +16,7 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   useCareNoteStore.setState({
     entries: [],
+    careMomentShownDate: null,
     hydrated: true,
     hydrationFailed: false,
   });
@@ -159,6 +164,136 @@ describe("care-note store", () => {
     expect(useCareNoteStore.getState().entries).toMatchObject([
       { date: "2026-08-02", text: "legacy two" },
     ]);
+  });
+
+  // The care moment's once-a-day memory (owner report 2026-09-12: the
+  // beat and its note field could be shown twice in one pass, because the
+  // dead end and the preview each kept their own flag).
+  describe("the care moment's day", () => {
+    it("is due until it is marked shown, then not again that day", () => {
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(true);
+
+      useCareNoteStore.getState().markCareMomentShown("2026-09-12");
+
+      expect(useCareNoteStore.getState().careMomentShownDate).toBe("2026-09-12");
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(false);
+      // A new day asks again: the beat belongs to a heavy day, not to an
+      // install.
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-13")).toBe(true);
+      // Marking twice in one day is idempotent.
+      useCareNoteStore.getState().markCareMomentShown("2026-09-12");
+      expect(useCareNoteStore.getState().careMomentShownDate).toBe("2026-09-12");
+    });
+
+    it("survives a relaunch on the same day, offline, under the same key", async () => {
+      useCareNoteStore.getState().markCareMomentShown("2026-09-12");
+      await flushPersistence();
+
+      const persisted = await AsyncStorage.getItem(STORAGE_KEY);
+      expect(persisted).toContain("2026-09-12");
+      useCareNoteStore.setState({
+        careMomentShownDate: null,
+        hydrated: false,
+        hydrationFailed: false,
+      });
+      await flushPersistence();
+      await AsyncStorage.setItem(STORAGE_KEY, persisted ?? "");
+      await useCareNoteStore.persist.rehydrate();
+      await flushPersistence();
+
+      expect(useCareNoteStore.getState().careMomentShownDate).toBe("2026-09-12");
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(false);
+    });
+
+    it("fails safe before hydration: not due, and a mark made then still lands", async () => {
+      useCareNoteStore.setState({
+        careMomentShownDate: null,
+        hydrated: false,
+        hydrationFailed: false,
+      });
+      // Unhydrated errs toward NOT showing: a skipped beat costs her
+      // nothing, a second ask in one day is the bug.
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(false);
+
+      useCareNoteStore.getState().markCareMomentShown("2026-09-12");
+      // Buffered, not applied — a rehydrate would clobber it.
+      expect(useCareNoteStore.getState().careMomentShownDate).toBeNull();
+
+      await useCareNoteStore.persist.rehydrate();
+      await flushPersistence();
+      expect(useCareNoteStore.getState().hydrated).toBe(true);
+      expect(useCareNoteStore.getState().careMomentShownDate).toBe("2026-09-12");
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(false);
+    });
+
+    it("a mark made in this run outlives whatever the disk remembered", async () => {
+      // Disk says the beat was shown yesterday; the app shows it again
+      // today before hydration lands. Today's mark is the truth.
+      useCareNoteStore.setState({
+        entries: [],
+        careMomentShownDate: null,
+        hydrated: false,
+        hydrationFailed: false,
+      });
+      await flushPersistence();
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          state: { entries: [], careMomentShownDate: "2026-09-11" },
+          version: 1,
+        }),
+      );
+      useCareNoteStore.getState().markCareMomentShown("2026-09-12");
+      await useCareNoteStore.persist.rehydrate();
+      await flushPersistence();
+
+      expect(useCareNoteStore.getState().careMomentShownDate).toBe("2026-09-12");
+    });
+
+    it("a storage failure still remembers the beat for the rest of the run", () => {
+      // hydrationFailed is the honest "no disk" state: notes still work
+      // in memory, and so does the day's memory — a broken disk must not
+      // bring the double ask back.
+      useCareNoteStore.setState({
+        careMomentShownDate: null,
+        hydrated: false,
+        hydrationFailed: true,
+      });
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(true);
+
+      useCareNoteStore.getState().markCareMomentShown("2026-09-12");
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(false);
+    });
+
+    it("is due on a v0 envelope: the memory did not exist before it", async () => {
+      useCareNoteStore.setState({
+        entries: [],
+        careMomentShownDate: null,
+        hydrated: false,
+        hydrationFailed: false,
+      });
+      await flushPersistence();
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          state: { entries: [{ date: "2026-08-01", text: "legacy" }] },
+          version: 0,
+        }),
+      );
+      await useCareNoteStore.persist.rehydrate();
+      await flushPersistence();
+
+      expect(useCareNoteStore.getState().careMomentShownDate).toBeNull();
+      expect(careMomentDue(useCareNoteStore.getState(), "2026-09-12")).toBe(true);
+    });
+
+    it("marking the day touches no note", () => {
+      useCareNoteStore.getState().append({ date: "2026-09-12", text: "hers" });
+      useCareNoteStore.getState().markCareMomentShown("2026-09-12");
+      expect(useCareNoteStore.getState().entries).toMatchObject([
+        { date: "2026-09-12", text: "hers" },
+      ]);
+    });
   });
 
   it("tolerates an id-less entry in memory: removable by date + text", () => {

@@ -25,7 +25,7 @@ import { needsCareMoment } from "../../lib/care-moment";
 import { todayIso } from "../../lib/dates";
 import { useStoreHydration } from "../../lib/route-guard";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
-import { useCareNoteStore } from "../../state/care-note-store";
+import { careMomentDue, useCareNoteStore } from "../../state/care-note-store";
 import { activeQuietMode, usePlaceStore } from "../../state/place-store";
 import { useProfileStore } from "../../state/profile-store";
 import { unblockingAreasFor } from "../../session/unblocking";
@@ -98,6 +98,15 @@ export function DailyPromptScreen({
   const { hydrated, failed: hydrationFailed } = useStoreHydration();
 
   const appendCareNote = useCareNoteStore((s) => s.append);
+  // The care moment is shown at most once per local day, across this
+  // screen AND the preview (owner report 2026-09-12: she was asked for
+  // the note twice in one pass). The memory lives in the care-note
+  // store; the date is this screen's own todayIso(), the one it already
+  // stamps prompts and notes with.
+  const careMomentStillDue = useCareNoteStore((s) =>
+    careMomentDue(s, todayIso()),
+  );
+  const markCareMomentShown = useCareNoteStore((s) => s.markCareMomentShown);
 
   // Whether today already holds completed work is the HUB's question now
   // (ADR-0013 §4): home renders the calm done state and owns "Another
@@ -490,14 +499,18 @@ export function DailyPromptScreen({
         // with care, never a dead end. Whether a session was possible was
         // decided engine-side; here we only read that result.
         <PromptNoSession
-          care={needsCareMoment(
-            BODY_AREAS.filter(
-              (area) => alwaysAvoid.includes(area) || avoid.includes(area),
-            ).length,
-            false,
-          )}
+          care={
+            careMomentStillDue &&
+            needsCareMoment(
+              BODY_AREAS.filter(
+                (area) => alwaysAvoid.includes(area) || avoid.includes(area),
+              ).length,
+              false,
+            )
+          }
           careNoteText={careNoteText}
           onChangeCareNote={setCareNoteText}
+          onCareDismissed={() => markCareMomentShown(todayIso())}
           areaCount={failedAreaCount}
           unblocking={unblocking}
           onSetAside={setAsideArea}

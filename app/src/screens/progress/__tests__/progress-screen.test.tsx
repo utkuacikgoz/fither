@@ -215,23 +215,36 @@ describe("ProgressScreen — hero numerals", () => {
     const screen = render(<ProgressScreen />);
 
     expect(screen.getByTestId("progress-streak-value").props.children).toBe("3");
-    expect(screen.getByText(strings.streak.label(3))).toBeTruthy();
-    expect(screen.getByText(strings.streak.best(5))).toBeTruthy();
-    expect(screen.getByText(strings.streak.restDayUsed)).toBeTruthy();
+    // One caption line beside the numeral (owner, 2026-09-12), naming the
+    // best only because it is higher than this run.
+    expect(screen.getByText(strings.streak.tileCaption(3, 5))).toBeTruthy();
+    expect(screen.queryByText(strings.streak.label(3))).toBeNull();
+    // The spent rest day is retired copy: a run that used one reads
+    // exactly like a run that did not.
+    expect(screen.queryByText(strings.streak.restDayUsed)).toBeNull();
+    // VoiceOver keeps the full sentences: StatTile speaks this label and
+    // never the numeral, so the count must be in it.
     const tile = screen.getByTestId("progress-streak");
     expect(tile.props.accessibilityLabel).toContain(strings.streak.title);
     expect(tile.props.accessibilityLabel).toContain(strings.streak.label(3));
+    expect(tile.props.accessibilityLabel).toContain(strings.streak.best(5));
   });
 
-  it("keeps the rest-day line off a run that has not spent it", () => {
+  it("never mentions the rest day, spent or not", () => {
     useProfileStore.setState({
       history: { entries: [0, 1].map((n) => trained(daysAgo(n))) },
     });
     const screen = render(<ProgressScreen />);
     expect(screen.getByTestId("progress-streak-value").props.children).toBe("2");
-    expect(screen.getByText(strings.streak.best(2))).toBeTruthy();
+    // Her best IS this run: naming it beside the numeral would read as a
+    // duplicate, so the caption carries the run alone.
+    expect(screen.getByText(strings.streak.tileCaption(2, 2))).toBeTruthy();
+    expect(screen.queryByText(strings.streak.best(2))).toBeNull();
     expect(screen.queryByText(strings.streak.restDayUsed)).toBeNull();
     expect(screen.queryByText(strings.streak.none)).toBeNull();
+    expect(screen.getByTestId("progress-streak").props.accessibilityLabel).not.toContain(
+      strings.streak.best(2),
+    );
   });
 
   it("shows how a streak begins when none is alive", () => {
@@ -287,6 +300,10 @@ it("renders no user-facing text outside strings.ts (plus library data)", () => {
   for (let n = 0; n <= MAX_TIER; n += 1) {
     allowed.add(strings.streak.label(n));
     allowed.add(strings.streak.best(n));
+    // The tile's one caption line, both shapes: with the best named and
+    // without (it is named only when it is higher than the run).
+    allowed.add(strings.streak.tileCaption(n, n));
+    allowed.add(strings.streak.tileCaption(n, n + 1));
     allowed.add(strings.home.skills.away(n));
     // Tier numerals on the pattern rows; the sentence is spoken, not drawn.
     allowed.add(String(n));

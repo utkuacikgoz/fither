@@ -51,6 +51,12 @@ describe.each<[string, ColorTheme]>([
       expect(contrast(c.accent, ground)).toBeGreaterThanOrEqual(3);
     }
   });
+
+  it("the armed quiet button's label passes AA on its own fill", () => {
+    // The two-tap skip's armed state (quiet-button, armed): accent label
+    // on the accentSoft fill. It is text, so 3:1 is not enough.
+    expect(contrast(c.accent, c.accentSoft)).toBeGreaterThanOrEqual(4.5);
+  });
 });
 
 describe("the unlock moment (theme-fixed)", () => {
