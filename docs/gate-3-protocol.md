@@ -12,8 +12,8 @@ she is actually moving, not when the player appears. The dev readout
 opens by long-pressing the day label on the daily prompt (dev builds
 only). Use it as the number of record; keep a phone stopwatch as backup.
 
-What the number covers: store loading, sign-in (one tap — "Continue
-without an account" is a full path, ADR-0011), onboarding, the four
+What the number covers: store loading, the guest-first equipment choice,
+the four
 questions, session generation, the preview, and the first block intro.
 It starts
 at the app's first screen mount — native launch time before that is not
@@ -34,11 +34,10 @@ run. No developers.
    the daily prompt's day label → "[dev] Reset first-run state" →
    "[dev] Confirm: wipe everything" → force-quit the app IMMEDIATELY
    (any further activity re-persists state). The next cold open starts
-   from nothing: the sign-in screen shows first (Apple / Google /
-   continue without an account), then onboarding, and the timing records
-   as a true first run. (A clean reinstall works too.) Verify the
-   SIGN-IN screen appears before handing the phone over — if the welcome
-   or prompt shows instead, the reset didn't take.
+   from nothing: the equipment choice shows first, then the daily questions,
+   and the timing records as a true first run. (A clean reinstall works too.)
+   Verify the EQUIPMENT screen appears before handing the phone over. If the
+   daily prompt or Home appears instead, the reset did not take.
 2. Do Not Disturb on the phone; nothing else running.
 3. Say only this, verbatim: **"This is a workout app. Use it however
    feels natural."** Then hand over the phone and say nothing else.

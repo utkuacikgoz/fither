@@ -146,13 +146,12 @@ visible in the frame; the overlay must not repeat it word for word.
 
 ## 8. App Review notes
 
-The "Notes" field under App Review Information. Plain facts. Measured:
-**145 words**.
+The "Notes" field under App Review Information. Plain facts.
 
 ```
 FITHER is an equipment-free strength training app. Everything runs on the device: session generation, progress, points and entitlements. It works fully offline, including airplane mode.
 
-No account is required. On first launch, "Continue without an account" sits beside Sign in with Apple as an equal option, and every feature works identically either way. Sign in with Apple requests no name or email.
+No account is required. First launch goes directly to equipment choice, then four daily questions and the session preview. Sign in with Apple is optional under Settings > Account and requests no name or email.
 
 There is one subscription, offered yearly or monthly, each with a 7-day introductory free trial through the App Store. The first session is never paywalled. After the first completed session, new sessions require the trial or an active subscription. The paywall shows price, renewal terms, Terms of Use, Privacy Policy and Restore purchase.
 
@@ -180,11 +179,11 @@ review:
 2. Paste this into **Beta App Review Information → Review Notes**:
 
 ```
-No account is needed. "Continue without an account" is offered beside Sign in with Apple, and every feature works identically either way.
+No account is needed. First launch goes directly to equipment choice, then four daily questions and the session preview. Sign in with Apple is optional under Settings > Account.
 
-The first session is free. New sessions after it require the 7-day free trial or a subscription, purchased through the App Store. To review the whole app, sign in to a sandbox Apple ID and start the free trial from the plan screen; no payment is taken. Everything is stored on the device, so deleting and reinstalling the app also returns it to a fresh state with a free session.
+The first session is free. To reach the purchase path: choose Floor, choose 10 minutes and answer the remaining questions, start the session, then complete or end it after doing at least one movement. Start another session from Today to reach the plan screen. Use a sandbox Apple ID and start the 7-day trial; no payment is taken during the trial. Restore purchase is on the same screen.
 
-Everything runs on the device and works in airplane mode: session generation, progress, points and entitlements.
+Session generation and saved training work in airplane mode. The App Store connection is needed only for purchase and restore.
 ```
 
 Internal testing needs no review at all: TestFlight > Internal Testing >

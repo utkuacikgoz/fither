@@ -22,6 +22,12 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 git pull -q origin main
 
+# Fail before changing a build number or spending time in Xcode when a
+# production adapter is disabled or the public acquisition/link routes
+# are redirected, parked or incomplete. Values are validated by shape
+# and never printed.
+pnpm production:check
+
 # Bump ios.buildNumber (a string in app.json) and commit it, so every
 # upload carries a unique number and the repo records which one shipped.
 NEXT="$(node -e '

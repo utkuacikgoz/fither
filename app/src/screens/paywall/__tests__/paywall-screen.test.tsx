@@ -1,11 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
+import { Linking } from "react-native";
 
 import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { WORDMARK } from "../../../design/primitives/wordmark";
 import { glyph } from "../../../design/tokens";
+import { LEGAL_URLS } from "../../../lib/legal-links";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import {
@@ -65,10 +67,17 @@ describe("PaywallScreen", () => {
     expect(screen.getByText(strings.paywall.cta)).toBeTruthy();
     expect(screen.getByText(strings.paywall.restore)).toBeTruthy();
     expect(screen.getByText(strings.paywall.legal.autoRenew)).toBeTruthy();
-    // Terms/Privacy controls deliberately absent until real destinations
-    // exist (audit S3): no control may render that cannot act.
-    expect(screen.queryByText(strings.paywall.legal.termsLabel)).toBeNull();
-    expect(screen.queryByText(strings.paywall.legal.privacyLabel)).toBeNull();
+    expect(screen.getByText(strings.paywall.legal.termsLabel)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.legal.privacyLabel)).toBeTruthy();
+  });
+
+  it("opens the first-party terms and privacy pages", () => {
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    const screen = render(<PaywallScreen />);
+    fireEvent.press(screen.getByTestId("paywall-terms"));
+    fireEvent.press(screen.getByTestId("paywall-privacy"));
+    expect(open).toHaveBeenNthCalledWith(1, LEGAL_URLS.terms);
+    expect(open).toHaveBeenNthCalledWith(2, LEGAL_URLS.privacy);
   });
 
   it("pre-expiry, keeps the pre-trial copy and never the expired letter", () => {
