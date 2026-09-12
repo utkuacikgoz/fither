@@ -1251,6 +1251,15 @@ export const strings = {
     noChange: "Every session added to your training.",
     share: "Share this week",
     settingsRow: "Weekly recaps",
+    home: {
+      title: "Last week",
+      line: (count: number) =>
+        count === 1
+          ? "One session is ready to look back on."
+          : `${capitalised(numberWord(count))} sessions are ready to look back on.`,
+      open: "See your week",
+      dismiss: "Not now",
+    },
   },
   unlock: {
     heading: "New skill",
