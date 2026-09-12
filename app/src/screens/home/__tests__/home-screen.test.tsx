@@ -20,7 +20,12 @@ import {
 } from "../../../session/player-machine";
 import { useIntentionStore } from "../../../state/intention-store";
 import { useProfileStore } from "../../../state/profile-store";
+import { useRecapStore } from "../../../state/recap-store";
 import { useSessionStore } from "../../../state/session-store";
+import {
+  clearRecordedEvents,
+  recordedEvents,
+} from "../../../analytics/dev-analytics";
 import {
   collectStringValues,
   renderedTextLeaves,
@@ -100,6 +105,12 @@ beforeEach(() => {
     hydrated: true,
     hydrationFailed: false,
   });
+  useRecapStore.setState({
+    handledWeekStart: null,
+    hydrated: true,
+    hydrationFailed: false,
+  });
+  clearRecordedEvents();
   useSessionStore.setState({
     prompt: null,
     sessionId: null,
@@ -376,6 +387,67 @@ describe("this week", () => {
     const screen = render(<HomeScreen />);
     fireEvent.press(screen.getByTestId("home-week-tile"));
     expect(router.push).toHaveBeenCalledWith(`/recap?week=${MON}&source=home`);
+  });
+});
+
+describe("last week's return", () => {
+  // Monday starts a new week; these entries belong to the one just closed.
+  const THIS_MONDAY = "2026-09-14";
+  const LAST_MONDAY = "2026-09-07";
+
+  it("offers a trained previous week once and records eligibility", () => {
+    mockToday.iso = THIS_MONDAY;
+    seedHistory([
+      todayEntry(10, ["completed"], LAST_MONDAY),
+      todayEntry(20, ["struggled"], "2026-09-09"),
+    ]);
+
+    const screen = render(<HomeScreen />);
+    expect(screen.getByText(strings.recap.home.title)).toBeTruthy();
+    expect(screen.getByText(strings.recap.home.line(2))).toBeTruthy();
+    expect(recordedEvents()).toContainEqual({
+      name: "weekly_recap_eligible",
+      properties: { sessions: 2 },
+    });
+
+    fireEvent.press(screen.getByTestId("home-previous-week-open"));
+    expect(useRecapStore.getState().handledWeekStart).toBe(LAST_MONDAY);
+    expect(router.push).toHaveBeenCalledWith(
+      `/recap?week=${LAST_MONDAY}&source=home`,
+    );
+  });
+
+  it("dismisses quietly and does not offer the same week again", () => {
+    mockToday.iso = THIS_MONDAY;
+    seedHistory([todayEntry(10, ["completed"], LAST_MONDAY)]);
+    const screen = render(<HomeScreen />);
+
+    fireEvent.press(screen.getByTestId("home-previous-week-dismiss"));
+    expect(screen.queryByTestId("home-previous-week")).toBeNull();
+    expect(useRecapStore.getState().handledWeekStart).toBe(LAST_MONDAY);
+    expect(recordedEvents()).toContainEqual({
+      name: "weekly_recap_dismiss",
+      properties: {},
+    });
+  });
+
+  it("stays absent before hydration, for an empty week, and after handling", () => {
+    mockToday.iso = THIS_MONDAY;
+    seedHistory([todayEntry(10, ["completed"], LAST_MONDAY)]);
+    useRecapStore.setState({ hydrated: false });
+    const loading = render(<HomeScreen />);
+    expect(loading.queryByTestId("home-previous-week")).toBeNull();
+    loading.unmount();
+
+    useRecapStore.setState({ hydrated: true, handledWeekStart: LAST_MONDAY });
+    const handled = render(<HomeScreen />);
+    expect(handled.queryByTestId("home-previous-week")).toBeNull();
+    handled.unmount();
+
+    useRecapStore.setState({ handledWeekStart: null });
+    seedHistory([]);
+    const empty = render(<HomeScreen />);
+    expect(empty.queryByTestId("home-previous-week")).toBeNull();
   });
 });
 
