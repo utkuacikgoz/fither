@@ -48,6 +48,10 @@ export interface AnalyticsEvents {
   weekly_intention_set: { target: "two" | "three" | "none" };
   /** A weekly recap was opened, and the surface that led to it. */
   weekly_recap_view: { source: "home" | "settings" | "link" };
+  /** The previous week's recap became available on Home. */
+  weekly_recap_eligible: { sessions: number };
+  /** She quietly removed the previous week's recap from Home. */
+  weekly_recap_dismiss: Record<string, never>;
   /** A share was offered on a surface (wave 3). */
   share_eligible: { source: "finish" | "receipt" | "recap" };
   /** She opened the share sheet; iOS reports nothing after this. */
@@ -143,6 +147,8 @@ export const ANALYTICS_EVENT_NAMES: readonly AnalyticsEventName[] = [
   "workout_complete",
   "weekly_intention_set",
   "weekly_recap_view",
+  "weekly_recap_eligible",
+  "weekly_recap_dismiss",
   "share_eligible",
   "share_start",
   "paywall_view",

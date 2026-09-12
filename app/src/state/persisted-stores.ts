@@ -19,6 +19,7 @@
 //   fither/experiments-v1     experiment-store.ts     the experiment seed + assignments (ADR-0025)
 //   fither/intention-v1       intention-store.ts      the weekly intention (2, 3, none) + asked flag
 //   fither/place-v1           place-store.ts          where she trains (home, hotel) + each place's equipment and quiet default
+//   fither/recap-v1           recap-store.ts          most recent previous week opened or dismissed
 
 import type { StoreApi } from "zustand";
 
@@ -37,6 +38,7 @@ import { useLifetimeOfferStore } from "./lifetime-offer-store";
 import { usePlaceStore } from "./place-store";
 import { useProfileStore } from "./profile-store";
 import { useRatingStore } from "./rating-store";
+import { useRecapStore } from "./recap-store";
 import { useReminderStore } from "./reminder-store";
 import { useSettingsStore } from "./settings-store";
 
@@ -58,6 +60,7 @@ export const persistedStores = [
   useExperimentStore,
   useIntentionStore,
   usePlaceStore,
+  useRecapStore,
 ] as const;
 
 /** The persisted keys, read from the stores' own persist configs. */

@@ -142,6 +142,7 @@ describe("dev first-run reset (persistence-layer wipe)", () => {
         "fither/experiments-v1",
         "fither/intention-v1",
         "fither/place-v1",
+        "fither/recap-v1",
       ].sort(),
     );
   });
