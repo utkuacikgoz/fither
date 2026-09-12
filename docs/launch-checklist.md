@@ -23,6 +23,13 @@ Play Store addendum at the bottom applies if/when Android ships.
 
 ## Pre-launch technical essentials
 
+- [ ] **Production preflight passes.** Put the real production adapter values
+  in `app/.env.production`, then run `pnpm production:check`. It must verify
+  RevenueCat, Sentry, PostHog, feedback and the share base without printing
+  their values, and receive the expected content with no redirect from the
+  home, privacy, terms, shared-session and universal-link routes. `pnpm ship`
+  runs the same check before changing a build number or opening Xcode.
+
 - [ ] **Every merged SHA has remote evidence.** After pushing `main`, wait for
   GitHub CI to finish and record the successful run for that exact commit. If
   an Expo/EAS build was triggered or is required by the step, verify that build

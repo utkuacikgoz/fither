@@ -35,10 +35,14 @@ Nothing here needs an Expo account.
    EXPO_PUBLIC_SENTRY_DSN=https://…ingest.us.sentry.io/…
    EXPO_PUBLIC_POSTHOG_KEY=phc_…
    EXPO_PUBLIC_SHARE_BASE_URL=https://fither.app
+   EXPO_PUBLIC_FEEDBACK_URL=https://…
    ```
 
    A missing key ships that port's dev adapter: no analytics, no
-   crash reports, or the fake store. `SENTRY_AUTH_TOKEN` (an org token
+   crash reports, no feedback, or the fake store. Run `pnpm production:check`
+   before archiving; it validates these values without printing them and
+   verifies the live home, legal, recipient, and universal-link routes.
+   `pnpm ship` runs this check automatically. `SENTRY_AUTH_TOKEN` (an org token
    with `project:releases` and `org:read`) exported in the shell lets the
    build upload source maps; without it, run the archive with
    `SENTRY_ALLOW_FAILURE=true` and crashes arrive unsymbolicated.

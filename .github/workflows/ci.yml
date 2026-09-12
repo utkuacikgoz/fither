@@ -45,6 +45,9 @@ jobs:
       - name: 'Gate: iOS release configuration'
         run: pnpm release:check
 
+      - name: 'Gate: production preflight contract'
+        run: pnpm production:preflight:test
+
       - name: 'Gate: typecheck (engine + app)'
         run: pnpm typecheck
 
