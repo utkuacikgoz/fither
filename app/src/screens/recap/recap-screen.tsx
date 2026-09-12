@@ -38,11 +38,15 @@ import { weekRecap } from "./week-recap";
 interface RecapScreenProps {
   /** Any date in the week to show, ISO yyyy-mm-dd. Defaults to today. */
   week?: string;
+  /** The surface that led to this visit, for the weekly-return funnel. */
+  source?: RecapSource;
 }
+
+export type RecapSource = "home" | "settings" | "link";
 
 const ORDER = { days: 1, rows: 2 } as const;
 
-export function RecapScreen({ week: anchor }: RecapScreenProps) {
+export function RecapScreen({ week: anchor, source = "link" }: RecapScreenProps) {
   const reduceMotion = useReducedMotion();
   const today = useTodayIso();
   const entries = useProfileStore((s) => s.history.entries);
@@ -55,6 +59,13 @@ export function RecapScreen({ week: anchor }: RecapScreenProps) {
   );
   const { week, participation, minutesPlanned, movements, tiersReached } = recap;
   const shareable = participation.count > 0;
+
+  const viewSent = useRef(false);
+  useEffect(() => {
+    if (viewSent.current) return;
+    viewSent.current = true;
+    track("weekly_recap_view", { source });
+  }, [source]);
 
   // share_eligible once per visit (wave 3): the offer is the button
   // being on the page, so it fires when the button does, not on a tap.

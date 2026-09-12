@@ -60,7 +60,7 @@ export const SETTINGS_ROUTES = {
   notes: "/settings/notes",
   invitation: "/settings/invitation",
   intention: "/settings/intention",
-  recap: "/recap",
+  recap: "/recap?source=settings",
   plan: "/settings/plan",
   feedback: "/settings/feedback",
 } as const;

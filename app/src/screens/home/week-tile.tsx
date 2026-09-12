@@ -12,12 +12,11 @@ import type { WeekView } from "../../state/week-view";
 // This week on the hub (owner brief 2026-09-07, wave 2; mockup home-week,
 // approved): one line about the week, then the seven-day strip (the
 // shared WeekRow — a filled disc for a day she trained, the green ring
-// on today). Not a door — nothing here navigates, nothing here decides.
+// on today). The whole tile opens the matching recap; it does not decide.
 // The count, the trained dates and the verdict are the engine's, read
 // through state/week-view.ts; this file only picks which line to set
-// and which day name to put in it. Days she did not train are simply
-// not filled: no shortfall, no debt, no untrained day named
-// (strings.week).
+// beside the strip. Days she did not train are simply not filled: no
+// shortfall, no debt, no untrained day named (strings.week).
 
 interface WeekTileProps {
   view: WeekView;
@@ -25,32 +24,33 @@ interface WeekTileProps {
   today: string;
   order: number;
   reduceMotion: boolean;
+  /** Opens the week whose progress this tile shows. */
+  onPress: () => void;
 }
 
 /**
- * The tile's one sentence: the count against her target and the day
- * that is next while one remains; the target reached, once it is; the
- * plain count with no target set.
+ * The tile's one sentence: the count against her target and the number
+ * remaining while one remains; the target reached, once it is;
+ * the plain count with no target set.
  */
-function weekLine(view: WeekView, dates: readonly string[]): string {
+function weekLine(view: WeekView): string {
   const { count } = view.participation;
   if (view.target === null) return strings.week.progressNoTarget(count);
   if (view.met) return strings.week.met(view.target);
   const progress = strings.week.progress(count, view.target);
-  const nextIndex =
-    view.nextTrainingDay === null ? -1 : dates.indexOf(view.nextTrainingDay);
-  const nextName = strings.week.dayNames[nextIndex];
-  return nextName === undefined ? progress : `${progress} ${strings.week.nextLine(nextName)}`;
+  return view.remaining === null || view.remaining === 0
+    ? progress
+    : `${progress} ${strings.week.remaining(view.remaining)}`;
 }
 
-export function WeekTile({ view, today, order, reduceMotion }: WeekTileProps) {
+export function WeekTile({ view, today, order, reduceMotion, onPress }: WeekTileProps) {
   const { dates } = weekOf(today);
   return (
     <View>
       <SectionCaption label={strings.week.title} />
-      <Tile order={order} reduceMotion={reduceMotion} testID="home-week-tile">
+      <Tile order={order} reduceMotion={reduceMotion} testID="home-week-tile" onPress={onPress}>
         <AppText variant="body" testID="home-week-line">
-          {weekLine(view, dates)}
+          {weekLine(view)}
         </AppText>
         <View style={styles.days}>
           {/* The strip carries the brief's ids: home-week, home-week-day-<i>. */}

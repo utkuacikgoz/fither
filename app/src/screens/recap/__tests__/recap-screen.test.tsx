@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { createInitialProfile, weekOf, type HistoryEntry, type LedgerEvent } from "@fither/engine";
 
-import RecapRoute, { parseRecapWeek } from "../../../../app/recap";
+import RecapRoute, { parseRecapSource, parseRecapWeek } from "../../../../app/recap";
 import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
 import { formatWeekRange } from "../../../lib/format-week";
@@ -142,7 +142,9 @@ describe("RecapScreen", () => {
     expect(screen.getByTestId("recap-minutes-value")).toHaveTextContent("0");
     expect(screen.getByTestId("recap-movements-value")).toHaveTextContent("0");
     expect(screen.queryByTestId("recap-share")).toBeNull();
-    expect(recordedEvents()).toEqual([]);
+    expect(recordedEvents()).toEqual([
+      { name: "weekly_recap_view", properties: { source: "link" } },
+    ]);
   });
 
   it("a trained week offers one share, sends share_eligible once, and pushes the recap share", () => {
@@ -150,9 +152,12 @@ describe("RecapScreen", () => {
       history: { entries: [entry("2026-09-08", 10, ["completed"])] },
     });
     const screen = render(<RecapScreen week={ANCHOR} />);
-    expect(recordedEvents()).toEqual([{ name: "share_eligible", properties: { source: "recap" } }]);
+    expect(recordedEvents()).toEqual([
+      { name: "weekly_recap_view", properties: { source: "link" } },
+      { name: "share_eligible", properties: { source: "recap" } },
+    ]);
     screen.rerender(<RecapScreen week={ANCHOR} />);
-    expect(recordedEvents()).toHaveLength(1);
+    expect(recordedEvents()).toHaveLength(2);
     fireEvent.press(screen.getByTestId("recap-share"));
     expect(router.push).toHaveBeenCalledWith(`/share?source=recap&date=${WEEK.start}`);
   });
@@ -209,5 +214,12 @@ describe("/recap route", () => {
     expect(screen.getByTestId("recap-range")).toHaveTextContent(
       strings.recap.title(formatWeekRange(week.start, week.end)),
     );
+  });
+
+  it("accepts only known recap sources", () => {
+    expect(parseRecapSource("home")).toBe("home");
+    expect(parseRecapSource(["settings", "home"])).toBe("settings");
+    expect(parseRecapSource(undefined)).toBe("link");
+    expect(parseRecapSource("campaign")).toBe("link");
   });
 });

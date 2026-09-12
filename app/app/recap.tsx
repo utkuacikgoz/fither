@@ -3,7 +3,10 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useTheme } from "../src/design/theme";
 import { pushedHeaderOptions } from "../src/lib/pushed-header";
 import { RouteGuard } from "../src/lib/route-guard";
-import { RecapScreen } from "../src/screens/recap/recap-screen";
+import {
+  RecapScreen,
+  type RecapSource,
+} from "../src/screens/recap/recap-screen";
 
 // The weekly recap (wave 2), pushed from Settings → Weekly recaps or a
 // link, wearing the shared back header (ADR-0017). Public route (URL
@@ -20,15 +23,26 @@ export function parseRecapWeek(value: string | string[] | undefined): string | u
   return typeof single === "string" && ISO_DATE.test(single) ? single : undefined;
 }
 
+export function parseRecapSource(value: string | string[] | undefined): RecapSource {
+  const single = Array.isArray(value) ? value[0] : value;
+  return single === "home" || single === "settings" ? single : "link";
+}
+
 export default function RecapRoute() {
   const colors = useTheme();
-  const { week } = useLocalSearchParams<{ week?: string | string[] }>();
+  const { week, source } = useLocalSearchParams<{
+    week?: string | string[];
+    source?: string | string[];
+  }>();
   const parsed = parseRecapWeek(week);
   return (
     <>
       <Stack.Screen options={pushedHeaderOptions(colors)} />
       <RouteGuard requires="hydratedOnly">
-        <RecapScreen {...(parsed !== undefined ? { week: parsed } : {})} />
+        <RecapScreen
+          {...(parsed !== undefined ? { week: parsed } : {})}
+          source={parseRecapSource(source)}
+        />
       </RouteGuard>
     </>
   );
