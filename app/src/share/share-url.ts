@@ -9,8 +9,12 @@
 // is treated as unset. Read at call time so a build variable and a test
 // can both set it.
 
-/** What a shared link lands on: `/s/session` or `/s/week` (web allowlist). */
-export type ShareLinkKind = "session" | "week";
+/** The recipient pages app-generated shares may use from the web allowlist. */
+export type ShareLinkKind =
+  | "session"
+  | "week"
+  | "away_from_home"
+  | "between_meetings";
 
 const HTTPS_ORIGIN = /^https:\/\/[a-z0-9.-]+(?::\d+)?$/i;
 

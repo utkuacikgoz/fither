@@ -31,7 +31,7 @@ export const FACTS = Object.freeze([
   "Works offline, anywhere.",
 ]);
 
-export const FINE_PRINT = "Free on the App Store. No account needed.";
+export const FINE_PRINT = "Free to download. First session included. No account needed.";
 
 // Shown instead of the button and the fine print while the owner has not
 // set APP_STORE_URL (web/src/app.js). Never a placeholder destination.

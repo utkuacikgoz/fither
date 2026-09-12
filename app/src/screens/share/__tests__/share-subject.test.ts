@@ -130,11 +130,15 @@ describe("shareSubject", () => {
     });
   });
 
-  it("the link kind follows the subject, not the context", () => {
-    expect(shareLinkKind({ kind: "session", minutes: 10, movements: 1, figureId: "" })).toBe(
+  it("the link kind keeps a session's selected context and a week's own story", () => {
+    const session = { kind: "session", minutes: 10, movements: 1, figureId: "" } as const;
+    expect(shareLinkKind(session, null)).toBe(
       "session",
     );
-    expect(shareLinkKind({ kind: "week", sessions: 2, movements: 4, figureId: "" })).toBe(
+    expect(shareLinkKind(session, "home")).toBe("session");
+    expect(shareLinkKind(session, "hotel")).toBe("away_from_home");
+    expect(shareLinkKind(session, "meetings")).toBe("between_meetings");
+    expect(shareLinkKind({ kind: "week", sessions: 2, movements: 4, figureId: "" }, "hotel")).toBe(
       "week",
     );
   });
