@@ -120,6 +120,8 @@ export interface FinishSummary {
    */
   /** At least one block attempted (completed or struggled); false = nothing done. */
   completedAnything: boolean;
+  /** This was the first completed session that began the included access period. */
+  first?: boolean;
   /**
    * The close state to render. Precedence: "nothingDone" wins over any
    * early close when zero blocks completed. Optional ONLY because
@@ -617,6 +619,7 @@ export const useSessionStore = create<SessionFlowState>()((set, get) => ({
           pointsEarned: record.result.ledgerEvents.reduce((s, e) => s + e.points, 0),
           unlockedSkills: record.result.unlockedSkills,
           completedAnything,
+          first: completedAnything && entitlementBefore.trialStartDate === null,
           close,
         },
         saveFailed: false,

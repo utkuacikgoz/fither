@@ -323,6 +323,32 @@ describe("FinishScreen", () => {
     expect(rowIds[rowIds.length - 1]).toBe("finish-receipt-points");
   });
 
+  it("makes the first completion the start of a visible capability path", async () => {
+    const base = figureBackedResult(["completed", "completed"]);
+    mockedApply.mockReturnValue({
+      ok: true,
+      value: {
+        ...base,
+        profile: createInitialProfile(),
+        unlockedSkills: [],
+      },
+    });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    const path = await screen.findByTestId("finish-first-path");
+    expect(path).toBeTruthy();
+    expect(screen.getByText(strings.finish.first.title)).toBeTruthy();
+    expect(
+      screen.getByText(strings.finish.first.next("Full Push-Up", 3)),
+    ).toBeTruthy();
+  });
+
+  it("does not repeat the starting-point card after the first completion", async () => {
+    useEntitlementStore.setState({ trialStartDate: "2026-08-30" });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByTestId("finish-receipt");
+    expect(screen.queryByTestId("finish-first-path")).toBeNull();
+  });
+
   it("a zero-completion session gets the honest close — no 'complete', no points row", async () => {
     // Every block skipped: the engine emits no "session" event and no
     // points (skip is neutral, ADR-0012). The screen must not celebrate.
@@ -432,6 +458,7 @@ describe("FinishScreen", () => {
     const allowed = collectStringValues(strings);
     // Parameterised strings.ts values and dynamic numerals, enumerated.
     allowed.add(strings.finish.outOfTime.headline(fixtureSession.minutes));
+    allowed.add(strings.finish.first.next("Full Push-Up", 3));
     allowed.add("+35");
     // The receipt's values, every shape this close can render.
     for (let n = 0; n <= 2; n += 1) {

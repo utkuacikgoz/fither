@@ -18,30 +18,30 @@ import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { useTodayIso } from "../../lib/use-today";
 import { loadLibrary } from "../../session/load-library";
 import { skillFigureId, skillLabel } from "../../session/skill-name";
-import { totalPoints, useLedgerStore } from "../../state/ledger-store";
 import { useProfileStore } from "../../state/profile-store";
 import { NextSkillTile } from "./next-skill-tile";
 import { PatternRow } from "./pattern-row";
 
-// Her capability, made visible (owner round 6, ADR-0017): one hero of two
-// numerals — the day streak in the green, the points total in ink — then
-// the skill she is climbing toward, then the five patterns as a grouped
-// list, each with the figure of the movement she is on now. Section
-// captions sit OUTSIDE the tile they name (ledger, round 5).
+// Her capability, made visible (owner round 6, ADR-0017; retention wave
+// 2): the skill she is climbing toward comes first and names the movement
+// she starts from. Her streak is a secondary consistency record, then the
+// five patterns form the detailed ledger. Points still exist in session
+// receipts and history, but no longer lead this surface while they have
+// no understandable use. Section captions sit outside the tile they name.
 //
 // Everything here is a read of what the stores and the engine already
 // carry: the streak from computeStreak over the history the engine
 // wrote, tiers from the profile, the next skill from nextMilestone and
 // tiersToMilestone, names and figures from the library through
-// session/skill-name.ts, points summed by the ledger module's own
-// totalPoints. No rule, threshold or derived value is computed here.
+// session/skill-name.ts. No rule, threshold or derived value is computed
+// here.
 
 /** Tile entrance order → the delay its contents wait before drawing. */
 function tileDelay(order: number): number {
   return order * motion.staggerMs;
 }
 
-const ORDER = { streak: 0, points: 1, skills: 2, patterns: 3 } as const;
+const ORDER = { skills: 0, streak: 1, patterns: 2 } as const;
 
 /**
  * The soft lines under the streak numeral, each an existing string: the
@@ -79,11 +79,9 @@ export function ProgressScreen() {
   const today = useTodayIso();
   const profile = useProfileStore((s) => s.profile);
   const historyEntries = useProfileStore((s) => s.history.entries);
-  const events = useLedgerStore((s) => s.events);
   const library = loadLibrary();
 
   const streak = computeStreak(historyEntries, today);
-  const points = totalPoints(events);
   // Absence tolerated per the engine contract (types.ts): treated as an
   // empty list. Skills are never lost — this list only ever grows.
   const milestones = profile.unlockedMilestones ?? [];
@@ -103,39 +101,40 @@ export function ProgressScreen() {
           {strings.profile.title}
         </AppText>
 
-        <View style={styles.stats}>
-          <StatTile
-            value={String(streak.current)}
-            lines={streakText}
-            tone="accent"
-            order={ORDER.streak}
-            reduceMotion={reduceMotion}
-            accessibilityLabel={streakSpoken(streak)}
-            testID="progress-streak"
-          />
-          {/* Points are a record of work done, never a balance
-              (gamification.md): the bare unit beneath the numeral, the
-              full sentence as the spoken reading. */}
-          <StatTile
-            value={String(points)}
-            lines={[strings.finish.pointsUnit(points)]}
-            order={ORDER.points}
-            reduceMotion={reduceMotion}
-            accessibilityLabel={strings.profile.points.total(points)}
-            testID="progress-points"
-          />
-        </View>
-
         <View style={styles.section}>
           <SectionCaption label={strings.profile.skills.nextTitle} />
           <NextSkillTile
             library={library}
             upcoming={upcoming}
             tiersAway={tiersAway}
+            currentMovement={
+              upcoming
+                ? skillLabel(
+                    library,
+                    upcoming.pattern,
+                    profile.patterns[upcoming.pattern].tier,
+                  )
+                : ""
+            }
             milestones={milestones}
             order={ORDER.skills}
             reduceMotion={reduceMotion}
           />
+        </View>
+
+        <View style={styles.section}>
+          <SectionCaption label={strings.streak.title} />
+          <View style={styles.stats}>
+            <StatTile
+              value={String(streak.current)}
+              lines={streakText}
+              tone="accent"
+              order={ORDER.streak}
+              reduceMotion={reduceMotion}
+              accessibilityLabel={streakSpoken(streak)}
+              testID="progress-streak"
+            />
+          </View>
         </View>
 
         <View style={styles.section}>

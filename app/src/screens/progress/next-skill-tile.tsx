@@ -10,8 +10,9 @@ import { fontFamily, glyph, hairline, spacing } from "../../design/tokens";
 import { skillFigureId, skillLabel } from "../../session/skill-name";
 
 // The skill she is climbing toward (round 6): its figure in the green,
-// an eyebrow with how many tiers ahead it sits, the skill's name, and,
-// before any skill has landed, the one line saying where skills come
+// an eyebrow with how many tiers ahead it sits, the skill's name, the
+// movement she starts from on that ladder, and, before any skill has
+// landed, the one line saying where skills come
 // from. Skills already named are listed beneath, each with its own
 // figure, so the tile reads forward first and record second.
 //
@@ -25,6 +26,8 @@ interface NextSkillTileProps {
   /** The engine's nearest unearned milestone; null when all are behind her. */
   upcoming: SkillMilestone | null;
   tiersAway: number;
+  /** The movement she is doing now on the same ladder. */
+  currentMovement: string;
   /** Skills she has named, in the order they landed. */
   milestones: readonly SkillMilestone[];
   order: number;
@@ -35,6 +38,7 @@ export function NextSkillTile({
   library,
   upcoming,
   tiersAway,
+  currentMovement,
   milestones,
   order,
   reduceMotion,
@@ -61,6 +65,9 @@ export function NextSkillTile({
             </AppText>
             <AppText variant="bodyLarge">
               {skillLabel(library, upcoming.pattern, upcoming.tier)}
+            </AppText>
+            <AppText variant="bodySoft" style={styles.body} testID="progress-current-skill">
+              {strings.profile.skills.from(currentMovement)}
             </AppText>
             {milestones.length === 0 && (
               <AppText variant="bodySoft" style={styles.body} testID="skills-empty">
