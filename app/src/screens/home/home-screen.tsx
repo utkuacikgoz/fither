@@ -171,7 +171,15 @@ export function HomeScreen() {
         </FadeIn>
 
         <View style={styles.week}>
-          <WeekTile view={week} today={today} order={1} reduceMotion={reduceMotion} />
+          <WeekTile
+            view={week}
+            today={today}
+            order={1}
+            reduceMotion={reduceMotion}
+            onPress={() =>
+              router.push(`/recap?week=${week.participation.start}&source=home`)
+            }
+          />
         </View>
 
         <Card

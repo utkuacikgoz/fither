@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 
 import { useTheme } from "../theme";
 import { hairline, motion, radius, spacing } from "../tokens";
@@ -40,6 +46,8 @@ interface TileProps {
   accessible?: boolean;
   accessibilityLabel?: string;
   testID?: string;
+  /** Present only when the whole tile opens another surface. */
+  onPress?: () => void;
 }
 
 export function Tile({
@@ -52,8 +60,15 @@ export function Tile({
   accessible,
   accessibilityLabel,
   testID,
+  onPress,
 }: TileProps) {
   const colors = useTheme();
+  const surface = [
+    styles.tile,
+    inset === "list" ? styles.listInset : styles.contentInset,
+    fill && styles.fill,
+    { backgroundColor: colors.surface, borderColor: colors.line },
+  ];
   return (
     <FadeIn
       reduceMotion={reduceMotion}
@@ -61,19 +76,26 @@ export function Tile({
       rise={motion.riseDistance}
       style={style}
     >
-      <View
-        style={[
-          styles.tile,
-          inset === "list" ? styles.listInset : styles.contentInset,
-          fill && styles.fill,
-          { backgroundColor: colors.surface, borderColor: colors.line },
-        ]}
-        accessible={accessible}
-        accessibilityLabel={accessibilityLabel}
-        testID={testID}
-      >
-        {children}
-      </View>
+      {onPress ? (
+        <Pressable
+          style={({ pressed }) => [...surface, { opacity: pressed ? 0.88 : 1 }]}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+          testID={testID}
+          onPress={onPress}
+        >
+          {children}
+        </Pressable>
+      ) : (
+        <View
+          style={surface}
+          accessible={accessible}
+          accessibilityLabel={accessibilityLabel}
+          testID={testID}
+        >
+          {children}
+        </View>
+      )}
     </FadeIn>
   );
 }
