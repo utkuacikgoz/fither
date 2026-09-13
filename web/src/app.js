@@ -1,11 +1,8 @@
 // Recipient page, browser entry. Thin on purpose: the page is rendered by
 // the pure functions in render.mjs, which the tests exercise directly.
 
-// OWNER: set this to the app's App Store listing URL once the listing
-// exists, e.g. "https://apps.apple.com/app/id0000000000". While it is
-// empty the page shows "Coming to the App Store." and no button. Only an
-// https://apps.apple.com/ URL is accepted; anything else counts as unset.
-const APP_STORE_URL = "";
+// The App Store destination now lives in content.mjs, so the served
+// HTML and this re-render cannot disagree (2026-09-13).
 
 // OWNER: set this to the page-view collector once one exists. While it is
 // empty nothing is sent. When set, one beacon per view carrying only the
@@ -15,6 +12,7 @@ const APP_STORE_URL = "";
 // time, or the CSP blocks it.
 const COLLECTOR_URL = "";
 
+import { APP_STORE_URL } from "./content.mjs";
 import { canonicalPath, renderPage, scenarioFromPath } from "./render.mjs";
 
 // The path is the only input the page ever reads. The query string and

@@ -14,7 +14,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { SCENARIOS } from "../src/content.mjs";
+import { APP_STORE_URL, SCENARIOS } from "../src/content.mjs";
 import { renderDocument } from "../src/render.mjs";
 
 const WEB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,10 +27,13 @@ function write(target, html) {
 }
 
 // The generic page, served at / and as the fallback for an unknown id.
-const generic = renderDocument();
+const generic = renderDocument({ appStoreUrl: APP_STORE_URL });
 write("index.html", generic);
 write(path.join("s", "index.html"), generic);
 
 for (const scenario of Object.keys(SCENARIOS)) {
-  write(path.join("s", scenario, "index.html"), renderDocument({ scenario }));
+  write(
+    path.join("s", scenario, "index.html"),
+    renderDocument({ scenario, appStoreUrl: APP_STORE_URL }),
+  );
 }
