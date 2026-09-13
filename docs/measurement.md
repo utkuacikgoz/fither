@@ -115,6 +115,20 @@ FROM (
 Week-two retention swaps the interval for `+8 DAY` to `+14 DAY`; week
 four for `+22 DAY` to `+28 DAY`.
 
+## First-session continuity offer
+
+ADR 0028 adds `firstClose` to the existing `paywall_view` and
+`paywall_leave` surfaces. Read the default cohort funnel from first
+completed session, through the weekly choice, to `paywall_view` with
+`surface = firstClose`, then `trial_start`. Keep the three-free-session
+cohort separate because it does not receive this offer.
+
+Evaluate trial starts alongside second-session completion, day-seven
+participation, trial-to-paid conversion and net revenue per eligible
+new user. RevenueCat supplies the payment outcomes. A higher offer-view
+or trial-start rate alone does not establish a commercial improvement.
+This routing change has no measured conversion lift yet.
+
 ## Limits, stated
 
 - **Anonymous ids reset** on sign-out and on the dev first-run reset; a

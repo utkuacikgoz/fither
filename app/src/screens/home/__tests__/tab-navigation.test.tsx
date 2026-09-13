@@ -165,21 +165,21 @@ describe("the tab bar", () => {
   });
 });
 
-describe("the hub and the questions are what a subscription gates", () => {
+describe("new sessions are what a subscription gates", () => {
   it("an entitled day renders the hub", () => {
     const screen = render(<HomeRoute />);
     expect(screen.getByTestId("home-start")).toBeTruthy();
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("on a gated day the Today tab IS the gated day — inline, no bounce through '/'", () => {
+  it("keeps Home and weekly progress visible after the free allowance is consumed", () => {
     useEntitlementStore.setState({ trialStartDate: isoDaysAgo(8), purchase: null, trialUsed: false });
     const screen = render(<HomeRoute />);
-    expect(screen.queryByTestId("home-start")).toBeNull();
+    expect(screen.getByTestId("home-start")).toBeTruthy();
     // The letter where the questions would be; her record stays one tab
     // away (the bar is the door now — ADR-0017 removed the corner pills).
-    expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
+    expect(screen.queryByText(strings.paywall.headline)).toBeNull();
+    expect(screen.getByTestId("home-week-tile")).toBeTruthy();
     expect(screen.queryByTestId("open-progress")).toBeNull();
     expect(router.replace).not.toHaveBeenCalled();
   });

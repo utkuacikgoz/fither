@@ -181,7 +181,7 @@ review:
 ```
 No account is needed. First launch goes directly to equipment choice, then four daily questions and the session preview. Sign in with Apple is optional under Settings > Account.
 
-The first session is free. To reach the purchase path: choose Floor, choose 10 minutes and answer the remaining questions, start the session, then complete or end it after doing at least one movement. Start another session from Today to reach the plan screen. Use a sandbox Apple ID and start the 7-day trial; no payment is taken during the trial. Restore purchase is on the same screen.
+The first session is free. To reach the purchase path: choose Floor, choose 10 minutes and answer the remaining questions, start the session, then complete or end it after doing at least one movement. After the finish screens and weekly choice, the default cohort sees the trial offer. Not now returns to Today with the saved session visible; starting another session still requires access. The three-free-session experiment keeps its existing offer timing. Use a sandbox Apple ID and start the 7-day trial; no payment is taken during the trial. Restore purchase is on the same screen.
 
 Session generation and saved training work in airplane mode. The App Store connection is needed only for purchase and restore.
 ```
