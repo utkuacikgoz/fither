@@ -118,6 +118,7 @@ export function HomeScreen() {
                 </AppText>
                 <View style={styles.action}>
                   <PrimaryButton
+                    reduceMotion={reduceMotion}
                     testID="home-keep-going"
                     label={strings.resume.continueLabel}
                     onPress={() => router.push("/session")}
@@ -170,6 +171,7 @@ export function HomeScreen() {
                 />
                 <View style={styles.action}>
                   <PrimaryButton
+                    reduceMotion={reduceMotion}
                     testID="home-start"
                     label={strings.home.today.start}
                     // Built today but never started: the session exists, so

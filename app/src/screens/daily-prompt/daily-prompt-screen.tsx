@@ -339,6 +339,7 @@ export function DailyPromptScreen({
           {MINUTES.map((m, index) => (
             <AnswerRow key={m} index={index} reduceMotion={reduceMotion}>
               <RowButton
+                reduceMotion={reduceMotion}
                 testID={`time-${m}`}
                 label={strings.prompt.time.minutes[m]}
                 selected={minutes === m}
@@ -369,6 +370,7 @@ export function DailyPromptScreen({
           {ENERGY.map((e, index) => (
             <AnswerRow key={e} index={index} reduceMotion={reduceMotion}>
               <RowButton
+                reduceMotion={reduceMotion}
                 testID={`energy-${e}`}
                 label={strings.prompt.energy.options[e]}
                 selected={energy === e}
@@ -400,6 +402,7 @@ export function DailyPromptScreen({
           </AppText>
           <AnswerRow index={0} reduceMotion={reduceMotion}>
             <RowButton
+              reduceMotion={reduceMotion}
               testID="quiet-yes"
               label={strings.prompt.quiet.yes}
               selected={quiet === true}
@@ -412,6 +415,7 @@ export function DailyPromptScreen({
           </AnswerRow>
           <AnswerRow index={1} reduceMotion={reduceMotion}>
             <RowButton
+              reduceMotion={reduceMotion}
               testID="quiet-no"
               label={strings.prompt.quiet.no}
               selected={quiet === false}
@@ -452,6 +456,7 @@ export function DailyPromptScreen({
               {firstSession && avoid.length > 0 && (
                 <View style={styles.remember}>
                   <RowButton
+                    reduceMotion={reduceMotion}
                     testID="soreness-remember"
                     label={strings.prompt.soreness.remember}
                     multiSelect
@@ -473,6 +478,7 @@ export function DailyPromptScreen({
                   {strings.prompt.soreness.areasNoted(avoid.length)}
                 </AppText>
                 <PrimaryButton
+                  reduceMotion={reduceMotion}
                   testID="soreness-confirm"
                   label={strings.prompt.soreness.confirm}
                   onPress={confirmSoreness}
@@ -482,6 +488,7 @@ export function DailyPromptScreen({
               // One button, one place (audit S5): "All good" with nothing
               // picked, the confirm once anything is.
               <PrimaryButton
+                reduceMotion={reduceMotion}
                 testID="soreness-all-good"
                 label={strings.prompt.soreness.allGood}
                 onPress={allGood}

@@ -268,6 +268,7 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
         {(finish || saveFailed) && !saving ? (
           <>
             <PrimaryButton
+              reduceMotion={reduceMotion}
               testID={saveFailed ? "finish-retry" : "finish-continue"}
               label={saveFailed ? strings.errors.tryAgain : strings.finish.continueLabel}
               onPress={saveFailed ? completeSession : onContinue}

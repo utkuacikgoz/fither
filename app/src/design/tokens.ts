@@ -159,6 +159,10 @@ export const glyph = {
 // carry a small rise and lists stagger, all inside the same 250–350ms
 // ease-out envelope. Reduce Motion renders the final state instead.
 export const motion = {
+  pressInMs: 90,
+  pressOutMs: 180,
+  pressScale: 0.98,
+  pressOpacity: 0.88,
   fadeMs: 300,
   /**
    * How long a toast stays before it fades itself out. Long enough to

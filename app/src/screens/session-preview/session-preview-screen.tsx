@@ -5,6 +5,7 @@ import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { BrandMark } from "../../design/primitives/brand-mark";
+import { FadeIn } from "../../design/primitives/fade-in";
 import { MovementFigure } from "../../design/primitives/movement-figure";
 import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
@@ -159,19 +160,18 @@ export function SessionPreviewScreen({
             the minutes are the fact, the line under them is hers. Both
             halves come from one copy key so they cannot drift, and the
             pair reads to VoiceOver as one header, not two fragments. */}
-        <View
+        <FadeIn reduceMotion={reduceMotion}
           style={styles.top}
-          accessible
-          accessibilityRole="header"
-          accessibilityLabel={`${title.first} ${title.second}`}
         >
+          <View accessible accessibilityRole="header" accessibilityLabel={`${title.first} ${title.second}`}>
           <AppText variant="display" testID="preview-title-first">
             {title.first}
           </AppText>
           <AppText variant="display" color={colors.accent} testID="preview-title-second">
             {title.second}
           </AppText>
-        </View>
+          </View>
+        </FadeIn>
         <AppText variant="bodySoft" style={styles.paragraph} testID="preview-fit">
           {paragraph}
         </AppText>
@@ -205,6 +205,7 @@ export function SessionPreviewScreen({
       <View style={styles.bottom}>
         <PrimaryButton
           testID="preview-start"
+          reduceMotion={reduceMotion}
           label={strings.preview.start}
           onPress={start}
         />

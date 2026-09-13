@@ -114,6 +114,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           <AnswerRow index={0} reduceMotion={reduceMotion}>
             <RowButton
               testID="onboarding-floor-only"
+              reduceMotion={reduceMotion}
               label={strings.onboarding.equipment.options.floorOnly}
               figure={EQUIPMENT_FIGURES.floorOnly}
               onPress={() => finish(FLOOR_ONLY_EQUIPMENT)}
@@ -122,6 +123,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           <AnswerRow index={1} reduceMotion={reduceMotion}>
             <RowButton
               testID="onboarding-chair"
+              reduceMotion={reduceMotion}
               label={strings.onboarding.equipment.options.chair}
               figure={EQUIPMENT_FIGURES.chair}
               onPress={() => finish(WITH_CHAIR_EQUIPMENT)}

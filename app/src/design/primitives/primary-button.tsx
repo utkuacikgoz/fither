@@ -1,58 +1,62 @@
-import { Pressable, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
 import { useTheme } from "../theme";
 import { minTouchTarget, onUnlock, radius, spacing, unlockBg } from "../tokens";
 import { AppText } from "./app-text";
+import { PressSurface } from "./press-surface";
 
 interface PrimaryButtonProps {
   label: string;
   onPress: () => void;
-  /** "inverse" = bone pill with sage text, for the sage unlock screen. */
+  /** White on black for the theme-fixed unlock screen. */
   tone?: "accent" | "inverse";
   testID?: string;
+  reduceMotion?: boolean;
+  disabled?: boolean;
+  busy?: boolean;
 }
 
-/**
- * The one call to action a screen is allowed. Sage pill, generous
- * height — reachable one-handed at the bottom of the screen. The label
- * colour comes from the THEME (theme.onAccent): bone on light's deep
- * sage, dark ink on dark's light sage — both ≥4.5:1. The inverse tone
- * exists only on the theme-independent sage unlock screen, so it pairs
- * the static unlock tokens (bone fill, deep-sage text, 5.05:1) in both
- * themes.
- */
+/** Generous primary action with theme-safe contrast and immediate feedback. */
 export function PrimaryButton({
   label,
   onPress,
   tone = "accent",
   testID,
+  reduceMotion = true,
+  disabled = false,
+  busy = false,
 }: PrimaryButtonProps) {
   const colors = useTheme();
   const background = tone === "inverse" ? onUnlock : colors.accent;
   const textColor = tone === "inverse" ? unlockBg : colors.onAccent;
   return (
-    <Pressable
+    <PressSurface
+      reduceMotion={reduceMotion}
+      disabled={disabled || busy}
+      accessibilityState={{ disabled: disabled || busy, busy }}
       accessibilityRole="button"
       testID={testID}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: background, opacity: pressed ? 0.88 : 1 },
+        { backgroundColor: background, opacity: disabled && !busy ? 0.6 : reduceMotion && pressed ? 0.88 : 1 },
       ]}
     >
-      <AppText variant="bodyLarge" color={textColor}>
+      <AppText variant="bodyLarge" color={textColor} style={styles.label}>
         {label}
       </AppText>
-    </Pressable>
+    </PressSurface>
   );
 }
 
 const styles = StyleSheet.create({
+  label: { textAlign: "center" },
   button: {
     minHeight: minTouchTarget + spacing.md,
     borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
   },
 });

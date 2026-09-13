@@ -9,6 +9,7 @@ import { WORDMARK } from "../../../design/primitives/wordmark";
 import { glyph } from "../../../design/tokens";
 import { LEGAL_URLS } from "../../../lib/legal-links";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
+import { getBilling, type PurchaseOutcome } from "../../../monetization/billing";
 import { useEntitlementStore } from "../../../state/entitlement-store";
 import { useIntentionStore } from "../../../state/intention-store";
 import {
@@ -48,6 +49,39 @@ beforeEach(async () => {
 });
 
 describe("PaywallScreen", () => {
+  it("keeps the selected charge beside the action and updates it with the plan", () => {
+    const screen = render(<PaywallScreen />);
+    expect(screen.getByTestId("paywall-selected-price").props.children).toBe(strings.paywall.afterTrialNote(strings.paywall.plans.annual.price));
+    fireEvent.press(screen.getByTestId("paywall-plan-monthly"));
+    expect(screen.getByTestId("paywall-selected-price").props.children).toBe(strings.paywall.afterTrialNote(strings.paywall.plans.monthly.price));
+    screen.unmount();
+    seedExpiredTrial();
+    const expired = render(<PaywallScreen />);
+    expect(expired.getByTestId("paywall-selected-price").props.children).toBe(strings.paywall.expired.afterTrialNote(strings.paywall.plans.annual.price));
+  });
+
+  it("gives pending checkout feedback and freezes the purchase choice until cancellation", async () => {
+    let settle!: (outcome: PurchaseOutcome) => void;
+    const attempt = new Promise<PurchaseOutcome>((resolve) => { settle = resolve; });
+    const purchase = jest.spyOn(getBilling(), "purchase").mockReturnValueOnce(attempt);
+    const onLeave = jest.fn();
+    const screen = render(<PaywallScreen firstClose onLeave={onLeave} />);
+    fireEvent.press(screen.getByTestId("paywall-purchase"));
+    expect(screen.getByText(strings.paywall.purchasing)).toBeTruthy();
+    expect(screen.getByTestId("paywall-purchase").props.accessibilityState).toEqual({ disabled: true, busy: true });
+    fireEvent.press(screen.getByTestId("paywall-plan-monthly"));
+    fireEvent.press(screen.getByTestId("paywall-purchase"));
+    fireEvent.press(screen.getByTestId("paywall-not-now"));
+    expect(purchase).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("paywall-plan-annual").props.accessibilityState.selected).toBe(true);
+    expect(onLeave).not.toHaveBeenCalled();
+    await act(async () => { settle({ ok: false, reason: "cancelled" }); });
+    expect(screen.getByText(strings.paywall.cta)).toBeTruthy();
+    expect(screen.queryByTestId("paywall-purchase-error")).toBeNull();
+    fireEvent.press(screen.getByTestId("paywall-not-now"));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    purchase.mockRestore();
+  });
   it("connects the optional offer to her weekly choice and records a quiet exit", () => {
     clearRecordedEvents();
     useIntentionStore.setState({ target: 3, asked: true });
