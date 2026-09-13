@@ -16,6 +16,7 @@ import {
   storeUrl,
 } from "../src/render.mjs";
 import {
+  APP_STORE_URL,
   COMING,
   FACTS,
   FIGURES,
@@ -212,7 +213,11 @@ test("index.html and s/index.html are the same pre-rendered generic page", () =>
   const root = read("index.html");
   const nested = read(path.join("s", "index.html"));
   assert.equal(root, nested);
-  assert.equal(root, renderDocument(), "run node web/scripts/build-page.mjs");
+  assert.equal(
+    root,
+    renderDocument({ appStoreUrl: APP_STORE_URL }),
+    "run node web/scripts/build-page.mjs",
+  );
   assert.ok(root.includes('<main id="page">'));
   assert.ok(root.includes(escapeHtml(GENERIC.headline)));
   assert.ok(root.includes('<script type="module" src="/src/app.js"></script>'));
@@ -224,9 +229,18 @@ test("index.html and s/index.html are the same pre-rendered generic page", () =>
 
 test("browser entry reads the path only and holds the owner's constants", () => {
   const js = read(path.join("src", "app.js"));
-  assert.match(js, /^const APP_STORE_URL = "";$/m, "APP_STORE_URL constant at the top");
+  // The destination moved to content.mjs (2026-09-13) so the served HTML
+  // and this re-render cannot disagree; app.js must read it, never hold
+  // its own copy.
+  assert.match(js, /^import \{ APP_STORE_URL \} from "\.\/content\.mjs";$/m);
+  assert.ok(!/^const APP_STORE_URL = /m.test(js), "app.js must not keep a second copy");
   assert.match(js, /^const COLLECTOR_URL = "";$/m, "collector off until one exists");
-  assert.ok(js.indexOf("APP_STORE_URL") < js.indexOf("import "), "constants before the import");
+  // The collector is still a constant the owner edits in place, so it
+  // stays above the imports where they will find it.
+  assert.ok(
+    js.indexOf("COLLECTOR_URL") < js.indexOf("import "),
+    "the owner's own constant stays at the top",
+  );
   for (const banned of [
     "location.search",
     "location.hash",
@@ -258,14 +272,19 @@ test("no HTML, CSS or JS in web/ references an external host", () => {
       // store or the owner's collector; nothing else may name any host.
       if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) return;
       if (/^const (APP_STORE_URL|COLLECTOR_URL) = /.test(trimmed)) return;
+      // The one App Store destination, and the pages built from it: the
+      // link is the point of the page, and storeUrl() already refuses
+      // anything that is not an apps.apple.com URL.
+      if (/^export const APP_STORE_URL = /.test(trimmed)) return;
+      if (/https:\/\/apps\.apple\.com\//.test(trimmed)) return;
       if (file.endsWith("page.test.mjs")) return;
       assert.ok(!host.test(line), `${path.relative(WEB, file)}:${i + 1} references a host: ${trimmed}`);
     });
   }
-  // The owner's store constant, if set, must be the store.
-  const js = read(path.join("src", "app.js"));
-  const value = /^const APP_STORE_URL = "([^"]*)";$/m.exec(js)[1];
-  assert.equal(storeUrl(value), value);
+  // The one destination, wherever it now lives, must survive storeUrl:
+  // anything that is not an apps.apple.com URL is treated as unset and
+  // the page silently falls back to COMING.
+  assert.equal(storeUrl(APP_STORE_URL), APP_STORE_URL);
 });
 
 test("copy passes the voice filter: no dashes, nothing forbidden", () => {

@@ -37,6 +37,15 @@ export const FINE_PRINT = "Free to download. First session included. No account 
 // set APP_STORE_URL (web/src/app.js). Never a placeholder destination.
 export const COMING = "Coming to the App Store.";
 
+// The listing this page sends her to. One constant, read by the build
+// (scripts/build-page.mjs, so it is in the served HTML) and by the
+// browser entry (app.js). They must agree, or a crawler reads a page
+// the recipient never sees. The App Store id exists as soon as the app
+// record does, well before the listing goes live. Only an
+// https://apps.apple.com/ URL is accepted; anything else counts as
+// unset and the page falls back to COMING.
+export const APP_STORE_URL = "https://apps.apple.com/app/id6808850285";
+
 export const GENERIC = Object.freeze({
   caption: "",
   headline: "A workout that fits today.",
