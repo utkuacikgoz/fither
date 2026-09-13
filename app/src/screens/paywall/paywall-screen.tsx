@@ -7,7 +7,6 @@ import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
 import { FadeIn } from "../../design/primitives/fade-in";
-import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
 import { LadderStrip } from "../../design/primitives/ladder-strip";
@@ -24,36 +23,15 @@ import { useEntitlementStore } from "../../state/entitlement-store";
 import { useIntentionStore } from "../../state/intention-store";
 import { useProfileStore } from "../../state/profile-store";
 import { PlanRow } from "./plan-row";
+import { PaywallActions } from "./paywall-actions";
 
-// The paywall as an honest letter (design-system): what's included and
-// the price, plainly. Annual led (ADR-0002), monthly present, no
-// countdowns, no strikethroughs, no scarcity. Purchase and restore go
-// through the billing port; the screen never talks to a provider
-// directly. Unlocking is store-driven — the launch surface re-renders
-// into the daily prompt the moment the grant lands.
-//
-// The letter is typeset like one: a small letter-spaced wordmark as the
-// letterhead (the share-card treatment — the display-size Wordmark
-// primitive belongs to the launch brand moment, and would compete with
-// the headline here), the letter body, one generous breath of space,
-// then the choice. The non-interactive letter fades in gently (Reduce
-// Motion honoured); plans and buttons are tappable from the first
-// frame. A plan is always selected — annual by default — so the one
-// button below the plans always has an honest referent, and its label
-// names its outcome. A hairline rule separates her actions from the
-// legal print, the way a letter ends.
-//
-// Two copy states, decided by the app-layer entitlement policy (never
-// re-derived here): an expired trial gets the paywall.expired.* letter —
-// no "free week ahead" promise she can no longer have — while every
-// other state (pre-expiry, e.g. reached via future settings) keeps the
-// pre-trial keys.
+// One promise, the real capability ladder, two localised plans and a fixed
+// action footer. Billing stays behind its port; store grants drive access.
+// Expired trials retain the existing paid-access copy, never a new free week.
+// ADR-0029 keeps the selected price beside the action and makes pending work
+// explicit. Entrances and presses honour the screen's reduced-motion value.
 
-/**
- * After a purchase or restore attempt: nothing to say, or exactly one calm
- * notice — a failed purchase, a restore that found nothing, or a failed
- * restore. One slot, one register; starting a new attempt clears it.
- */
+/** One outcome notice; starting another attempt clears it. */
 type Notice = "none" | "purchaseFailed" | "restoreEmpty" | "restoreFailed";
 
 // Developer-facing only, shown solely in __DEV__ builds — deliberately
@@ -62,19 +40,12 @@ type Notice = "none" | "purchaseFailed" | "restoreEmpty" | "restoreFailed";
 export const DEV_RESET_LABEL = "[dev] Reset entitlement";
 
 interface PaywallScreenProps {
-  /** Optional chrome above the screen: the gated day's own eyebrow. */
   headerSlot?: ReactNode;
-  /**
-   * Rendered as the Today tab (the gated day, ADR-0009 §3): the record
-   * note ("your record stays yours") is stated whatever the trial state,
-   * because on that surface it is the boundary she needs to hear.
-   */
+  /** The daily gate states that her records remain accessible. */
   inDay?: boolean;
-  /** The earned, optional offer after her first session and weekly choice. */
+  /** Optional offer after the first qualifying session and weekly choice. */
   firstClose?: boolean;
-  /** Present only on the optional offer; the gated day has no bypass. */
   onLeave?: () => void;
-  /** Purchase or restore granted access; lets the optional route close. */
   onEntitled?: () => void;
 }
 
@@ -100,7 +71,9 @@ export function PaywallScreen({
   const offerings = getBilling().getOfferings();
   const [selected, setSelected] = useState<PlanId>("annual");
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"purchase" | "restore">("purchase");
   const [notice, setNotice] = useState<Notice>("none");
+  const selectedPrice = offerings.find((offering) => offering.plan === selected)?.priceLabel ?? "";
 
   // The expired gate state, from the same policy the launch gate uses.
   const expired =
@@ -111,8 +84,7 @@ export function PaywallScreen({
       qualifyingSessions,
       freeSessions,
     }) === "trialExpired";
-  // paywall_view (ADR-0024): the platform observed the paywall on
-  // screen, once per showing; which surface, nothing about her.
+  // One observed view per surface (ADR-0024).
   const surface = expired
     ? "expired"
     : firstClose
@@ -123,10 +95,7 @@ export function PaywallScreen({
   useEffect(() => {
     track("paywall_view", { surface });
   }, [surface]);
-  // The selling screen (ADR-0017, owner-approved 2026-09-06): a promise
-  // headline, one lead, the ladder she is on drawn as a picture, three
-  // benefits, the plans. The expired day keeps its own headline and the
-  // record note; everything else is the same honest image.
+  // Preserve distinct expired and first-session promises.
   const copy = expired
     ? {
         headline: strings.paywall.expired.headline,
@@ -147,8 +116,7 @@ export function PaywallScreen({
           trialLine: strings.paywall.trialLine,
           cta: strings.paywall.cta,
         };
-  // The ladder is hers: the pattern the engine points her at next, with
-  // the tiers she has reached in the green (nextMilestone decides).
+  // The engine supplies the milestone and tier.
   const profile = useProfileStore((s) => s.profile);
   const library = loadLibrary();
   const ladderPattern = nextMilestone(profile)?.pattern ?? "push";
@@ -156,11 +124,9 @@ export function PaywallScreen({
 
   const buy = async () => {
     if (busy) return;
+    setBusyAction("purchase");
     setBusy(true);
     setNotice("none");
-    // A false here is a provider/process failure (audit S2) — never her
-    // declining. Say so calmly; success is store-driven (the grant lands
-    // and the gate re-renders away), so there is nothing to say on true.
     const result = await purchasePlan(selected);
     // Closing the store sheet is her decision, not a failure — nothing
     // is said. Only a process failure gets the calm retry line.
@@ -171,6 +137,7 @@ export function PaywallScreen({
 
   const restore = async () => {
     if (busy) return;
+    setBusyAction("restore");
     setBusy(true);
     setNotice("none");
     const result = await restorePurchases();
@@ -184,8 +151,9 @@ export function PaywallScreen({
     <Screen>
       {headerSlot}
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator
       >
         <FadeIn reduceMotion={reduceMotion}>
           <AppText variant="caption" style={styles.letterhead}>
@@ -226,7 +194,7 @@ export function PaywallScreen({
           ].map((line) => (
             <View key={line} style={styles.benefit}>
               <View style={[styles.dot, { backgroundColor: colors.accent }]} />
-              <AppText variant="body">{line}</AppText>
+              <AppText variant="body" style={styles.benefitText}>{line}</AppText>
             </View>
           ))}
         </View>
@@ -239,6 +207,8 @@ export function PaywallScreen({
               priceLabel={offering.priceLabel}
               noteLabel={offering.noteLabel}
               selected={selected === offering.plan}
+              reduceMotion={reduceMotion}
+              disabled={busy}
               onSelect={() => {
                 setSelected(offering.plan);
                 // paywall_plan: a row was tapped. The port never lists
@@ -254,40 +224,12 @@ export function PaywallScreen({
         <AppText variant="caption" style={styles.trialLine}>
           {copy.trialLine}
         </AppText>
-        <PrimaryButton
-          testID="paywall-purchase"
-          label={copy.cta}
-          onPress={() => {
-            void buy();
-          }}
-        />
-        {firstClose && onLeave && (
-          <QuietButton
-            testID="paywall-not-now"
-            label={strings.paywall.firstClose.notNow}
-            onPress={() => {
-              if (busy) return;
-              track("paywall_leave", { surface: "firstClose" });
-              onLeave();
-            }}
-          />
-        )}
 
         <View style={styles.restore}>
-          {/* The purchase notice sits above Restore, adjacent to the
-              purchase cluster it answers (mapping), in the same register
-              as the restore notices below. */}
-          {notice === "purchaseFailed" && (
-            <AppText
-              variant="bodySoft"
-              style={styles.noticeText}
-              testID="paywall-purchase-error"
-            >
-              {strings.paywall.purchaseError}
-            </AppText>
-          )}
           <QuietButton
             testID="paywall-restore"
+            disabled={busy}
+            reduceMotion={reduceMotion}
             label={strings.paywall.restore}
             onPress={() => {
               void restore();
@@ -342,6 +284,18 @@ export function PaywallScreen({
           </View>
         )}
       </ScrollView>
+      <PaywallActions
+        reduceMotion={reduceMotion}
+        disclosure={expired ? strings.paywall.expired.afterTrialNote(selectedPrice) : strings.paywall.afterTrialNote(selectedPrice)}
+        label={busy ? busyAction === "purchase" ? strings.paywall.purchasing : strings.paywall.restoring : copy.cta}
+        busy={busy}
+        purchaseFailed={notice === "purchaseFailed"}
+        onPurchase={() => void buy()}
+        onLeave={firstClose && onLeave ? () => {
+          track("paywall_leave", { surface: "firstClose" });
+          onLeave();
+        } : undefined}
+      />
     </Screen>
   );
 }
@@ -351,10 +305,12 @@ interface PlanRowForProps {
   priceLabel: string;
   noteLabel?: string | undefined;
   selected: boolean;
+  reduceMotion: boolean;
+  disabled: boolean;
   onSelect: () => void;
 }
 
-function PlanRowFor({ plan, priceLabel, noteLabel, selected, onSelect }: PlanRowForProps) {
+function PlanRowFor({ plan, priceLabel, noteLabel, selected, onSelect, reduceMotion, disabled }: PlanRowForProps) {
   return (
     <PlanRow
       testID={`paywall-plan-${plan}`}
@@ -366,12 +322,15 @@ function PlanRowFor({ plan, priceLabel, noteLabel, selected, onSelect }: PlanRow
       price={priceLabel}
       note={noteLabel}
       selected={selected}
+      reduceMotion={reduceMotion}
+      disabled={disabled}
       onPress={onSelect}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   scrollContent: {
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
@@ -402,13 +361,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm + spacing.xs,
   },
+  benefitText: { flex: 1 },
   dot: {
     width: spacing.sm,
     height: spacing.sm,
     borderRadius: radius.pill,
   },
   plans: {
-    gap: spacing.sm + spacing.xs,
     marginBottom: spacing.md,
   },
   trialLine: {

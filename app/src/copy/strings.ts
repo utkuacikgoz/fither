@@ -871,7 +871,7 @@ export const strings = {
       // question below with the room she is standing in. Numerals, the
       // same shape as the prompt's own buttons. No "no equipment": the
       // question that follows says it better than a claim would. 15 words.
-      lead: "10, 20 or 30 minutes, adapted to you every day. First, the room you're in.",
+      lead: "10, 20 or 30 minutes. Built around your day. What can you use?",
       question: "What's within reach?",
       options: {
         floorOnly: "Just me and the floor",
@@ -939,14 +939,14 @@ export const strings = {
   // paywall-screen.tsx and the expired variant still read the key shape;
   // drop it with the screen, not before.
   paywall: {
-    headline: "Your first full push-up starts here.",
-    lead: "Six tiers for every movement. You climb at your own pace.",
+    headline: "Your day. Your strength.",
+    lead: "Build strength in 10, 20 or 30 minutes. At home or away.",
     letter:
       "FITHER is one subscription and it covers everything: every session, every length, adapted daily to your time, energy and surroundings. It works offline, on a plane or in a quiet house at 6am. No ads, nothing sold separately.",
     benefits: {
-      adapts: "10, 20, 30 minutes, adapted daily.",
-      anywhere: "Works offline, wherever you are.",
-      simple: "No equipment. No ads.",
+      adapts: "Your time. Your energy. Your session.",
+      anywhere: "At home or away. Even offline.",
+      simple: "No gym. No equipment. No ads.",
     },
     trialLine: "7 days free. Cancel before the week ends and pay nothing.",
     plans: {
@@ -980,6 +980,8 @@ export const strings = {
       },
     },
     cta: "Start my free week",
+    purchasing: "Opening secure checkout…",
+    restoring: "Checking your purchases…",
     afterTrialNote: (price: string) => `7 days free, then ${price}. Cancel anytime.`,
     firstClose: {
       headline: "Keep your week moving",
