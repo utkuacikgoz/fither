@@ -21,8 +21,8 @@ describe("deepLinkPath", () => {
     ["fither://unlock?token=abc#x", "/unlock"],
     ["fither://", "/"],
     ["fither:///", "/"],
-    ["https://fither.app/today?utm=x", "/today"],
-    ["https://fither.app", "/"],
+    ["https://fither.pro/today?utm=x", "/today"],
+    ["https://fither.pro", "/"],
     ["fither://today/", "/today"],
   ])("%s → %s", (url, path) => {
     expect(deepLinkPath(url)).toBe(path);
@@ -49,7 +49,7 @@ describe("useDeepLinkTracking", () => {
       { name: "deep_link_open", properties: { path: "/unlock" } },
     ]);
 
-    mockedUrl.mockReturnValue("https://fither.app/today");
+    mockedUrl.mockReturnValue("https://fither.pro/today");
     view.rerender(<Probe />);
     expect(recordedEvents()).toHaveLength(2);
     expect(recordedEvents()[1]).toEqual({

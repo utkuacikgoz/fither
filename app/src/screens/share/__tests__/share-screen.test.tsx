@@ -207,7 +207,7 @@ describe("ShareScreen", () => {
 
   describe("sharing", () => {
     it("sends the captured PNG and the message with the session link", async () => {
-      process.env[ENV] = "https://fither.app";
+      process.env[ENV] = "https://fither.pro";
       const screen = render(<ShareScreen source="finish" />);
       fireEvent.press(screen.getByTestId("share-context-hotel"));
       fireEvent.press(screen.getByTestId("share-send"));
@@ -220,7 +220,7 @@ describe("ShareScreen", () => {
       expect(shareSpy).toHaveBeenCalledWith({
         url: "file:///tmp/skill-card.png",
         message: strings.share.context.sessionMessage(
-          "https://fither.app/s/away_from_home",
+          "https://fither.pro/s/away_from_home",
         ),
       });
       // The file goes through the one sheet that carries text beside it.
@@ -228,24 +228,24 @@ describe("ShareScreen", () => {
     });
 
     it("a recap links to the week page with a message about the week", async () => {
-      process.env[ENV] = "https://fither.app";
+      process.env[ENV] = "https://fither.pro";
       const screen = render(<ShareScreen source="recap" />);
       fireEvent.press(screen.getByTestId("share-send"));
       await flushShare();
       expect(shareSpy).toHaveBeenCalledWith({
         url: "file:///tmp/skill-card.png",
-        message: strings.share.context.weekMessage("https://fither.app/s/week"),
+        message: strings.share.context.weekMessage("https://fither.pro/s/week"),
       });
     });
 
     it("falls back to the text alone when the capture fails", async () => {
-      process.env[ENV] = "https://fither.app";
+      process.env[ENV] = "https://fither.pro";
       jest.mocked(captureRef).mockRejectedValueOnce(new Error("no surface"));
       const screen = render(<ShareScreen source="receipt" />);
       fireEvent.press(screen.getByTestId("share-send"));
       await flushShare();
       expect(shareSpy).toHaveBeenCalledWith({
-        message: strings.share.context.sessionMessage("https://fither.app/s/session"),
+        message: strings.share.context.sessionMessage("https://fither.pro/s/session"),
       });
     });
 
@@ -265,15 +265,15 @@ describe("ShareScreen", () => {
       expect(sent).not.toContain("/s/");
       for (const leaf of renderedTextLeaves(screen.toJSON())) {
         expect(leaf).not.toMatch(/https?:\/\//);
-        expect(leaf).not.toContain("fither.app");
+        expect(leaf).not.toContain("fither.pro");
       }
     });
 
     it("prints the public host on the card when one is configured", () => {
-      process.env[ENV] = "https://fither.app";
+      process.env[ENV] = "https://fither.pro";
       const screen = render(<ShareScreen source="finish" />);
-      expect(screen.getByTestId("share-card-host").props.children).toBe("fither.app");
-      expect(screen.queryByText("https://fither.app")).toBeNull();
+      expect(screen.getByTestId("share-card-host").props.children).toBe("fither.pro");
+      expect(screen.queryByText("https://fither.pro")).toBeNull();
     });
 
     it("a dismissed sheet is not an error: nothing changes, she can share again", async () => {
@@ -362,7 +362,7 @@ describe("ShareScreen", () => {
 
   describe("what never leaves the phone", () => {
     it("nothing about her restrictions or her notes is on the card, in the text or in the event", async () => {
-      process.env[ENV] = "https://fither.app";
+      process.env[ENV] = "https://fither.pro";
       const note = "Knee felt sharp on the lunge, stopped early.";
       useSettingsStore.setState({ alwaysAvoid: ["knees", "back"] });
       useCareNoteStore.setState({ entries: [{ id: "n1", date: TODAY, text: note }] });
@@ -396,9 +396,9 @@ describe("ShareScreen", () => {
   });
 
   it("renders no user-facing text outside strings.ts, except the public host", () => {
-    process.env[ENV] = "https://fither.app";
+    process.env[ENV] = "https://fither.pro";
     const allowed = allowedText();
-    allowed.add("fither.app");
+    allowed.add("fither.pro");
     for (const source of ["finish", "receipt", "recap"] as const) {
       const screen = render(<ShareScreen source={source} />);
       if (source !== "recap") fireEvent.press(screen.getByTestId("share-context-hotel"));

@@ -36,7 +36,7 @@ python3 web/scripts/build-assets.py  # refresh fonts and figures from app/assets
 
 ## Deploying: the live site is the fither-web repository
 
-`fither.app` is served by Vercel from the sibling `fither-web` repository
+`fither.pro` is served by Vercel from the sibling `fither-web` repository
 (landing page, privacy, terms). This directory stays the source of the
 recipient page; after editing `src/` run
 

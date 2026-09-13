@@ -1,7 +1,7 @@
 // The public destination a share may point at (wave 3, web/README.md).
 // Build configuration, never a remote value:
 //
-//   EXPO_PUBLIC_SHARE_BASE_URL = "https://fither.app"
+//   EXPO_PUBLIC_SHARE_BASE_URL = "https://fither.pro"
 //
 // Unset means there is NO URL: the share text carries the card line
 // alone and the card shows no host. A placeholder destination would be
@@ -32,7 +32,7 @@ export function shareUrl(kind: ShareLinkKind): string | null {
   return base === null ? null : `${base}/s/${kind}`;
 }
 
-/** The host the card prints ("fither.app"), or null when no destination is configured. */
+/** The host the card prints ("fither.pro"), or null when no destination is configured. */
 export function shareUrlHost(): string | null {
   const base = shareBaseUrl();
   return base === null ? null : base.replace(/^https:\/\//i, "");

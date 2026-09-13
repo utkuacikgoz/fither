@@ -16,7 +16,7 @@ const DEV_CLIENT_HOST = "expo-development-client";
  * The trackable path of an incoming URL, or null when the URL is not a
  * deep link worth counting. Pure, so the rule is testable on its own.
  *   fither://unlock?x=1      → "/unlock"
- *   https://fither.app/today → "/today"
+ *   https://fither.pro/today → "/today"
  *   fither://                → "/"
  */
 export function deepLinkPath(url: string): string | null {

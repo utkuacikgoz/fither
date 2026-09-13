@@ -15,7 +15,7 @@
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "associatedDomains": [
-        "applinks:fither.app"
+        "applinks:fither.pro"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
