@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useTheme } from "../../design/theme";
 import {
@@ -9,6 +9,7 @@ import {
   spacing,
 } from "../../design/tokens";
 import { AppText } from "../../design/primitives/app-text";
+import { PressSurface } from "../../design/primitives/press-surface";
 
 interface PlanRowProps {
   label: string;
@@ -18,12 +19,14 @@ interface PlanRowProps {
   selected: boolean;
   onPress: () => void;
   testID?: string;
+  reduceMotion?: boolean;
+  disabled?: boolean;
 }
 
 /**
  * One subscription plan as a calm surface card: hairline border, name
- * left, price plainly set on the same line — the price lives on the plan
- * it prices. Selection reads three ways at once (sage wash, accent
+ * above the price, with room for both to scale. Selection reads three
+ * ways at once (green wash, accent
  * border, check glyph): these rows are "tapped and staying" while she
  * reads on, the same grammar as the multi-select rows. The check slot is
  * always reserved so the prices keep their alignment and nothing jumps
@@ -32,12 +35,14 @@ interface PlanRowProps {
  * badges, no strikethroughs, no "save X%" theatrics — the paywall is an
  * honest letter.
  */
-export function PlanRow({ label, price, note, selected, onPress, testID }: PlanRowProps) {
+export function PlanRow({ label, price, note, selected, onPress, testID, reduceMotion = true, disabled = false }: PlanRowProps) {
   const colors = useTheme();
   return (
-    <Pressable
+    <PressSurface
+      reduceMotion={reduceMotion}
+      disabled={disabled}
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
       testID={testID}
       onPress={onPress}
       style={({ pressed }) => [
@@ -50,10 +55,10 @@ export function PlanRow({ label, price, note, selected, onPress, testID }: PlanR
       ]}
     >
       <View style={styles.topLine}>
-        <AppText variant="bodyLarge" style={styles.label}>
-          {label}
-        </AppText>
-        <AppText variant="bodyLarge">{price}</AppText>
+        <View style={styles.planText}>
+          <AppText variant="body" color={colors.inkSoft}>{label}</AppText>
+          <AppText variant="bodyLarge">{price}</AppText>
+        </View>
         <View style={styles.checkSlot}>
           {selected && (
             // Decorative: selection is announced via accessibilityState.
@@ -74,7 +79,7 @@ export function PlanRow({ label, price, note, selected, onPress, testID }: PlanR
           {note}
         </AppText>
       ) : null}
-    </Pressable>
+    </PressSurface>
   );
 }
 
@@ -92,8 +97,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  label: {
+  planText: {
     flex: 1,
+    gap: spacing.xs,
   },
   checkSlot: {
     width: spacing.lg,

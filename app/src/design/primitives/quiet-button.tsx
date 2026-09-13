@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
 import { useTheme } from "../theme";
 import { hairline, minTouchTarget, radius, spacing } from "../tokens";
 import { AppText } from "./app-text";
+import { PressSurface } from "./press-surface";
 
 interface QuietButtonProps {
   label: string;
@@ -26,6 +27,8 @@ interface QuietButtonProps {
    * meaning.
    */
   armed?: boolean;
+  reduceMotion?: boolean;
+  disabled?: boolean;
 }
 
 /** A deliberately quiet text action (skip, secondary paths). Never competes. */
@@ -35,10 +38,15 @@ export function QuietButton({
   testID,
   outlined = false,
   armed = false,
+  reduceMotion = true,
+  disabled = false,
 }: QuietButtonProps) {
   const colors = useTheme();
   return (
-    <Pressable
+    <PressSurface
+      reduceMotion={reduceMotion}
+      disabled={disabled}
+      accessibilityState={{ disabled }}
       accessibilityRole="button"
       testID={testID}
       onPress={onPress}
@@ -53,13 +61,13 @@ export function QuietButton({
           styles.outlined,
           { borderColor: colors.accent, backgroundColor: colors.accentSoft },
         ],
-        { opacity: pressed ? 0.6 : 1 },
+        { opacity: disabled ? 0.6 : reduceMotion && pressed ? 0.6 : 1 },
       ]}
     >
       <AppText variant="body" color={armed ? colors.accent : colors.inkSoft}>
         {label}
       </AppText>
-    </Pressable>
+    </PressSurface>
   );
 }
 

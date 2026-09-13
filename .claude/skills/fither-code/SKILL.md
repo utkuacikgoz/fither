@@ -126,6 +126,11 @@ validates `data/movements.json` on every edit — keep it working, and keep
 
 ## Design primitives and motion (ADR-0013)
 
+- `press-surface` (ADR-0029) provides native-driver press feedback for
+  buttons and choices. Pass the screen's reduced-motion value; controls
+  never delay their action for motion. The offer's fixed action footer
+  carries the selected localised price and explicit pending status.
+
 - Reuse before adding. `app/src/design/primitives/` holds the shared
   vocabulary: `card` (every hub surface), `track` + `flow-progress` +
   `progress-line` (the app's progress forms — one 4pt pill everywhere),

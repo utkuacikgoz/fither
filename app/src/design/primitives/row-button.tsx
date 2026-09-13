@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
 import { useTheme } from "../theme";
 import { glyph, hairline, minTouchTarget, radius, spacing } from "../tokens";
 import { AppText } from "./app-text";
 import { MovementFigure } from "./movement-figure";
+import { PressSurface } from "./press-surface";
 
 interface RowButtonProps {
   label: string;
@@ -23,6 +24,7 @@ interface RowButtonProps {
    */
   multiSelect?: boolean;
   testID?: string;
+  reduceMotion?: boolean;
 }
 
 /**
@@ -37,10 +39,12 @@ export function RowButton({
   multiSelect = false,
   figure,
   testID,
+  reduceMotion = true,
 }: RowButtonProps) {
   const colors = useTheme();
   return (
-    <Pressable
+    <PressSurface
+      reduceMotion={reduceMotion}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       testID={testID}
@@ -73,7 +77,7 @@ export function RowButton({
           {glyph.check}
         </AppText>
       )}
-    </Pressable>
+    </PressSurface>
   );
 }
 

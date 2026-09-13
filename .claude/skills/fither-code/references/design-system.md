@@ -144,6 +144,13 @@ unlockBg "#0B0F0C"  onUnlock "#F5F7F5"  unlockAccent "#3DBE7A"
 
 ## Accessibility is part of premium
 
+ADR-0029: control feedback has a shorter envelope than entrances: 90ms
+press-in and 180ms release, ease-out, scale 0.98, no spring. The action
+runs immediately. Reduced motion keeps immediate colour feedback without
+movement. Subscription offers keep the primary action and selected actual
+price visible in a fixed footer while the plan details scroll. Pending
+checkout announces its status and prevents duplicate operations.
+
 Dynamic Type without breakage, contrast AA minimum on all text (the muted
 palette must still pass — check inkSoft on bg), VoiceOver labels on the
 player controls, captions/text for anything audio-only.
