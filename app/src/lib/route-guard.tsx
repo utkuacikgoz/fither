@@ -28,6 +28,7 @@ import { AppText } from "../design/primitives/app-text";
 import { Screen } from "../design/primitives/screen";
 import { entitlementStatus, isEntitled } from "../monetization/entitlement";
 import { freeSessionsAllowance } from "../monetization/experiment";
+import { firstCloseOfferDue } from "../monetization/first-close-offer";
 import { isFinished } from "../session/player-machine";
 import { useActiveSessionStore } from "../state/active-session-store";
 import { useEntitlementStore } from "../state/entitlement-store";
@@ -67,6 +68,8 @@ export type RouteRequirement =
    * cold open or re-entry redirects home — the ask never runs twice.
    */
   | "intentionAsk"
+  /** /trial-offer: the first proven session consumed the assigned free allowance. */
+  | "firstCloseOffer"
   /**
    * /reminder-ask: a close with completed work behind it AND the one
    * in-context ask still owed. A cold open (or any re-entry once
@@ -149,6 +152,8 @@ function requirementMet(requirement: RouteRequirement): boolean {
       // shared hydration set; intentionAskDue fails safe toward not
       // asking until its persisted `asked` is known.
       return finish !== null && finish.completedAnything && intentionAskDue();
+    case "firstCloseOffer":
+      return firstCloseOfferDue(finish);
     case "reminderAsk": {
       // The reminder store is deliberately NOT in the shared hydration
       // set (no other route needs it); an unhydrated read fails SAFE

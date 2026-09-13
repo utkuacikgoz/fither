@@ -21,6 +21,7 @@ import { entitlementStatus } from "../../monetization/entitlement";
 import { useFreeSessionsAllowance } from "../../monetization/experiment";
 import { loadLibrary } from "../../session/load-library";
 import { useEntitlementStore } from "../../state/entitlement-store";
+import { useIntentionStore } from "../../state/intention-store";
 import { useProfileStore } from "../../state/profile-store";
 import { PlanRow } from "./plan-row";
 
@@ -69,9 +70,21 @@ interface PaywallScreenProps {
    * because on that surface it is the boundary she needs to hear.
    */
   inDay?: boolean;
+  /** The earned, optional offer after her first session and weekly choice. */
+  firstClose?: boolean;
+  /** Present only on the optional offer; the gated day has no bypass. */
+  onLeave?: () => void;
+  /** Purchase or restore granted access; lets the optional route close. */
+  onEntitled?: () => void;
 }
 
-export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps = {}) {
+export function PaywallScreen({
+  headerSlot,
+  inDay = false,
+  firstClose = false,
+  onLeave,
+  onEntitled,
+}: PaywallScreenProps = {}) {
   const purchasePlan = useEntitlementStore((s) => s.purchasePlan);
   const restorePurchases = useEntitlementStore((s) => s.restorePurchases);
   const resetForDev = useEntitlementStore((s) => s.resetForDev);
@@ -80,6 +93,7 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
   const qualifyingSessions = useEntitlementStore((s) => s.qualifyingSessions);
   const freeSessions = useFreeSessionsAllowance();
   const purchase = useEntitlementStore((s) => s.purchase);
+  const intention = useIntentionStore((s) => s.target);
 
   const colors = useTheme();
   const reduceMotion = useReducedMotion();
@@ -99,7 +113,13 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
     }) === "trialExpired";
   // paywall_view (ADR-0024): the platform observed the paywall on
   // screen, once per showing; which surface, nothing about her.
-  const surface = expired ? "expired" : inDay ? "gate" : "settings";
+  const surface = expired
+    ? "expired"
+    : firstClose
+      ? "firstClose"
+      : inDay
+        ? "gate"
+        : "settings";
   useEffect(() => {
     track("paywall_view", { surface });
   }, [surface]);
@@ -114,12 +134,19 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
         trialLine: strings.paywall.expired.trialLine,
         cta: strings.paywall.expired.cta,
       }
-    : {
-        headline: strings.paywall.headline,
-        lead: strings.paywall.lead,
-        trialLine: strings.paywall.trialLine,
-        cta: strings.paywall.cta,
-      };
+    : firstClose
+      ? {
+          headline: strings.paywall.firstClose.headline,
+          lead: strings.paywall.firstClose.lead(intention),
+          trialLine: strings.paywall.trialLine,
+          cta: strings.paywall.cta,
+        }
+      : {
+          headline: strings.paywall.headline,
+          lead: strings.paywall.lead,
+          trialLine: strings.paywall.trialLine,
+          cta: strings.paywall.cta,
+        };
   // The ladder is hers: the pattern the engine points her at next, with
   // the tiers she has reached in the green (nextMilestone decides).
   const profile = useProfileStore((s) => s.profile);
@@ -139,6 +166,7 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
     // is said. Only a process failure gets the calm retry line.
     if (result === "failed") setNotice("purchaseFailed");
     setBusy(false);
+    if (result === "purchased") onEntitled?.();
   };
 
   const restore = async () => {
@@ -149,6 +177,7 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
     if (result === "empty") setNotice("restoreEmpty");
     else if (result === "failed") setNotice("restoreFailed");
     setBusy(false);
+    if (result === "restored") onEntitled?.();
   };
 
   return (
@@ -232,6 +261,17 @@ export function PaywallScreen({ headerSlot, inDay = false }: PaywallScreenProps 
             void buy();
           }}
         />
+        {firstClose && onLeave && (
+          <QuietButton
+            testID="paywall-not-now"
+            label={strings.paywall.firstClose.notNow}
+            onPress={() => {
+              if (busy) return;
+              track("paywall_leave", { surface: "firstClose" });
+              onLeave();
+            }}
+          />
+        )}
 
         <View style={styles.restore}>
           {/* The purchase notice sits above Restore, adjacent to the

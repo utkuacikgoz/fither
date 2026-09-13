@@ -129,6 +129,13 @@ sessions after it until the store entitles her. Entitlements must work
 offline once granted — a paying user in airplane mode is never locked
 out.
 
+**First-session offer (ADR-0028, owner decision 2026-09-13).** When the first
+qualifying session consumes her free allowance, the finish and weekly
+intention lead to an optional trial offer. Not now returns to Home, which
+keeps her weekly progress and recaps visible. New-session generation remains
+gated. The notification ask waits for a later completed session. The
+three-session experiment keeps its full allowance and existing ask sequence.
+
 ## Movement library
 
 `data/movements.json` is the source of truth for the 60 movements. Schema
