@@ -303,3 +303,31 @@ test("every figure the copy names exists as a masked asset and a class", () => {
   assert.ok(!/url\((?!["']?\/assets\/)/.test(css), "css urls must be root-relative to /assets/");
   assert.ok((css.match(/url\(/g) || []).length >= 12, "expected font, mark and figure urls");
 });
+
+// Pre-rendered scenarios (2026-09-13). A shared link is read by things
+// that never run JavaScript; every one of them was getting the generic
+// page while the recipient saw the scenario.
+test("every allowlisted scenario has its own pre-rendered page", () => {
+  for (const [id, content] of Object.entries(SCENARIOS)) {
+    const html = read(path.join("s", id, "index.html"));
+    assert.ok(
+      html.includes(escapeHtml(content.headline)),
+      `${id}: the served HTML must carry its own headline`,
+    );
+    // Not the button: it is replaced by COMING until the App Store URL
+    // is set, so the line is what proves the scenario reached the HTML.
+    assert.ok(html.includes(escapeHtml(content.line)), `${id}: and its own line`);
+  }
+});
+
+test("the generic page is still what an unknown scenario falls back to", () => {
+  const generic = read(path.join("s", "index.html"));
+  assert.ok(generic.includes(escapeHtml(GENERIC.headline)));
+  for (const content of Object.values(SCENARIOS)) {
+    if (content.headline === GENERIC.headline) continue;
+    assert.ok(
+      !generic.includes(escapeHtml(content.headline)),
+      "the fallback page must not leak a scenario's copy",
+    );
+  }
+});
