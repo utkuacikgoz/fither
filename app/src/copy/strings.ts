@@ -981,6 +981,14 @@ export const strings = {
     },
     cta: "Start my free week",
     afterTrialNote: (price: string) => `7 days free, then ${price}. Cancel anytime.`,
+    firstClose: {
+      headline: "Keep your week moving",
+      lead: (target: 2 | 3 | null) =>
+        target === null
+          ? "Your first session is saved. Start a free week for sessions built around the day you have."
+          : `Your first session is saved. Start a free week to continue the rhythm you chose: ${numberWord(target)} sessions most weeks.`,
+      notNow: "Not now",
+    },
     // Expired-trial variants (ADR-0009 flag). Shown when the paywall gates
     // after the 7 free days are spent. Key shapes mirror the pre-trial
     // keys one-for-one: headline, letter, trialLine, cta, afterTrialNote.

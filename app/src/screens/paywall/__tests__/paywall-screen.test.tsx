@@ -10,6 +10,7 @@ import { glyph } from "../../../design/tokens";
 import { LEGAL_URLS } from "../../../lib/legal-links";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
 import { useEntitlementStore } from "../../../state/entitlement-store";
+import { useIntentionStore } from "../../../state/intention-store";
 import {
   collectStringValues,
   renderedTextLeaves,
@@ -47,6 +48,16 @@ beforeEach(async () => {
 });
 
 describe("PaywallScreen", () => {
+  it("connects the optional offer to her weekly choice and records a quiet exit", () => {
+    clearRecordedEvents();
+    useIntentionStore.setState({ target: 3, asked: true });
+    const onLeave = jest.fn();
+    const screen = render(<PaywallScreen firstClose onLeave={onLeave} />);
+    expect(screen.getByText(strings.paywall.firstClose.lead(3))).toBeTruthy();
+    fireEvent.press(screen.getByTestId("paywall-not-now"));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(recordedEvents()).toContainEqual({ name: "paywall_leave", properties: { surface: "firstClose" } });
+  });
   it("reads as the honest letter: letterhead, copy, both plans, restore, disclosure", () => {
     const screen = render(<PaywallScreen />);
     // The letterhead is the shared brand mark, not copy.

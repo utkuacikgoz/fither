@@ -7,10 +7,12 @@ import * as StoreReview from "expo-store-review";
 import FinishRoute from "../../../app/finish";
 import IntentionRoute from "../../../app/intention";
 import ReminderAskRoute from "../../../app/reminder-ask";
+import TrialOfferRoute from "../../../app/trial-offer";
 import UnlockRoute from "../../../app/unlock";
 import { strings } from "../../copy/strings";
 import { useActiveSessionStore } from "../../state/active-session-store";
 import { useEntitlementStore } from "../../state/entitlement-store";
+import { useExperimentStore } from "../../state/experiment-store";
 import { useIdentityStore } from "../../state/identity-store";
 import { useIntentionStore } from "../../state/intention-store";
 import { useLedgerStore } from "../../state/ledger-store";
@@ -31,7 +33,7 @@ import { useSessionStore, type FinishClose } from "../../state/session-store";
 const requestReview = jest.mocked(StoreReview.requestReview);
 const hasAction = jest.mocked(StoreReview.hasAction);
 
-function seedFinish(close: FinishClose, unlocked = false) {
+function seedFinish(close: FinishClose, unlocked = false, first = false) {
   useSessionStore.setState({
     prompt: null,
     sessionId: null,
@@ -42,6 +44,7 @@ function seedFinish(close: FinishClose, unlocked = false) {
     workResumedAt: null,
     pendingClose: null,
     finish: {
+      first,
       pointsEarned: close.reason === "nothingDone" ? 0 : 35,
       completedAnything: close.reason !== "nothingDone",
       close,
@@ -76,9 +79,12 @@ beforeEach(() => {
   useEntitlementStore.setState({
     trialStartDate: null,
     purchase: null,
+    trialUsed: false,
+    qualifyingSessions: 0,
     hydrated: true,
     hydrationFailed: false,
   });
+  useExperimentStore.setState({ hydrated: true, hydrationFailed: false, assignments: {}, forceVariant: null });
   useIdentityStore.setState({
     identity: { kind: "guest", date: "2026-08-01" },
     hydrated: true,
@@ -102,6 +108,57 @@ beforeEach(() => {
     completedCloses: 0,
     hydrated: true,
     hydrationFailed: false,
+  });
+});
+
+describe("the first-session commercial offer", () => {
+  beforeEach(() => {
+    useIntentionStore.setState({ asked: false });
+    useEntitlementStore.setState({ trialStartDate: "2026-09-12", qualifyingSessions: 1 });
+  });
+
+  it("follows the weekly choice, lets her decline, and leaves reminders for later", () => {
+    seedFinish({ reason: "completed" }, false, true);
+    const close = render(<FinishRoute />);
+    fireEvent.press(close.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenLastCalledWith("/intention");
+    close.unmount();
+    const intention = render(<IntentionRoute />);
+    fireEvent.press(intention.getByTestId("intention-three"));
+    expect(router.replace).toHaveBeenLastCalledWith("/trial-offer");
+    intention.unmount();
+    const offer = render(<TrialOfferRoute />);
+    expect(offer.getByText(strings.paywall.firstClose.lead(3))).toBeTruthy();
+    fireEvent.press(offer.getByTestId("paywall-not-now"));
+    expect(router.replace).toHaveBeenLastCalledWith("/home");
+    expect(useSessionStore.getState().finish).toBeNull();
+    expect(useReminderStore.getState().asked).toBe(false);
+  });
+
+  it("ends the offer after a successful purchase", async () => {
+    seedFinish({ reason: "completed" }, false, true);
+    const offer = render(<TrialOfferRoute />);
+    fireEvent.press(offer.getByTestId("paywall-purchase"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/home"));
+    expect(useEntitlementStore.getState().purchase).not.toBeNull();
+    expect(useSessionStore.getState().finish).toBeNull();
+  });
+
+  it("preserves the three-session experiment allowance", () => {
+    useExperimentStore.setState({ forceVariant: "three" });
+    useIntentionStore.setState({ asked: true });
+    seedFinish({ reason: "completed" }, false, true);
+    const close = render(<FinishRoute />);
+    fireEvent.press(close.getByTestId("finish-continue"));
+    expect(router.replace).toHaveBeenLastCalledWith("/reminder-ask");
+    expect(router.replace).not.toHaveBeenCalledWith("/trial-offer");
+  });
+
+  it("rejects a direct entry without a qualifying first close", async () => {
+    seedFinish({ reason: "completed" });
+    const offer = render(<TrialOfferRoute />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    expect(offer.queryByText(strings.paywall.firstClose.headline)).toBeNull();
   });
 });
 

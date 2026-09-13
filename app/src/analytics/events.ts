@@ -57,7 +57,7 @@ export interface AnalyticsEvents {
   /** She opened the share sheet; iOS reports nothing after this. */
   share_start: { source: "finish" | "receipt" | "recap"; context: "home" | "hotel" | "meetings" | "none" };
   /** The paywall was shown: the gated day, the expired state, or Settings. */
-  paywall_view: { surface: "gate" | "expired" | "settings" };
+  paywall_view: { surface: "gate" | "expired" | "settings" | "firstClose" };
   /** The app opened from a shared scenario link (ADR-0024 §3); the allowlisted id only. */
   scenario_entry: { scenario: ScenarioId };
   /** An experiment assigned this phone a variant (ADR-0025); once per experiment. */
@@ -96,7 +96,7 @@ export interface AnalyticsEvents {
   /** A plan row was tapped on the paywall. */
   paywall_plan: { plan: "annual" | "monthly" };
   /** She left the paywall without buying, where leaving is possible. */
-  paywall_leave: { surface: "gate" | "expired" | "settings" };
+  paywall_leave: { surface: "gate" | "expired" | "settings" | "firstClose" };
   /** The purchase sheet's outcome, any plan. */
   purchase_result: { plan: "annual" | "monthly" | "lifetime"; outcome: "purchased" | "cancelled" | "failed" };
   /** Restore purchases, from the paywall or Settings. */
