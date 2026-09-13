@@ -28,10 +28,23 @@ const out = (...parts) => {
   return file;
 };
 
-const html = readFileSync(path.join(web, "s", "index.html"), "utf8")
-  .replaceAll('"/src/page.css"', '"/s/page.css"')
-  .replaceAll('"/src/app.js"', '"/s/app.js"');
-writeFileSync(out("s", "index.html"), html);
+// Every pre-rendered page: the generic fallback and one per scenario.
+// The page's own /src/ references become /s/ so its modules sit beside
+// it in the site repository.
+const rewrite = (file) =>
+  readFileSync(file, "utf8")
+    .replaceAll('"/src/page.css"', '"/s/page.css"')
+    .replaceAll('"/src/app.js"', '"/s/app.js"');
+writeFileSync(out("s", "index.html"), rewrite(path.join(web, "s", "index.html")));
+let pages = 1;
+for (const entry of readdirSync(path.join(web, "s"), { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue;
+  writeFileSync(
+    out("s", entry.name, "index.html"),
+    rewrite(path.join(web, "s", entry.name, "index.html")),
+  );
+  pages += 1;
+}
 for (const name of ["page.css", "app.js", "render.mjs", "content.mjs"]) {
   copyFileSync(path.join(web, "src", name), out("s", name));
 }
@@ -45,4 +58,6 @@ copyFileSync(
   path.join(web, ".well-known", "apple-app-site-association"),
   out(".well-known", "apple-app-site-association"),
 );
-console.log(`sync-site: wrote s/ (5 files), ${figures} figures and the association file to ${target}`);
+console.log(
+  `sync-site: wrote ${pages} pages plus 4 modules under s/, ${figures} figures and the association file to ${target}`,
+);
