@@ -123,6 +123,18 @@ export function renderPage(scenario, options = {}) {
 // The whole static document. Both web/index.html and web/s/index.html are
 // this, pre-rendered generic; app.js swaps in the scenario on the phone.
 // Asset paths are root-absolute so the same file serves at / and /s/*.
+/**
+ * The whole document for ONE scenario, or the generic page for null.
+ *
+ * Every scenario is pre-rendered to its own file (scripts/build-page.mjs)
+ * rather than swapped in by the browser. A shared link is read by things
+ * that never run JavaScript — the production preflight, link previews,
+ * a reader with scripting off — and all of them were being served the
+ * generic page while the recipient saw the scenario (found 2026-09-13,
+ * when the preflight asked /s/session for its own headline and did not
+ * find it). app.js still renders on load; it now agrees with the HTML
+ * it finds instead of replacing it.
+ */
 export function renderDocument(options = {}) {
   const csp = [
     "default-src 'none'",
@@ -150,7 +162,7 @@ export function renderDocument(options = {}) {
     "</head>",
     "<body>",
     '<main id="page">',
-    renderPage(null, options),
+    renderPage(options.scenario ?? null, options),
     "</main>",
     '<script type="module" src="/src/app.js"></script>',
     "</body>",
