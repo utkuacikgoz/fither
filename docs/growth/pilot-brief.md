@@ -40,7 +40,7 @@ added link (DECIDE below). The sender chooses it herself; the app never
 sends anything on its own.
 
 **What it carries.** A link whose path is the scenario id and nothing
-else: `https://fither.app/s/friends_week`. No query string, no token, no
+else: `https://fither.pro/s/friends_week`. No query string, no token, no
 sender identifier, none of her inputs. Not her minutes, energy, quiet
 answer, restrictions, tier, points, intention or week count. The path is
 the only thing either side of the link ever records (`deep_link_open`
@@ -50,7 +50,7 @@ drops the query unread; web analytics take path and scenario only).
 words in Messages; the app's part is:
 
 > Three sessions this week, with a friend. Each on your own schedule.
-> https://fither.app/s/friends_week
+> https://fither.pro/s/friends_week
 
 **What the sender sees after sending.** Nothing. iOS reports nothing
 after the share sheet opens (`share_start` is the last event), and there

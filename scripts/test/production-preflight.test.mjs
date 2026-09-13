@@ -11,7 +11,7 @@ const validEnv = {
   EXPO_PUBLIC_REVENUECAT_IOS_KEY: "appl_live123",
   EXPO_PUBLIC_SENTRY_DSN: "https://public@o1.ingest.sentry.io/1",
   EXPO_PUBLIC_POSTHOG_KEY: "phc_live123",
-  EXPO_PUBLIC_SHARE_BASE_URL: "https://fither.app",
+  EXPO_PUBLIC_SHARE_BASE_URL: "https://fither.pro",
   EXPO_PUBLIC_FEEDBACK_URL: "https://forms.example.com/f/fither",
   EXPO_PUBLIC_EXPERIMENT_FREE_SESSIONS: "off",
 };
@@ -32,13 +32,13 @@ test("rejects missing adapters, test store keys, placeholders, and wrong share h
     EXPO_PUBLIC_REVENUECAT_IOS_KEY: "test_store",
     EXPO_PUBLIC_SENTRY_DSN: "https://…@….ingest.sentry.io/…",
     EXPO_PUBLIC_POSTHOG_KEY: "project-key",
-    EXPO_PUBLIC_SHARE_BASE_URL: "https://staging.fither.app",
+    EXPO_PUBLIC_SHARE_BASE_URL: "https://staging.fither.pro",
     EXPO_PUBLIC_FEEDBACK_URL: "http://forms.example.com/f/fither",
     EXPO_PUBLIC_EXPERIMENT_FREE_SESSIONS: "true",
   });
   assert.equal(errors.length, 6);
   assert.ok(errors.some((error) => error.includes("appl_")));
-  assert.ok(errors.some((error) => error.includes("exactly https://fither.app")));
+  assert.ok(errors.some((error) => error.includes("exactly https://fither.pro")));
 });
 
 test("checks first-party pages, the recipient handoff, and the association file", async () => {

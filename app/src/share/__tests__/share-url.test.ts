@@ -19,22 +19,22 @@ describe("shareBaseUrl", () => {
   });
 
   it("reads the configured https origin, trimmed, without a trailing slash", () => {
-    process.env[ENV] = " https://fither.app/ ";
-    expect(shareBaseUrl()).toBe("https://fither.app");
-    process.env[ENV] = "https://staging.fither.app:8443";
-    expect(shareBaseUrl()).toBe("https://staging.fither.app:8443");
+    process.env[ENV] = " https://fither.pro/ ";
+    expect(shareBaseUrl()).toBe("https://fither.pro");
+    process.env[ENV] = "https://staging.fither.pro:8443";
+    expect(shareBaseUrl()).toBe("https://staging.fither.pro:8443");
   });
 
   it("treats anything that is not an https origin as unset", () => {
     for (const value of [
       "",
       "   ",
-      "fither.app",
-      "http://fither.app",
+      "fither.pro",
+      "http://fither.pro",
       "https://",
-      "https://fither.app/s/session",
+      "https://fither.pro/s/session",
       "javascript:alert(1)",
-      "https://fither.app?x=1",
+      "https://fither.pro?x=1",
     ]) {
       process.env[ENV] = value;
       expect(shareBaseUrl()).toBeNull();
@@ -44,15 +44,15 @@ describe("shareBaseUrl", () => {
   });
 
   it("builds the recipient path per kind, matching the web page's allowlist", () => {
-    process.env[ENV] = "https://fither.app";
-    expect(shareUrl("session")).toBe("https://fither.app/s/session");
-    expect(shareUrl("week")).toBe("https://fither.app/s/week");
-    expect(shareUrl("away_from_home")).toBe("https://fither.app/s/away_from_home");
-    expect(shareUrl("between_meetings")).toBe("https://fither.app/s/between_meetings");
+    process.env[ENV] = "https://fither.pro";
+    expect(shareUrl("session")).toBe("https://fither.pro/s/session");
+    expect(shareUrl("week")).toBe("https://fither.pro/s/week");
+    expect(shareUrl("away_from_home")).toBe("https://fither.pro/s/away_from_home");
+    expect(shareUrl("between_meetings")).toBe("https://fither.pro/s/between_meetings");
   });
 
   it("prints the host alone for the card", () => {
-    process.env[ENV] = "https://fither.app";
-    expect(shareUrlHost()).toBe("fither.app");
+    process.env[ENV] = "https://fither.pro";
+    expect(shareUrlHost()).toBe("fither.pro");
   });
 });

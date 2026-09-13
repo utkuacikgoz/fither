@@ -57,8 +57,8 @@ export function validateProductionEnvironment(env) {
     errors.push("EXPO_PUBLIC_POSTHOG_KEY must be a real phc_ project key");
   }
   const share = env.EXPO_PUBLIC_SHARE_BASE_URL ?? "";
-  if (share && share !== "https://fither.app") {
-    errors.push("EXPO_PUBLIC_SHARE_BASE_URL must be exactly https://fither.app");
+  if (share && share !== "https://fither.pro") {
+    errors.push("EXPO_PUBLIC_SHARE_BASE_URL must be exactly https://fither.pro");
   }
   const feedback = env.EXPO_PUBLIC_FEEDBACK_URL ?? "";
   if (feedback && !validHttps(feedback)) {
@@ -72,10 +72,10 @@ export function validateProductionEnvironment(env) {
 }
 
 const ROUTES = Object.freeze([
-  ["home", "https://fither.app/", "Strength"],
-  ["privacy", "https://fither.app/privacy", "Privacy"],
-  ["terms", "https://fither.app/terms", "Terms"],
-  ["shared session", "https://fither.app/s/session", "Ten minutes. No equipment. Done."],
+  ["home", "https://fither.pro/", "Strength"],
+  ["privacy", "https://fither.pro/privacy", "Privacy"],
+  ["terms", "https://fither.pro/terms", "Terms"],
+  ["shared session", "https://fither.pro/s/session", "Ten minutes. No equipment. Done."],
 ]);
 
 export async function probeProductionSite(fetchImpl = fetch) {
@@ -102,7 +102,7 @@ export async function probeProductionSite(fetchImpl = fetch) {
 
   try {
     const response = await fetchImpl(
-      "https://fither.app/.well-known/apple-app-site-association",
+      "https://fither.pro/.well-known/apple-app-site-association",
       { redirect: "manual", signal: AbortSignal.timeout(10_000) },
     );
     if (response.status !== 200) {

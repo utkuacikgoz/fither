@@ -1,5 +1,5 @@
 // Copies the recipient page into the live site's checkout (the fither-web
-// repository, deployed on Vercel at fither.app). This directory stays the
+// repository, deployed on Vercel at fither.pro). This directory stays the
 // source — its tests pin the contract the app relies on — and the site
 // repository carries the deployable copy. Run after build-page.mjs:
 //

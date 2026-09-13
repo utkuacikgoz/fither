@@ -1,8 +1,8 @@
 import { Linking } from "react-native";
 
 export const LEGAL_URLS = {
-  terms: "https://fither.app/terms",
-  privacy: "https://fither.app/privacy",
+  terms: "https://fither.pro/terms",
+  privacy: "https://fither.pro/privacy",
 } as const;
 
 /** Open a fixed first-party legal page. A platform failure stays quiet. */

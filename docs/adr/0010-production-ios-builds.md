@@ -14,7 +14,7 @@ builds share a deliberate configuration.
 ## Decision
 
 - Version 1 is iOS-only and starts at app version `1.0.0`, native build `1`.
-- `com.fither.app` was the intended identifier; `com.fitherfitness.app` is the one registered (2026-09-08, `com.fither.app` was taken), subject to the
+- `com.fither.pro` was the intended identifier; `com.fitherfitness.app` is the one registered (2026-09-08, `com.fither.pro` was taken), subject to the
   owner's final Apple-team availability check before the first upload.
 - EAS provides four profiles: simulator development, physical-device
   development, internal preview, and production store distribution.
