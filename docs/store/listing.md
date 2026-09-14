@@ -68,8 +68,8 @@ If the trial or the offline claim ever changes, change it here first.
 
 ## 5. Description
 
-Limit 4,000. Measured: **1,058** characters of text, **1,072** including
-the seven paragraph breaks. The first two lines carry the value; they are
+Limit 4,000. Measured: **1,138** characters of text, **1,155** including
+the eight paragraph breaks. The first two lines carry the value; they are
 all most people see before "more".
 
 ```
@@ -88,7 +88,18 @@ Everything runs on your phone, so it works in airplane mode, in a basement, anyw
 Progress is what your body can do: your first full push-up, your first full plank. We will never ask what you want to look like.
 
 $59.99 a year or $12.99 a month after a 7-day free trial. Cancel anytime.
+
+Terms of Use: https://fither.pro/terms
+Privacy Policy: https://fither.pro/privacy
 ```
+
+<!--
+The two links are App Review's requirement for auto-renewable
+subscriptions (automated rejection 2026-09-14: "does not include a
+functional link to the Terms of Use (EULA) in the app metadata"). They
+are the same pages the paywall links, so the store and the app agree.
+Metadata only: no build is needed to change them.
+-->
 
 <!--
 Pricing: USD reference prices per ADR-0014. Apple localises the price
