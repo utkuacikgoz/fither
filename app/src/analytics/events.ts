@@ -107,6 +107,8 @@ export interface AnalyticsEvents {
   share_complete: { completed: boolean };
   /** She signed out or erased everything: the churn signals. */
   account_action: { action: "signOut" | "erase" };
+  /** She opened a pattern's ladder from Progress (2026-09-14). */
+  ladder_view: { pattern: Pattern };
 }
 
 /**
@@ -173,4 +175,5 @@ export const ANALYTICS_EVENT_NAMES: readonly AnalyticsEventName[] = [
   "lifetime_offer",
   "share_complete",
   "account_action",
+  "ladder_view",
 ];

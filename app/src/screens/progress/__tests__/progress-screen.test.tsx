@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
+import { router } from "expo-router";
 import React from "react";
 import { Image } from "react-native";
 import {
@@ -10,6 +11,7 @@ import {
   type Pattern,
   type Profile,
   type Tier,
+  nextMilestone,
 } from "@fither/engine";
 
 import { strings } from "../../../copy/strings";
@@ -289,4 +291,24 @@ it("renders no user-facing text outside strings.ts (plus library data)", () => {
   for (const leaf of renderedTextLeaves(screen.toJSON())) {
     expect(allowed.has(leaf) ? true : leaf).toBe(true);
   }
+});
+
+describe("ProgressScreen — doors to the ladder (owner 2026-09-14, A2)", () => {
+  it("a pattern row opens its ladder, and says it is a door", () => {
+    const screen = render(<ProgressScreen />);
+    expect(screen.getByTestId("pattern-pull").props.accessibilityRole).toBe("button");
+    expect(screen.getByTestId("pattern-pull-chevron", hidden)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("pattern-pull"));
+    expect(router.push).toHaveBeenLastCalledWith("/ladder?pattern=pull");
+  });
+
+  it("the next-skill row opens the ladder that skill sits on", () => {
+    useProfileStore.setState({ profile: tier4Profile() });
+    const screen = render(<ProgressScreen />);
+    fireEvent.press(screen.getByTestId("progress-next-skill"));
+    // Push is at tier 4 with its tier-4 skill earned; the nearest
+    // unearned milestone is the engine's answer, and the row opens it.
+    const upcoming = nextMilestone(tier4Profile());
+    expect(router.push).toHaveBeenLastCalledWith(`/ladder?pattern=${upcoming?.pattern}`);
+  });
 });

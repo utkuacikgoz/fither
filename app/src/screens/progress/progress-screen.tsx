@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
   computeStreak,
@@ -119,6 +120,7 @@ export function ProgressScreen() {
             milestones={milestones}
             order={ORDER.skills}
             reduceMotion={reduceMotion}
+            onOpen={(pattern) => router.push(`/ladder?pattern=${pattern}`)}
           />
         </View>
 
@@ -157,6 +159,7 @@ export function ProgressScreen() {
                   first={index === 0}
                   reduceMotion={reduceMotion}
                   baseDelayMs={tileDelay(ORDER.patterns)}
+                  onPress={() => router.push(`/ladder?pattern=${pattern}`)}
                 />
               );
             })}

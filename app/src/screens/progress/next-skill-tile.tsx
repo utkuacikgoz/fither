@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import type { MovementLibrary, SkillMilestone } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
@@ -32,6 +32,8 @@ interface NextSkillTileProps {
   milestones: readonly SkillMilestone[];
   order: number;
   reduceMotion: boolean;
+  /** Opens the ladder the next skill sits on (owner, 2026-09-14). */
+  onOpen: (pattern: SkillMilestone["pattern"]) => void;
 }
 
 export function NextSkillTile({
@@ -42,13 +44,21 @@ export function NextSkillTile({
   milestones,
   order,
   reduceMotion,
+  onOpen,
 }: NextSkillTileProps) {
   const colors = useTheme();
   const rule = { borderTopWidth: hairline, borderTopColor: colors.line };
   return (
     <Tile order={order} reduceMotion={reduceMotion} testID="progress-skills">
       {upcoming ? (
-        <View style={styles.next} testID="progress-next-skill">
+        // The row is a door to that ladder and says so: button role,
+        // drawn chevron. The earned list beneath stays a record.
+        <Pressable
+          style={({ pressed }) => [styles.next, { opacity: pressed ? 0.6 : 1 }]}
+          accessibilityRole="button"
+          onPress={() => onOpen(upcoming.pattern)}
+          testID="progress-next-skill"
+        >
           <MovementFigure
             movementId={skillFigureId(library, upcoming.pattern, upcoming.tier)}
             size={spacing.xxxl + spacing.sm}
@@ -75,7 +85,13 @@ export function NextSkillTile({
               </AppText>
             )}
           </View>
-        </View>
+          <View
+            style={[styles.chevron, { borderColor: colors.inkSoft }]}
+            importantForAccessibility="no"
+            accessibilityElementsHidden
+            testID="progress-next-skill-chevron"
+          />
+        </Pressable>
       ) : (
         <AppText variant="bodySoft" testID="skills-all-reached">
           {strings.home.skills.empty}
@@ -140,5 +156,13 @@ const styles = StyleSheet.create({
   },
   skillName: {
     flex: 1,
+  },
+  chevron: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRightWidth: hairline * 1.5,
+    borderTopWidth: hairline * 1.5,
+    transform: [{ rotate: "45deg" }],
+    marginRight: spacing.xs,
   },
 });

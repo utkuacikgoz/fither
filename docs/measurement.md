@@ -60,6 +60,7 @@ platform observed, never as intent.
 | Lifetime offer | `lifetime_offer` view → `purchase_result` plan=lifetime, or `lifetime_offer` decline | same screen |
 | Restore | `restore_result` split by `outcome` | none; a failure rate, not a funnel |
 | Share | `share_eligible` → `share_start` → `share_complete` (split by `completed`) | same screen |
+| Progress | `ladder_view` split by `pattern`: who opens a ladder from Progress, and which one, against later `workout_complete` counts | 14 days |
 | Churn signals | `account_action` split by `action`; pair with the person's `sessions_completed` at the time | none |
 
 Return visits come from PostHog's own `Application Opened` (with
