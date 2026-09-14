@@ -1706,6 +1706,22 @@ export const strings = {
     // Ladder length comes from the engine's MAX_TIER at the callsite —
     // copy never hardcodes product structure.
     tier: (tier: number, max: number) => `Tier ${tier} of ${max}`,
+    // COPY-WRITER (2026-09-14, owner, design A2): the ladder page, opened
+    // from a pattern row or the next-skill tile. The eyebrow joins the
+    // pattern's name and the tier line; the movement she is on is the
+    // title; `toSkill` sits under it only while a milestone is ahead on
+    // THIS ladder. `caption` labels the six rungs, `now` marks hers,
+    // `skill` marks a milestone rung. The rule line under the rungs is
+    // skills.empty, read here as well. Nothing here says "unlock",
+    // "locked" or "level": rungs ahead are simply ahead.
+    ladder: {
+      header: (pattern: string, tierLine: string) => `${pattern} · ${tierLine}`,
+      toSkill: (skill: string, tiers: number) =>
+        tiers === 1 ? `${skill} is one tier ahead` : `${skill} is ${tiers} tiers ahead`,
+      caption: "The ladder",
+      now: "Now",
+      skill: "Skill",
+    },
   },
   errors: {
     // Shown while the session engine or movement library is unavailable

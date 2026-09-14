@@ -73,6 +73,12 @@ that cannot write Watchman's LaunchAgent.
 - Haptics behind a port (ADR-0030): a choice felt, work beginning felt,
   a skip landing felt, the receipt and a grant felt; switching the voice
   on answers in the voice.
+- The ladder page (owner pick 2026-09-14, design A2, mockup
+  docs/design/mockups/ladder-a2.html): every pattern row and the
+  next-skill row on Progress is a door to `/ladder?pattern=`, the six
+  rungs from the engine's own lookup, hers marked Now, milestones marked
+  Skill, the distance to the next skill when it is on that ladder;
+  `ladder_view` reports which ladders get opened.
 - Gates: jest `testTimeout` 20 s (a cold module graph beside an Xcode
   archive outran 5 s on the owner's Mac and failed a green test).
 
@@ -286,20 +292,16 @@ ones.
 
 ## Next, in order
 
-1. **Owner: pick the ladder design** (A1 sheet or A2 page, mockups
-   docs/design/mockups/ladder-a1.html / ladder-a2.html): tapping a
-   pattern row or the next-skill tile opens the six rungs of that
-   ladder. Then build it, with tests.
-2. **`pnpm ship` → build (5).** The voice stop fix and haptics are on
-   main and not yet in a build; haptics adds a native module, so the
-   build is a rebuild (the script prebuilds).
-3. **Owner: sandbox purchase on device** (yearly with the free week,
+1. **`pnpm ship` → build (5).** The voice stop fix, haptics, the copy
+   cuts and the ladder page are on main and not yet in a build; haptics
+   adds a native module, so the build is a rebuild (the script prebuilds).
+2. **Owner: sandbox purchase on device** (yearly with the free week,
    restore, the lifetime trigger on day 3 with auto-renew off), then
    the external TestFlight group with the §8 review notes.
-4. **Submit for review.** The landing page keeps "Coming to the App
+3. **Submit for review.** The landing page keeps "Coming to the App
    Store" until the release goes live; `web/src/content.mjs` holds the
    one App Store URL.
-5. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
+4. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
    Not before launch. Order: schema and RLS, auth adapter and account
    deletion, append-only sync behind the ports, feedback onto the same
    project, owner dashboard. The engine never moves server-side.

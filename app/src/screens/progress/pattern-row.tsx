@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { MAX_TIER, type Pattern, type Tier } from "@fither/engine";
 
 import { strings } from "../../copy/strings";
@@ -17,6 +17,10 @@ import { TierTrack } from "./tier-track";
 // ("Tier 2 of 6", strings.profile.tier) — the visible numeral is the
 // mockup's short form, the track is decorative, and the movement name
 // comes from the library through the caller (session/skill-name.ts).
+//
+// Since 2026-09-14 (owner, design A2) the row is a door to the ladder
+// page and says so: a button role and a drawn chevron, the same two
+// hairline edges the settings rows use.
 
 interface PatternRowProps {
   pattern: Pattern;
@@ -28,6 +32,8 @@ interface PatternRowProps {
   reduceMotion: boolean;
   /** When the tile holding this row has finished entering. */
   baseDelayMs: number;
+  /** Opens this pattern's ladder. */
+  onPress: () => void;
 }
 
 export function PatternRow({
@@ -38,14 +44,20 @@ export function PatternRow({
   first,
   reduceMotion,
   baseDelayMs,
+  onPress,
 }: PatternRowProps) {
   const colors = useTheme();
   const name = strings.profile.patterns.names[pattern];
   return (
-    <View
-      style={[styles.row, !first && { borderTopWidth: hairline, borderTopColor: colors.line }]}
-      accessible
+    <Pressable
+      style={({ pressed }) => [
+        styles.row,
+        !first && { borderTopWidth: hairline, borderTopColor: colors.line },
+        { opacity: pressed ? 0.6 : 1 },
+      ]}
+      accessibilityRole="button"
       accessibilityLabel={[name, strings.profile.tier(tier, MAX_TIER), movementName].join(". ")}
+      onPress={onPress}
       testID={`pattern-${pattern}`}
     >
       <MovementFigure movementId={movementId} size="small" tone="ink" />
@@ -68,7 +80,13 @@ export function PatternRow({
       <AppText variant="body" style={styles.tier} testID={`pattern-${pattern}-tier`}>
         {String(tier)}
       </AppText>
-    </View>
+      <View
+        style={[styles.chevron, { borderColor: colors.inkSoft }]}
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+        testID={`pattern-${pattern}-chevron`}
+      />
+    </Pressable>
   );
 }
 
@@ -95,5 +113,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semibold,
     minWidth: spacing.lg,
     textAlign: "right",
+  },
+  chevron: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRightWidth: hairline * 1.5,
+    borderTopWidth: hairline * 1.5,
+    transform: [{ rotate: "45deg" }],
+    marginRight: spacing.xs,
   },
 });

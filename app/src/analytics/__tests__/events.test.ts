@@ -53,6 +53,7 @@ describe("analytics events", () => {
       "lifetime_offer",
       "share_complete",
       "account_action",
+      "ladder_view",
     ]);
   });
 
