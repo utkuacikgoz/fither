@@ -78,6 +78,15 @@ Nothing here needs an Expo account.
    `ITSAppUsesNonExemptEncryption` is set false in `app.json`, so no
    compliance question per build.
 
+   **When `pnpm ship` says the upload failed**: the archive is kept, so
+   run this step by hand (the command above, or `open` the archive in
+   Xcode → Organizer → Distribute App) and read the error; the script's
+   log is `~/fither-build/export.log`. A successful export ends with
+   `** EXPORT SUCCEEDED **` and writes `DistributionSummary.plist` into
+   `~/fither-build/export`; anything else, and TestFlight never gets the
+   build, whatever the number in `app.json` says (builds 3 to 5 were lost
+   this way on 2026-09-14 before the script checked).
+
 5. **Every later build**: bump `ios.buildNumber` in `app/app.json`
    (same version, new number), commit, repeat 2 to 4.
 

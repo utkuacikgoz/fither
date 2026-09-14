@@ -98,10 +98,21 @@ else
   echo "ship: no bundle at $BUNDLE — cannot verify which keys shipped"
 fi
 
+# The upload. Its full output goes to a log and the verdict is read from
+# the log, never from a pipe: piped through grep, a failed export used
+# to exit 0 and the script went on to commit a build that never left
+# the Mac (builds 3, 4 and 5, 2026-09-14).
+EXPORT_LOG="$BUILD_DIR/export.log"
 xcodebuild -exportArchive -archivePath "$BUILD_DIR/FITHER.xcarchive" \
   -exportOptionsPlist "$BUILD_DIR/ExportOptions.plist" \
-  -exportPath "$BUILD_DIR/export" -allowProvisioningUpdates 2>&1 \
-  | grep -E "error:|SUCCEEDED|FAILED"
+  -exportPath "$BUILD_DIR/export" -allowProvisioningUpdates > "$EXPORT_LOG" 2>&1 || true
+grep -E "error:|SUCCEEDED|FAILED" "$EXPORT_LOG" || true
+if ! grep -q "EXPORT SUCCEEDED" "$EXPORT_LOG"; then
+  echo "ship: upload failed; the full log is $EXPORT_LOG"
+  echo "ship: the archive is kept at $BUILD_DIR/FITHER.xcarchive, so a fixed"
+  echo "ship: upload can be retried without rebuilding (docs/release-builds.md)."
+  exit 1
+fi
 
 cd "$ROOT"
 git add app/app.json
