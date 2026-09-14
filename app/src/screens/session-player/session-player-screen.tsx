@@ -26,6 +26,7 @@ import {
   totalSets,
 } from "../../session/player-machine";
 import { useSessionStore } from "../../state/session-store";
+import { haptic } from "../../haptics/haptics";
 import { speakCue, stopVoice } from "../../session/voice";
 import { FeedbackPhase, RestPhase, SideSwitchPhase, SkipControl } from "./player-phases";
 import { useSettingsStore } from "../../state/settings-store";
@@ -102,6 +103,8 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
       return;
     }
     setSkipArmed(false);
+    // The skip lands: she feels it before the toast says it (ADR-0030).
+    haptic("commit");
     // A skipped block keeps no voice: the cue must not talk over the
     // next block's intro.
     stopVoice();
@@ -167,6 +170,9 @@ export function SessionPlayerScreen({ onFinished }: SessionPlayerScreenProps) {
     if (phaseKey === null) return;
     if (announcedKey.current === phaseKey) return;
     announcedKey.current = phaseKey;
+    // Work begins, whether by her tap or by a hand-off counting out: the
+    // one moment in a set she must not miss, so it is felt (ADR-0030).
+    if (player?.phase.kind === "work") haptic("commit");
     const announcement =
       player === null ? null : phaseAnnouncement(player);
     if (announcement !== null) {

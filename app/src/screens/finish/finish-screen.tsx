@@ -9,6 +9,7 @@ import {
 
 import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
+import { haptic } from "../../haptics/haptics";
 import { AppText } from "../../design/primitives/app-text";
 import { Card } from "../../design/primitives/card";
 import { FadeIn } from "../../design/primitives/fade-in";
@@ -140,7 +141,10 @@ export function FinishScreen({ onContinue }: FinishScreenProps) {
     if (!finish || announcedRef.current) return;
     announcedRef.current = true;
     AccessibilityInfo.announceForAccessibility(closeCopy(finish).headline);
-  }, [finish]);
+    // A session closed in her favour is felt once, with the receipt; the
+    // honest nothing-done close is not a success and gets nothing.
+    if (!nothingDone) haptic("success");
+  }, [finish, nothingDone]);
 
   // share_eligible once, when a receipt with something on it settles:
   // the share is offered here, whether or not she takes it.

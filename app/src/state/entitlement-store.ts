@@ -10,6 +10,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { track } from "../analytics/analytics";
+import { haptic } from "../haptics/haptics";
 import { getBilling, type PlanId, type PurchaseRecord } from "../monetization/billing";
 
 /**
@@ -146,6 +147,8 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
         });
         if (!outcome.ok) return outcome.reason;
         set({ purchase: outcome.purchase, trialUsed: true });
+        // The grant is felt here, once, whichever screen asked (ADR-0030).
+        haptic("success");
         // trial_start: the store granted a free period on a subscription
         // (ADR-0014 §6). A straight purchase or the lifetime plan is not
         // a trial and sends nothing here.
@@ -165,6 +168,7 @@ export const useEntitlementStore = create<EntitlementStoreState>()(
         track("restore_result", { outcome: result });
         if (!outcome.ok) return result;
         set({ purchase: outcome.purchase, trialUsed: true });
+        haptic("success");
         return result;
       },
 

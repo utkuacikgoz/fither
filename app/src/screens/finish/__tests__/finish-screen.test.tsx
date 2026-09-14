@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
+import { clearRecordedHaptics, recordedHaptics } from "../../../test-utils/haptics";
 import { darkColors } from "../../../design/tokens";
 import { applyResult } from "../../../session/apply-result";
 import { createPlayer, reduce } from "../../../session/player-machine";
@@ -517,5 +518,23 @@ describe("FinishScreen", () => {
     fireEvent.press(await screen.findByTestId("finish-retry"));
     await waitFor(() => expect(mockedApply).toHaveBeenCalledTimes(2));
     expect(await screen.findByTestId("finish-continue")).toBeTruthy();
+  });
+});
+
+describe("what she feels (ADR-0030)", () => {
+  it("a session closed in her favour is one success, with the receipt", async () => {
+    clearRecordedHaptics();
+    mockedApply.mockReturnValue({ ok: true, value: fixtureApplyResult() });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByText(strings.finish.headline);
+    expect(recordedHaptics()).toEqual(["notification:success"]);
+  });
+
+  it("the honest nothing-done close is not a success and is not felt as one", async () => {
+    clearRecordedHaptics();
+    mockedApply.mockReturnValue({ ok: true, value: fixtureApplyResultOutcomes(["skipped", "skipped"]) });
+    const screen = render(<FinishScreen onContinue={jest.fn()} />);
+    await screen.findByTestId("finish-continue");
+    expect(recordedHaptics()).toEqual([]);
   });
 });

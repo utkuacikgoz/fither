@@ -1,0 +1,79 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Ladder, sheet</title><link rel="stylesheet" href="tokens.css">
+<style>
+.h { margin-top: 12px; margin-bottom: 20px; }
+.sec { margin-bottom: 28px; }
+.sec .caption { margin-bottom: 12px; }
+.stats { display: flex; gap: 12px; }
+.stat { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 18px; }
+.stat .numeral { font-size: 44px; line-height: 1; letter-spacing: -1px; }
+.stat .numeral.g { color: var(--accent); }
+.stat .l { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
+.prow { display: flex; align-items: center; gap: 14px; height: 64px; }
+.prow + .prow { border-top: 1px solid var(--line); }
+.prow .fig { width: 44px; height: 44px; flex: 0 0 44px; background: var(--ink); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.prow .txt { flex: 1; min-width: 0; }
+.prow .name { font-size: 17px; font-weight: 600; }
+.prow .mv { font-size: 13px; color: var(--ink-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow .track { width: 72px; }
+.prow .tier { width: 34px; text-align: right; font-size: 15px; font-weight: 600; }
+.prow .tier small { color: var(--ink-soft); font-weight: 500; font-size: 13px; }
+.skill { display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 18px; }
+.skill .fig { width: 72px; height: 72px; flex: 0 0 72px; background: var(--accent); -webkit-mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; mask: url('../../../app/assets/movements/full-push-up.png') center/contain no-repeat; }
+.skill .name { font-size: 19px; font-weight: 600; }
+.skill .away { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
+.skill .eyebrow { font-size: 12px; color: var(--accent); font-weight: 600; letter-spacing: 0.4px; margin-bottom: 4px; }
+.row { display: flex; align-items: center; gap: 14px; height: 60px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .ic { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 8px; background: var(--accent-soft); display:flex; align-items:center; justify-content:center; }
+.row .ic i { display:block; width: 12px; height: 12px; border: 2px solid var(--accent); border-radius: 3px; }
+.row .lbl { flex: 1; font-size: 17px; }
+.row .val { color: var(--ink-soft); font-size: 15px; }
+.row .chev { width: 9px; height: 9px; border-right: 1.5px solid var(--ink-soft); border-top: 1.5px solid var(--ink-soft); transform: rotate(45deg); margin-left: 4px; }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 0 18px; }
+.profile { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+.profile .mark { width: 48px; height: 48px; background: var(--accent); -webkit-mask: url('../../../app/assets/brand/mark.png') center/contain no-repeat; mask: url('../../../app/assets/brand/mark.png') center/contain no-repeat; }
+.profile .who { font-size: 17px; font-weight: 600; }
+.profile .st { color: var(--ink-soft); font-size: 14px; margin-top: 2px; }
+.scroll { overflow: hidden; flex: 1; }
+.foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+
+.rung { display: flex; align-items: center; gap: 14px; height: 64px; }
+.rung + .rung { border-top: 1px solid var(--line); }
+.rung .fig { width: 44px; height: 44px; flex: 0 0 44px; background: var(--ink-soft); -webkit-mask: var(--m) center/contain no-repeat; mask: var(--m) center/contain no-repeat; }
+.rung.done .fig, .rung.now .fig { background: var(--ink); }
+.rung.now .fig { background: var(--accent); }
+.rung .txt { flex: 1; min-width: 0; }
+.rung .name { font-size: 17px; color: var(--ink-soft); }
+.rung.done .name, .rung.now .name { color: var(--ink); font-weight: 600; }
+.rung .eb { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 2px; }
+.rung .mark { color: var(--accent); font-size: 18px; }
+.rung .now { color: var(--accent); font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
+.rung .t { color: var(--ink-soft); font-size: 15px; font-weight: 600; min-width: 22px; text-align: right; }
+.rule { color: var(--ink-soft); font-size: 14px; line-height: 1.45; margin-top: 18px; }
+
+.dim { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 24px 24px 0 0; padding: 10px 24px 40px; }
+.handle { width: 36px; height: 5px; border-radius: 3px; background: var(--rail); margin: 0 auto 18px; }
+.sheet .stitle { font-size: 26px; font-weight: 600; letter-spacing: -0.3px; }
+.sheet .ssub { color: var(--ink-soft); font-size: 15px; margin-top: 4px; margin-bottom: 8px; }
+.phone { position: relative; }
+</style></head><body><div class="phone"><div class="statusbar"><span>9:41</span><span class="right"><span>●●●●</span><span>⌒</span><span class="batt"></span></span></div>
+<div class="screen" style="padding-bottom:83px">
+  <div class="title h">Progress</div>
+  <div class="scroll">
+  <div class="sec"><div class="stats">
+    <div class="stat"><div class="numeral g">3</div><div class="l">day streak · best 9</div></div>
+    <div class="stat"><div class="numeral">85</div><div class="l">points earned</div></div>
+  </div></div>
+  <div class="sec"><div class="caption">Next skill</div>
+    <div class="skill"><span class="fig"></span><div><div class="eyebrow">2 TIERS AHEAD</div><div class="name">Full Push-Up</div><div class="away">Your first named skill. Every session counts toward it.</div></div></div>
+  </div>
+  <div class="sec"><div class="caption">Patterns</div><div class="group"><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/incline-push-up.png')"></span><div class="txt"><div class="name">Push</div><div class="mv">Incline push-up</div></div><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="tier">2<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/shoulder-blade-squeeze.png')"></span><div class="txt"><div class="name">Pull</div><div class="mv">Blade squeeze</div></div><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><div class="tier">1<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/sit-to-stand.png')"></span><div class="txt"><div class="name">Squat</div><div class="mv">Sit-to-stand</div></div><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="tier">2<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/glute-bridge.png')"></span><div class="txt"><div class="name">Hip hinge</div><div class="mv">Glute bridge</div></div><div class="track"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><div class="tier">1<small>/6</small></div></div><div class="prow"><span class="fig" style="--m:url('../../../app/assets/movements/incline-plank.png')"></span><div class="txt"><div class="name">Core</div><div class="mv">Incline plank</div></div><div class="track"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="tier">2<small>/6</small></div></div></div></div>
+  </div>
+</div>
+<div class="tabbar"><div class="tab "><img src="../../../app/assets/icons/tab-today.png" style="filter:brightness(0.68)"><span class="caption">Today</span></div><div class="tab active"><img src="../../../app/assets/icons/tab-progress.png" style="filter:invert(62%) sepia(45%) saturate(600%) hue-rotate(95deg) brightness(95%)"><span class="caption">Progress</span></div><div class="tab "><img src="../../../app/assets/icons/tab-settings.png" style="filter:brightness(0.68)"><span class="caption">Settings</span></div></div><div class="home-indicator"></div><div class="dim"></div><div class="sheet"><div class="handle"></div><div class="stitle">Push</div><div class="ssub">Tier 2 of 6 · Incline Push-Up</div><div class="rung done"><span class="fig" style="--m:url('../../../app/assets/movements/wall-push-up.png')"></span><div class="txt"><div class="name">Wall Push-Up</div></div><span class="mark">✓</span></div>
+<div class="rung now"><span class="fig" style="--m:url('../../../app/assets/movements/incline-push-up.png')"></span><div class="txt"><div class="name">Incline Push-Up</div></div><span class="now">Now</span></div>
+<div class="rung ahead"><span class="fig" style="--m:url('../../../app/assets/movements/kneeling-push-up.png')"></span><div class="txt"><div class="name">Kneeling Push-Up</div></div><span class="t">3</span></div>
+<div class="rung skill"><span class="fig" style="--m:url('../../../app/assets/movements/full-push-up.png')"></span><div class="txt"><div class="eb">Skill</div><div class="name">Full Push-Up</div></div><span class="t">4</span></div>
+<div class="rung ahead"><span class="fig" style="--m:url('../../../app/assets/movements/decline-push-up.png')"></span><div class="txt"><div class="name">Decline Push-Up</div></div><span class="t">5</span></div>
+<div class="rung ahead"><span class="fig" style="--m:url('../../../app/assets/movements/archer-push-up.png')"></span><div class="txt"><div class="name">Archer Push-Up</div></div><span class="t">6</span></div><div class="rule">Every tier takes three sessions that don't feel hard.</div></div></div></body></html>

@@ -1,4 +1,4 @@
-# Where the build stands — 2026-09-07 (phase 5: growth waves in progress)
+# Where the build stands — 2026-09-14 (phase 6: on TestFlight, launch polish)
 
 Read `CLAUDE.md` first, then this. Everything below is on `main` with
 green GitHub CI verified per wave commit (runs #90 onward).
@@ -8,11 +8,13 @@ green GitHub CI verified per wave commit (runs #90 onward).
 ```
 node scripts/validate-movements.mjs  OK — 64 movements, ladders complete,
                                      constrained tiers 1-4 intact
-pnpm release:check                   pass — FITHER 1.0.0 (1), iOS identity,
-                                     isolated EAS build environments
+pnpm release:check                   pass — FITHER 1.0.0 (4), com.fitherfitness.app,
+                                     isolated build environments
 engine + app typecheck               pass
-engine tests                         77/77
-app tests                            559/559 (62 suites, 0 act() warnings)
+engine tests                         181/181 (12 files)
+app tests                            1048/1048 (112 suites, 0 act() warnings)
+pnpm production:check                pass — production keys present by shape,
+                                     fither.pro routes 200 with no redirect
 pnpm bundle:ios                      pass — full production Hermes bundle
                                      exports (6.9MB Hermes; +0.6MB PostHog, +1.9MB Sentry), zero resolution errors
 expo prebuild --platform ios         pass — native project generates with
@@ -42,6 +44,37 @@ another Vite project cannot inherit its parent's plugins. App Jest runs with
 that cannot write Watchman's LaunchAgent.
 
 ## Done
+
+**Phase 6 — on TestFlight (2026-09-08 → 2026-09-14)**
+
+- Builds 1.0.0 (2), (3), (4) uploaded via `pnpm ship`
+  (scripts/ship-testflight.sh: bump, prebuild, archive, verify the
+  archived bundle carries the `appl_` RevenueCat key, upload, commit the
+  bump). Build (1) was rejected under 2.1(a): the gate after the free
+  session with no store products; App Store Connect products exist now
+  and the beta review notes are docs/store/listing.md §8.
+- Production config live: RevenueCat products and offering, PostHog key,
+  Sentry DSN, Formspree feedback endpoint, `fither.pro` on Vercel (apex
+  serves, www redirects; the six shared scenario pages pre-rendered so
+  crawlers and the preflight see real content). Voice audio generated
+  and committed (ElevenLabs), the voice ask on the way into the first
+  session, in-set cues spoken per set, the last five seconds counted.
+- Session player: the hand-offs run themselves — 15 s intro, 5 s side
+  switch, rest counts out into the next set; the skip is two taps in
+  place with a toast, no dialog; a stopped voice actually stops (iOS
+  `remove()` never paused; now pause then remove, and a cue asked for
+  before a skip cannot start after it).
+- Preview rebuilt (two-line headline, one paragraph in her terms, the
+  plan). Progress: one streak line, no rest-day tile. Finish: points
+  beside the label. Copy cut on the paywall, Where I train and Your
+  notes; an empty notes page offers the day (same door as Home).
+- Analytics: hashed identity on Sign in with Apple, person properties,
+  one event per place she can leave (ADR-0027).
+- Haptics behind a port (ADR-0030): a choice felt, work beginning felt,
+  a skip landing felt, the receipt and a grant felt; switching the voice
+  on answers in the voice.
+- Gates: jest `testTimeout` 20 s (a cold module graph beside an Xcode
+  archive outran 5 s on the owner's Mac and failed a green test).
 
 **Phase 0 — foundation**
 
@@ -138,9 +171,10 @@ that cannot write Watchman's LaunchAgent.
 - Monetization: billing port + dev adapter; trial stamps ONLY on the
   engine's own completed-session evidence, journaled for replay
   (ADR-0009 §2); expired trial renders the gated day — paywall letter
-  where the questions would be, Progress/Settings doors intact, "Your
-  record stays yours." The paywall is the redesigned honest letter
-  (triple-marked selection, purchase-failure notice, no dead controls).
+  where the questions would be, Progress/Settings doors intact. The
+  paywall is the honest letter cut to what she needs (2026-09-14: no
+  letterhead, no lead, no record note; headline, ladder, benefits,
+  plans, price, legal).
 - Daily invitation (ADR: owner-decided): once-ever in-context ask after
   the first completed session, slot pick (8:00/12:30/18:30 — real hours
   in the labels), seven weekly local triggers rotating four invitation
@@ -252,49 +286,20 @@ ones.
 
 ## Next, in order
 
-1. **Owner: rebuild and walk the app.** Wave C added native modules —
-   `git pull`, `rm -rf app/ios`, `cd app && npx expo run:ios`. The dev
-   previewer (Settings → Developer tools) walks paywall/unlock/all four
-   closes in minutes. This is the only unverified inch: everything
-   checkable without a Mac is checked (bundle export + prebuild green).
-2. **Owner: GATE 3** — five real users, under 60s to first movement
-   (docs/gate-3-protocol.md; the protocol now names sign-in as the
-   post-reset first screen).
-3. **Owner: App Store Connect products + RevenueCat offering** per
-   docs/revenuecat-setup.md, then sandbox verification. The trial model
-   is decided (ADR-0014 §6: the store trial is the trial). Sign in with
-   Apple is wired; a Google adapter needs a Google Cloud OAuth client
-   (owner) before the button returns.
-   *(was: Apple Developer enrollment + EAS link — done 2026-09-05)*
-   (docs/release-builds.md). Unblocks: real Apple/Google sign-in
-   adapters, App Store Connect subscription products → RevenueCat
-   adapter + sandbox testing + offline-lockout re-review, TestFlight,
-   ops SDKs (Resend/Canny; PostHog and Sentry are built), store preparation.
-4. **Owner: commission Brief 6** (movement animations; 6 reference
-   clips first) and the **human coach review** of the 60 movements.
-5. **Owner: create the PostHog project and set the key** per
-   docs/posthog-setup.md, and **the Sentry project and DSN** per
-   docs/sentry-setup.md (then the deliberate test crash from Settings →
-   Developer tools — the launch checklist's verification). Both are
-   built and tested (ADR-0015, ADR-0016); without their keys every build
-   runs the quiet adapters and sends nothing.
-6. **Owner: pick the voice and generate the audio.** Everything else is
-   built — the pipeline, the offline playback, the Settings card, the
-   quiet-day rule. One command, once, with the ElevenLabs key and the
-   chosen voice id:
-
-   ```
-   ELEVENLABS_API_KEY=… ELEVENLABS_VOICE_ID=… node scripts/generate-voice-audio.mjs
-   ```
-
-   180 unique cues, 5,621 characters (one run). Commit the mp3s and the
-   regenerated manifest; the Settings card appears on the next build.
-   Until then the app builds with an empty manifest and voice has
-   nothing to say. Default is OFF — an owner call worth confirming:
-   audio she did not ask for, next to a sleeping child, is the wrong
-   first surprise.
-
-7. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
+1. **Owner: pick the ladder design** (A1 sheet or A2 page, mockups
+   docs/design/mockups/ladder-a1.html / ladder-a2.html): tapping a
+   pattern row or the next-skill tile opens the six rungs of that
+   ladder. Then build it, with tests.
+2. **`pnpm ship` → build (5).** The voice stop fix and haptics are on
+   main and not yet in a build; haptics adds a native module, so the
+   build is a rebuild (the script prebuilds).
+3. **Owner: sandbox purchase on device** (yearly with the free week,
+   restore, the lifetime trigger on day 3 with auto-renew off), then
+   the external TestFlight group with the §8 review notes.
+4. **Submit for review.** The landing page keeps "Coming to the App
+   Store" until the release goes live; `web/src/content.mjs` holds the
+   one App Store URL.
+5. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
    Not before launch. Order: schema and RLS, auth adapter and account
    deletion, append-only sync behind the ports, feedback onto the same
    project, owner dashboard. The engine never moves server-side.

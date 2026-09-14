@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { haptic } from "../../haptics/haptics";
 import { useTheme } from "../theme";
 import { glyph, hairline, minTouchTarget, spacing } from "../tokens";
 import { AppText } from "./app-text";
@@ -50,7 +51,11 @@ export function OptionRow({
       // on a verb is noise (reviewer note).
       {...(emphasis === "action" ? {} : { accessibilityState: { selected } })}
       testID={testID}
-      onPress={onPress}
+      // A preference set is a preference felt (ADR-0030).
+      onPress={() => {
+        haptic("tap");
+        onPress();
+      }}
       style={({ pressed }) => [
         styles.row,
         divider && { borderBottomWidth: hairline, borderBottomColor: colors.line },

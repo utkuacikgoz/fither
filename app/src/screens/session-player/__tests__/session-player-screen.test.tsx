@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 import { strings } from "../../../copy/strings";
+import { clearRecordedHaptics, recordedHaptics } from "../../../test-utils/haptics";
 import {
   countFloorMaxFontScale,
   darkColors,
@@ -849,5 +850,33 @@ describe("SessionPlayerScreen", () => {
       fireEvent.press(screen.getByTestId("feedback-good"));
       expect(announce).toHaveBeenCalledTimes(2);
     });
+  });
+});
+
+describe("what she feels (ADR-0030)", () => {
+  it("work beginning is a commit, by her tap and by the hand-off alike; the intro is not", () => {
+    clearRecordedHaptics();
+    const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+    expect(recordedHaptics()).toEqual([]);
+    fireEvent.press(screen.getByTestId("player-begin"));
+    expect(recordedHaptics()).toEqual(["impact:medium"]);
+    // Through the set into rest, then the rest counts itself out into
+    // the next set: that hand-off is felt too, without a tap.
+    fireEvent.press(screen.getByTestId("player-set-done"));
+    expect(recordedHaptics()).toEqual(["impact:medium"]);
+    waitOutRest();
+    expect(recordedHaptics()).toEqual(["impact:medium", "impact:medium"]);
+  });
+
+  it("a skip is felt when it lands, not when it is armed; the feedback answer is a tap", () => {
+    clearRecordedHaptics();
+    const screen = render(<SessionPlayerScreen onFinished={jest.fn()} />);
+    fireEvent.press(screen.getByTestId("player-begin"));
+    fireEvent.press(screen.getByTestId("player-skip")); // arms
+    expect(recordedHaptics()).toEqual(["impact:medium"]);
+    fireEvent.press(screen.getByTestId("player-skip")); // skips
+    // The skip's own commit, then the next block's intro (no haptic).
+    expect(recordedHaptics()).toEqual(["impact:medium", "impact:medium"]);
+    settleToast();
   });
 });

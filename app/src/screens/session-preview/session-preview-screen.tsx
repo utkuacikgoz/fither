@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 
 import { track } from "../../analytics/analytics";
 import { strings } from "../../copy/strings";
+import { haptic } from "../../haptics/haptics";
 import { AppText } from "../../design/primitives/app-text";
 import { BrandMark } from "../../design/primitives/brand-mark";
 import { FadeIn } from "../../design/primitives/fade-in";
@@ -123,6 +124,9 @@ export function SessionPreviewScreen({
             testID="care-continue"
             label={strings.care.continue}
             onPress={() => {
+              // A note she wrote is kept, and the keeping is felt: the
+              // page says nothing, the phone answers (ADR-0030).
+              if (careNoteText.trim().length > 0) haptic("commit");
               // The note saves exactly as before, then the day
               // remembers the beat: neither screen asks again today.
               saveCareNote();

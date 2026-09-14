@@ -157,6 +157,26 @@ jest.mock("expo-audio", () => {
   };
 });
 
+// Haptics (ADR-0030): the engine is a call log. Tests read
+// `recordedHaptics()` through the port's own test seam.
+jest.mock("expo-haptics", () => {
+  const log: string[] = [];
+  return {
+    ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy" },
+    NotificationFeedbackType: { Success: "success", Warning: "warning", Error: "error" },
+    selectionAsync: jest.fn(async () => {
+      log.push("tap");
+    }),
+    impactAsync: jest.fn(async (style: string) => {
+      log.push(`impact:${style}`);
+    }),
+    notificationAsync: jest.fn(async (type: string) => {
+      log.push(`notification:${type}`);
+    }),
+    __log: log,
+  };
+});
+
 // RevenueCat (ADR-0014): never selected in tests (no key), but the
 // adapter module is imported by the port, so its natives are shimmed.
 // The adapter's own unit test drives these mocks directly.

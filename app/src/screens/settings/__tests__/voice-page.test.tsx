@@ -5,10 +5,14 @@ import { strings } from "../../../copy/strings";
 import { glyph } from "../../../design/tokens";
 import { useSettingsStore } from "../../../state/settings-store";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
+import { speakCue } from "../../../session/voice";
 import { VoicePage } from "../pages/voice-page";
 import { resetSettingsStores } from "./settings-test-setup";
 
 const hidden = { includeHiddenElements: true } as const;
+
+jest.mock("../../../session/voice", () => ({ speakCue: jest.fn(async () => true), stopVoice: jest.fn() }));
+jest.mock("../../../session/voice-sample", () => ({ sampleCue: jest.fn(() => "Squeeze your glutes.") }));
 
 beforeEach(async () => {
   await resetSettingsStores();
@@ -44,4 +48,13 @@ describe("Settings → Voice", () => {
       expect(allowed.has(leaf)).toBe(true);
     }
   });
+});
+
+it("switching the voice on answers in the voice: one real cue, once; off says nothing", () => {
+  const screen = render(<VoicePage />);
+  fireEvent.press(screen.getByTestId("voice-on"));
+  expect(speakCue).toHaveBeenCalledWith("Squeeze your glutes.");
+  expect(speakCue).toHaveBeenCalledTimes(1);
+  fireEvent.press(screen.getByTestId("voice-off"));
+  expect(speakCue).toHaveBeenCalledTimes(1);
 });
