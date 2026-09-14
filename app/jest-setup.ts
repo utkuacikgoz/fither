@@ -122,15 +122,25 @@ jest.mock("expo-sharing", () => ({
   shareAsync: jest.fn(async () => undefined),
 }));
 
-// Voice playback native (expo-audio): a player that records play/remove
-// and lets a test fire "didJustFinish"; the audio mode is a no-op.
+// Voice playback native (expo-audio): a player that records play/pause/
+// remove in one call log and lets a test fire "didJustFinish"; the audio
+// mode is a no-op.
 jest.mock("expo-audio", () => {
-  const players: Array<{ play: jest.Mock; remove: jest.Mock; listeners: Array<(s: unknown) => void> }> = [];
+  const players: Array<{
+    play: jest.Mock;
+    pause: jest.Mock;
+    remove: jest.Mock;
+    calls: string[];
+    listeners: Array<(s: unknown) => void>;
+  }> = [];
   const createAudioPlayer = jest.fn(() => {
     const listeners: Array<(s: unknown) => void> = [];
+    const calls: string[] = [];
     const player = {
-      play: jest.fn(),
-      remove: jest.fn(),
+      play: jest.fn(() => calls.push("play")),
+      pause: jest.fn(() => calls.push("pause")),
+      remove: jest.fn(() => calls.push("remove")),
+      calls,
       listeners,
       addListener: jest.fn((_event: string, cb: (s: unknown) => void) => {
         listeners.push(cb);

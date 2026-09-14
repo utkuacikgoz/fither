@@ -12,7 +12,13 @@ jest.mock("../voice-manifest", () => ({
 }));
 
 type Mocked = typeof Audio & {
-  __players: Array<{ play: jest.Mock; remove: jest.Mock; listeners: Array<(s: unknown) => void> }>;
+  __players: Array<{
+    play: jest.Mock;
+    pause: jest.Mock;
+    remove: jest.Mock;
+    calls: string[];
+    listeners: Array<(s: unknown) => void>;
+  }>;
 };
 const audio = Audio as Mocked;
 
@@ -57,6 +63,27 @@ it("one voice at a time: a new cue releases the one still speaking", async () =>
   expect(audio.__players).toHaveLength(2);
   expect(audio.__players[0]!.remove).toHaveBeenCalledTimes(1);
   expect(audio.__players[1]!.remove).not.toHaveBeenCalled();
+});
+
+it("releasing is pause THEN remove — on iOS remove() alone leaves the sound playing", async () => {
+  await speakCue("Push through your palms.");
+  stopVoice();
+  expect(audio.__players[0]!.calls).toEqual(["play", "pause", "remove"]);
+});
+
+it("a cue still waiting on the audio mode when the voice is stopped never starts", async () => {
+  const pending = speakCue("Push through your palms.");
+  stopVoice();
+  expect(await pending).toBe(false);
+  expect(audio.__players).toHaveLength(0);
+});
+
+it("two cues asked for in the same instant: only the later one speaks", async () => {
+  const first = speakCue("Push through your palms.");
+  const second = speakCue("Push through your palms.");
+  expect(await Promise.all([first, second])).toEqual([false, true]);
+  expect(audio.__players).toHaveLength(1);
+  expect(audio.__players[0]!.play).toHaveBeenCalledTimes(1);
 });
 
 it("stopVoice releases whatever is speaking, and is safe when nothing is", async () => {
