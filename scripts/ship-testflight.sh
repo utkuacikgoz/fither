@@ -21,6 +21,10 @@ if [ -n "$(git status --porcelain)" ]; then
   echo "ship: commit or stash your changes first"; git status --short; exit 1
 fi
 git pull -q origin main
+# The pull can bring a new native module (expo-haptics did, 2026-09-14);
+# without its package the bundle step fails inside xcodebuild, after the
+# number was already bumped. Install exactly the lockfile, every time.
+pnpm install --frozen-lockfile
 
 # Fail before changing a build number or spending time in Xcode when a
 # production adapter is disabled or the public acquisition/link routes
