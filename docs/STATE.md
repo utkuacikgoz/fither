@@ -1,4 +1,4 @@
-# Where the build stands — 2026-09-14 (phase 6: on TestFlight, launch polish)
+# Where the build stands — 2026-09-14 (phase 6: submitted for App Store review)
 
 Read `CLAUDE.md` first, then this. Everything below is on `main` with
 green GitHub CI verified per wave commit (runs #90 onward).
@@ -47,7 +47,12 @@ that cannot write Watchman's LaunchAgent.
 
 **Phase 6 — on TestFlight (2026-09-08 → 2026-09-14)**
 
-- Builds 1.0.0 (2), (3), (4) uploaded via `pnpm ship`
+- **Submitted for App Store review 2026-09-14 16:20** with build
+  1.0.0 (5), the FITHER Pro subscription group (yearly with the 7-day
+  intro offer, monthly) and the lifetime purchase, review notes from
+  docs/store/listing.md §8. Builds 3 and 4 never reached TestFlight
+  (Xcode's account session had expired and the ship script did not
+  notice; fixed the same day). Build (2) uploaded via `pnpm ship`
   (scripts/ship-testflight.sh: bump, prebuild, archive, verify the
   archived bundle carries the `appl_` RevenueCat key, upload, commit the
   bump). Build (1) was rejected under 2.1(a): the gate after the free
@@ -292,16 +297,17 @@ ones.
 
 ## Next, in order
 
-1. **`pnpm ship` → build (5).** The voice stop fix, haptics, the copy
-   cuts and the ladder page are on main and not yet in a build; haptics
-   adds a native module, so the build is a rebuild (the script prebuilds).
-2. **Owner: sandbox purchase on device** (yearly with the free week,
-   restore, the lifetime trigger on day 3 with auto-renew off), then
-   the external TestFlight group with the §8 review notes.
-3. **Submit for review.** The landing page keeps "Coming to the App
-   Store" until the release goes live; `web/src/content.mjs` holds the
-   one App Store URL.
-4. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
+1. **Wait for App Review** (up to 48 h). On approval: release, then flip
+   the landing page from "Coming to the App Store" to the store link
+   (`web/src/content.mjs` holds the one App Store URL; the "Coming" line
+   is what the production preflight forbids on the shared pages).
+   On rejection: read the reason against docs/store/listing.md §8 before
+   changing anything.
+2. **Owner: walk build 5 on the phone** while review runs: skip mid-cue
+   (no overlap, a thump, the toast), Progress → a ladder, Voice → Spoken
+   speaks a cue, sandbox yearly purchase unlocks with the success thump,
+   Settings footer reads 1.0.0 (5).
+3. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
    Not before launch. Order: schema and RLS, auth adapter and account
    deletion, append-only sync behind the ports, feedback onto the same
    project, owner dashboard. The engine never moves server-side.
