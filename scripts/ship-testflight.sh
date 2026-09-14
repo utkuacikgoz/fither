@@ -106,5 +106,8 @@ xcodebuild -exportArchive -archivePath "$BUILD_DIR/FITHER.xcarchive" \
 cd "$ROOT"
 git add app/app.json
 git commit -q -m "Build $NEXT"
+# Main may have moved during the archive; the bump commit is one line
+# in app.json and rebases cleanly over anything that is not another bump.
+git pull -q --rebase origin main
 git push -q origin main
 echo "ship: $VERSION ($NEXT) uploaded; TestFlight shows it in about ten minutes"
