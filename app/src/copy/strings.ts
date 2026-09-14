@@ -935,14 +935,11 @@ export const strings = {
   // per movement, her pace), the image, three `benefits` (each a fact
   // the app keeps offline today), `trialLine`, the plan rows, `cta`.
   // Still annual led, plain prices, no countdowns, no strikethroughs,
-  // no user counts, no "transform". `letter` is kept in place because
-  // paywall-screen.tsx and the expired variant still read the key shape;
-  // drop it with the screen, not before.
+  // no user counts, no "transform". The letterhead, the lead and the
+  // `letter` went in the copy cut (2026-09-14, owner): the headline, the
+  // ladder, the three benefits and the price are the whole letter.
   paywall: {
     headline: "Your day. Your strength.",
-    lead: "Build strength in 10, 20 or 30 minutes. At home or away.",
-    letter:
-      "FITHER is one subscription and it covers everything: every session, every length, adapted daily to your time, energy and surroundings. It works offline, on a plane or in a quiet house at 6am. No ads, nothing sold separately.",
     benefits: {
       adapts: "Your time. Your energy. Your session.",
       anywhere: "At home or away. Even offline.",
@@ -993,21 +990,15 @@ export const strings = {
     },
     // Expired-trial variants (ADR-0009 flag). Shown when the paywall gates
     // after the 7 free days are spent. Key shapes mirror the pre-trial
-    // keys one-for-one: headline, letter, trialLine, cta, afterTrialNote.
+    // keys one-for-one: headline, trialLine, cta, afterTrialNote.
     // No fake re-trial, no guilt about the week being over. The pre-trial
     // keys above stay for any settings-reachable paywall before expiry.
     expired: {
       headline: "Your free week is complete",
-      letter:
-        "You've had the full seven days: every session, every length, adapted daily. A subscription covers exactly what you've been using: works offline, no ads, nothing sold separately.",
       trialLine:
         "Subscribing starts billing today. Cancel anytime in your App Store settings.",
       cta: "Keep training",
       afterTrialNote: (price: string) => `${price}, starting today. Cancel anytime.`,
-      // The ownership boundary on the gated day (ADR-0009 §3), rendered
-      // under the "Today" header, above the letter. Plain fact: history,
-      // points and skills stay hers; only making a new session is gated.
-      recordNote: "Your record stays yours. Subscribe to make a new session.",
     },
     restore: "Restore purchase",
     restoreError: "Couldn't restore your purchase. Try again in a minute.",
@@ -1516,7 +1507,11 @@ export const strings = {
     // only on this phone. No drama, no "are you sure?" theatre.
     careNotes: {
       title: "Your notes",
-      empty: "No notes yet. Anything you write on a heavy day is kept here.",
+      // COPY-CUT (2026-09-14, owner): the empty state says the fact and
+      // stops; the button under it is the way into the day, the same
+      // words as Home's door so the tap reads as the same tap.
+      empty: "No notes yet.",
+      start: "Build today's session",
       // Editing her own note is mundane (ADR-0012 §4): a quiet affordance
       // and a plain commit, no ceremony, no confirmation.
       editAction: "Edit note",
@@ -1598,7 +1593,6 @@ export const strings = {
   place: {
     row: "Where I train",
     title: "Where I train",
-    lead: "Switch when you travel. Each day's answers stay yours.",
     sectionPlace: "Place",
     home: PLACE_LABELS.home,
     hotel: PLACE_LABELS.hotel,
@@ -1610,7 +1604,6 @@ export const strings = {
     quietAlways: "Always",
     sectionVoice: "Coaching audio",
     voiceRow: "Voice",
-    note: "Quiet movements and the voice are separate. Headphones can carry the voice through a quiet session.",
     value: (place: "home" | "hotel"): string => PLACE_LABELS[place],
   },
   // COPY-WRITER: feedback (2026-09-07, owner decision). One row under the

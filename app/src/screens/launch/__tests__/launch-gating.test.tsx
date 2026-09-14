@@ -361,7 +361,6 @@ describe("entitlement gating (ADR-0009 §3)", () => {
     // (ADR-0017: one way to a place, not two).
     expect(screen.getByText(strings.prompt.dayLabel)).toBeTruthy();
     expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
     expect(screen.queryByTestId("open-progress")).toBeNull();
     expect(screen.queryByTestId("open-settings")).toBeNull();
     // Restore is always available from the gated day (ADR-0009 §3).
@@ -386,7 +385,7 @@ describe("entitlement gating (ADR-0009 §3)", () => {
       expect(screen.getByTestId("paywall-restore-empty")).toBeTruthy(),
     );
     expect(screen.getByText(strings.prompt.dayLabel)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
   });
 
   it("a purchase entitles her even with the trial long expired", () => {

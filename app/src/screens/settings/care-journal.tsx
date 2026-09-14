@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 
 import { strings } from "../../copy/strings";
 import { AppText } from "../../design/primitives/app-text";
@@ -8,10 +9,13 @@ import { NoteField } from "../../design/primitives/note-field";
 import { PrimaryButton } from "../../design/primitives/primary-button";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { spacing } from "../../design/tokens";
+import { useTodayIso } from "../../lib/use-today";
 import {
   useCareNoteStore,
   type CareNoteEntry,
 } from "../../state/care-note-store";
+import { useSessionStore } from "../../state/session-store";
+import { todaySessionState } from "../../state/today-session";
 
 // The care journal (ADR-0012 §4): her heavy-day notes, listed newest
 // first, each on its own tile (owner-approved settings-notes mockup)
@@ -71,12 +75,32 @@ export function CareJournal({ reduceMotion }: CareJournalProps) {
     .map((entry, index) => ({ entry, key: noteKey(entry, index) }))
     .reverse();
 
+  // Nothing here yet: the page offers the day instead of describing
+  // itself (owner, 2026-09-14). Same door as Home, same three states
+  // (state/today-session.ts): a begun session resumes, a built one
+  // opens its preview, otherwise the four questions. A gated day is the
+  // route guard's to redirect, exactly as it is from Home.
+  const today = useTodayIso();
+  const session = useSessionStore((s) => s.session);
+  const player = useSessionStore((s) => s.player);
+  const todaySession = todaySessionState(session, player, today);
+  const startRoute =
+    todaySession === "inFlight" ? "/session" : todaySession === "built" ? "/preview" : "/prompt";
+
   return (
     <View>
       {notes.length === 0 && (
-        <AppText variant="bodySoft" style={styles.empty} testID="care-journal-empty">
-          {strings.settings.careNotes.empty}
-        </AppText>
+        <View style={styles.empty}>
+          <AppText variant="bodySoft" testID="care-journal-empty">
+            {strings.settings.careNotes.empty}
+          </AppText>
+          <PrimaryButton
+            testID="care-journal-start"
+            reduceMotion={reduceMotion}
+            label={strings.settings.careNotes.start}
+            onPress={() => router.push(startRoute)}
+          />
+        </View>
       )}
 
       {notes.map(({ entry, key }, index) => {
@@ -174,6 +198,7 @@ export function CareJournal({ reduceMotion }: CareJournalProps) {
 
 const styles = StyleSheet.create({
   empty: {
+    gap: spacing.lg,
     marginBottom: spacing.md,
   },
   note: {

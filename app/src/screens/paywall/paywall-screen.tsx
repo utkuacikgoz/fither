@@ -10,9 +10,8 @@ import { FadeIn } from "../../design/primitives/fade-in";
 import { QuietButton } from "../../design/primitives/quiet-button";
 import { Screen } from "../../design/primitives/screen";
 import { LadderStrip } from "../../design/primitives/ladder-strip";
-import { WORDMARK } from "../../design/primitives/wordmark";
 import { useTheme } from "../../design/theme";
-import { hairline, radius, spacing, trackingWide } from "../../design/tokens";
+import { hairline, radius, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { openLegalPage } from "../../lib/legal-links";
 import { getBilling, type PlanId } from "../../monetization/billing";
@@ -96,10 +95,12 @@ export function PaywallScreen({
     track("paywall_view", { surface });
   }, [surface]);
   // Preserve distinct expired and first-session promises.
-  const copy = expired
+  // Only the first close carries a lead: it names the rhythm she chose.
+  // Everywhere else the headline, the ladder and the price say it all
+  // (copy cut 2026-09-14, owner).
+  const copy: { headline: string; lead?: string; trialLine: string; cta: string } = expired
     ? {
         headline: strings.paywall.expired.headline,
-        lead: strings.paywall.expired.recordNote,
         trialLine: strings.paywall.expired.trialLine,
         cta: strings.paywall.expired.cta,
       }
@@ -112,7 +113,6 @@ export function PaywallScreen({
         }
       : {
           headline: strings.paywall.headline,
-          lead: strings.paywall.lead,
           trialLine: strings.paywall.trialLine,
           cta: strings.paywall.cta,
         };
@@ -156,9 +156,6 @@ export function PaywallScreen({
         showsVerticalScrollIndicator
       >
         <FadeIn reduceMotion={reduceMotion}>
-          <AppText variant="caption" style={styles.letterhead}>
-            {WORDMARK}
-          </AppText>
           <AppText
             variant={expired ? "title" : "display"}
             style={styles.headline}
@@ -166,12 +163,9 @@ export function PaywallScreen({
           >
             {copy.headline}
           </AppText>
-          <AppText variant="bodySoft" style={styles.lead}>
-            {copy.lead}
-          </AppText>
-          {inDay && !expired && (
-            <AppText variant="caption" style={styles.recordNote} testID="paywall-record-note">
-              {strings.paywall.expired.recordNote}
+          {copy.lead !== undefined && (
+            <AppText variant="bodySoft" style={styles.lead}>
+              {copy.lead}
             </AppText>
           )}
         </FadeIn>
@@ -335,18 +329,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
   },
-  letterhead: {
-    letterSpacing: trackingWide,
-    marginBottom: spacing.md,
-  },
   headline: {
     marginBottom: spacing.sm,
   },
   lead: {
-    marginBottom: spacing.lg,
-  },
-  recordNote: {
-    marginTop: -spacing.sm,
     marginBottom: spacing.lg,
   },
   ladder: {

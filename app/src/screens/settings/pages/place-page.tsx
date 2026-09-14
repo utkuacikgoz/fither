@@ -2,7 +2,6 @@ import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 
 import { strings } from "../../../copy/strings";
-import { AppText } from "../../../design/primitives/app-text";
 import { OptionRow } from "../../../design/primitives/option-row";
 import { SectionCaption } from "../../../design/primitives/section-caption";
 import { SettingsRow } from "../../../design/primitives/settings-row";
@@ -59,7 +58,6 @@ export function PlacePage() {
   return (
     <SettingsSubpage
       title={strings.place.title}
-      lead={strings.place.lead}
       testID="settings-place"
     >
       <View style={styles.section}>
@@ -117,10 +115,6 @@ export function PlacePage() {
           </SettingsGroup>
         </View>
       )}
-
-      <AppText variant="caption" testID="place-note">
-        {strings.place.note}
-      </AppText>
     </SettingsSubpage>
   );
 }

@@ -92,12 +92,12 @@ describe("PaywallScreen", () => {
     expect(onLeave).toHaveBeenCalledTimes(1);
     expect(recordedEvents()).toContainEqual({ name: "paywall_leave", properties: { surface: "firstClose" } });
   });
-  it("reads as the honest letter: letterhead, copy, both plans, restore, disclosure", () => {
+  it("reads as the honest letter: headline, ladder, benefits, both plans, restore, disclosure", () => {
     const screen = render(<PaywallScreen />);
-    // The letterhead is the shared brand mark, not copy.
-    expect(screen.getByText(WORDMARK)).toBeTruthy();
+    // No letterhead and no lead (copy cut 2026-09-14): she is inside the
+    // app already, and the headline says the promise on its own.
+    expect(screen.queryByText(WORDMARK)).toBeNull();
     expect(screen.getByText(strings.paywall.headline)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.lead)).toBeTruthy();
     // The ladder she is on, drawn: six tiers, the reached ones filled.
     expect(screen.getByTestId("paywall-ladder")).toBeTruthy();
     for (const line of Object.values(strings.paywall.benefits)) {
@@ -128,7 +128,6 @@ describe("PaywallScreen", () => {
   it("pre-expiry, keeps the pre-trial copy and never the expired letter", () => {
     const screen = render(<PaywallScreen />);
     expect(screen.queryByText(strings.paywall.expired.headline)).toBeNull();
-    expect(screen.queryByText(strings.paywall.expired.recordNote)).toBeNull();
     expect(screen.queryByText(strings.paywall.expired.trialLine)).toBeNull();
     expect(screen.queryByText(strings.paywall.expired.cta)).toBeNull();
   });
@@ -138,13 +137,11 @@ describe("PaywallScreen", () => {
     const screen = render(<PaywallScreen />);
 
     expect(screen.getByText(strings.paywall.expired.headline)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.expired.recordNote)).toBeTruthy();
     expect(screen.getByText(strings.paywall.expired.trialLine)).toBeTruthy();
     expect(screen.getByText(strings.paywall.expired.cta)).toBeTruthy();
 
     // None of the pre-trial free-week copy survives into the expired state.
     expect(screen.queryByText(strings.paywall.headline)).toBeNull();
-    expect(screen.queryByText(strings.paywall.lead)).toBeNull();
     expect(screen.queryByText(strings.paywall.trialLine)).toBeNull();
     expect(screen.queryByText(strings.paywall.cta)).toBeNull();
 
