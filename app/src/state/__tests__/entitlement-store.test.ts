@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { clearRecordedEvents, recordedEvents, recordedPerson } from "../../analytics/dev-analytics";
 import { startPersonSyncForTest } from "../../test-utils/person-sync";
+import { clearRecordedHaptics, recordedHaptics } from "../../test-utils/haptics";
 import { useDevReceiptStore } from "../../monetization/dev-billing";
 import { entitlementStatus } from "../../monetization/entitlement";
 import { FREE_SESSIONS_EXPERIMENT } from "../../monetization/experiment";
@@ -403,5 +404,20 @@ describe("qualifying sessions (ADR-0025)", () => {
     } finally {
       globalThis.fetch = previousFetch;
     }
+  });
+});
+
+describe("what she feels (ADR-0030)", () => {
+  it("a purchase and a restore that grant are each one success; an empty restore is nothing", async () => {
+    clearRecordedHaptics();
+    await useEntitlementStore.getState().purchasePlan("annual");
+    expect(recordedHaptics()).toEqual(["notification:success"]);
+    useEntitlementStore.getState().resetForDev();
+    await useEntitlementStore.getState().restorePurchases();
+    expect(recordedHaptics()).toEqual(["notification:success", "notification:success"]);
+    useDevReceiptStore.setState({ receipt: null });
+    useEntitlementStore.getState().resetForDev();
+    expect(await useEntitlementStore.getState().restorePurchases()).toBe("empty");
+    expect(recordedHaptics()).toHaveLength(2);
   });
 });

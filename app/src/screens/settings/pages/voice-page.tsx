@@ -1,6 +1,9 @@
 import { strings } from "../../../copy/strings";
 import { OptionRow } from "../../../design/primitives/option-row";
 import { useReducedMotion } from "../../../lib/use-reduced-motion";
+import { loadLibrary } from "../../../session/load-library";
+import { speakCue } from "../../../session/voice";
+import { sampleCue } from "../../../session/voice-sample";
 import { useSettingsStore } from "../../../state/settings-store";
 import { SettingsGroup } from "../settings-group";
 import { SettingsSubpage } from "./settings-subpage";
@@ -25,7 +28,13 @@ export function VoicePage() {
           testID="voice-on"
           label={strings.settings.voice.on}
           selected={voice}
-          onPress={() => setVoice(true)}
+          onPress={() => {
+            setVoice(true);
+            // Switching it on answers in the voice itself: one real cue,
+            // so she hears what she chose (ADR-0030).
+            const cue = sampleCue(loadLibrary());
+            if (cue !== null) void speakCue(cue);
+          }}
         />
         <OptionRow
           testID="voice-off"

@@ -10,6 +10,9 @@ import { Screen } from "../../design/primitives/screen";
 import { useTheme } from "../../design/theme";
 import { motion, spacing } from "../../design/tokens";
 import { useReducedMotion } from "../../lib/use-reduced-motion";
+import { loadLibrary } from "../../session/load-library";
+import { speakCue } from "../../session/voice";
+import { sampleCue } from "../../session/voice-sample";
 import { useSettingsStore } from "../../state/settings-store";
 
 // The one voice ask (owner decision 2026-09-08): on the way into her
@@ -32,6 +35,11 @@ export function VoiceAskScreen({ onDone }: VoiceAskScreenProps) {
 
   const choose = (voice: boolean) => {
     answer(voice);
+    // Allowing the voice hears it at once: one real cue (ADR-0030).
+    if (voice) {
+      const cue = sampleCue(loadLibrary());
+      if (cue !== null) void speakCue(cue);
+    }
     track("voice_ask", { voice });
     onDone();
   };

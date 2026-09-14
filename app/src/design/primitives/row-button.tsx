@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+import { haptic } from "../../haptics/haptics";
 import { useTheme } from "../theme";
 import { glyph, hairline, minTouchTarget, radius, spacing } from "../tokens";
 import { AppText } from "./app-text";
@@ -48,7 +49,11 @@ export function RowButton({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       testID={testID}
-      onPress={onPress}
+      // A choice registered is a choice felt (ADR-0030).
+      onPress={() => {
+        haptic("tap");
+        onPress();
+      }}
       style={({ pressed }) => [
         styles.row,
         {

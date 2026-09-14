@@ -130,6 +130,13 @@ validates `data/movements.json` on every edit — keep it working, and keep
   buttons and choices. Pass the screen's reduced-motion value; controls
   never delay their action for motion. The offer's fixed action footer
   carries the selected localised price and explicit pending status.
+- Haptics (ADR-0030) live behind `app/src/haptics/haptics.ts`:
+  `haptic("tap" | "commit" | "success")`, synchronous, swallows
+  everything. `tap` is already inside `row-button` and `option-row`;
+  `commit` is the player's transition into work and a landed skip;
+  `success` is the settled finish and the entitlement store's grant.
+  Never import `expo-haptics` at a call site; tests read
+  `test-utils/haptics.ts`.
 
 - Reuse before adding. `app/src/design/primitives/` holds the shared
   vocabulary: `card` (every hub surface), `track` + `flow-progress` +

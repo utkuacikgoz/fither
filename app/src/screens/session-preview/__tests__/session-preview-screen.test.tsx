@@ -4,6 +4,7 @@ import type { BodyArea } from "@fither/engine";
 
 import { clearRecordedEvents, recordedEvents } from "../../../analytics/dev-analytics";
 import { strings } from "../../../copy/strings";
+import { clearRecordedHaptics, recordedHaptics } from "../../../test-utils/haptics";
 import { toPlayerBlocks } from "../../../session/create-session";
 import { loadLibrary } from "../../../session/load-library";
 import { createPlayer } from "../../../session/player-machine";
@@ -272,5 +273,21 @@ describe("SessionPreviewScreen — the care moment", () => {
 
     act(() => seedCareDay(null, true));
     expect(screen.getByTestId("care-acknowledgment")).toBeTruthy();
+  });
+
+  it("keeping a note is felt; continuing with an empty field keeps nothing and is not", () => {
+    clearRecordedHaptics();
+    seedHeavyPreview();
+    seedCareDay(null);
+    const empty = render(<SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />);
+    fireEvent.press(empty.getByTestId("care-continue"));
+    expect(recordedHaptics()).toEqual([]);
+    empty.unmount();
+
+    seedCareDay(null);
+    const written = render(<SessionPreviewScreen onStart={jest.fn()} onChangeAnswers={jest.fn()} />);
+    fireEvent.changeText(written.getByTestId("care-note"), "shoulder all day");
+    fireEvent.press(written.getByTestId("care-continue"));
+    expect(recordedHaptics()).toEqual(["impact:medium"]);
   });
 });

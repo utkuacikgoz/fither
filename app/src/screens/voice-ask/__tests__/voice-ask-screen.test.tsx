@@ -6,7 +6,11 @@ import { strings } from "../../../copy/strings";
 import { useSettingsStore } from "../../../state/settings-store";
 import { startPersonSyncForTest } from "../../../test-utils/person-sync";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
+import { speakCue } from "../../../session/voice";
 import { VoiceAskScreen } from "../voice-ask-screen";
+
+jest.mock("../../../session/voice", () => ({ speakCue: jest.fn(async () => true), stopVoice: jest.fn() }));
+jest.mock("../../../session/voice-sample", () => ({ sampleCue: jest.fn(() => "Squeeze your glutes.") }));
 
 beforeEach(() => {
   clearRecordedEvents();
@@ -63,4 +67,15 @@ describe("VoiceAskScreen", () => {
       expect(allowed.has(leaf)).toBe(true);
     }
   });
+});
+
+it("allowing the voice hears it at once; declining hears nothing", () => {
+  const allow = render(<VoiceAskScreen onDone={jest.fn()} />);
+  fireEvent.press(allow.getByTestId("voice-ask-allow"));
+  expect(speakCue).toHaveBeenCalledWith("Squeeze your glutes.");
+  allow.unmount();
+  jest.mocked(speakCue).mockClear();
+  const decline = render(<VoiceAskScreen onDone={jest.fn()} />);
+  fireEvent.press(decline.getByTestId("voice-ask-decline"));
+  expect(speakCue).not.toHaveBeenCalled();
 });

@@ -2,6 +2,7 @@ import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
 import { glyph } from "../../tokens";
+import { clearRecordedHaptics, recordedHaptics } from "../../../test-utils/haptics";
 import { OptionRow } from "../option-row";
 
 // The settings unit (ADR-0013). Norman: a preference she set months ago
@@ -70,4 +71,13 @@ it("an action row announces no selection state — a verb is not a choice", () =
   // Pressable normalises the state object; what matters is that no
   // selected flag is announced either way.
   expect(screen.getByTestId("act").props.accessibilityState?.selected).toBeUndefined();
+});
+
+it("a preference set is felt: one selection tap, then the handler (ADR-0030)", () => {
+  clearRecordedHaptics();
+  const onPress = jest.fn();
+  const screen = render(<OptionRow label="Wrists" onPress={onPress} testID="avoid-wrists" />);
+  fireEvent.press(screen.getByTestId("avoid-wrists"));
+  expect(recordedHaptics()).toEqual(["tap"]);
+  expect(onPress).toHaveBeenCalledTimes(1);
 });
