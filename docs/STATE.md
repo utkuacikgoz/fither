@@ -84,6 +84,12 @@ that cannot write Watchman's LaunchAgent.
   rungs from the engine's own lookup, hers marked Now, milestones marked
   Skill, the distance to the next skill when it is on that ladder;
   `ladder_view` reports which ladders get opened.
+- `pnpm ship` hardened after the 2026-09-14 losses (docs/release-builds.md):
+  installs after the pull, reads the upload verdict from its log, stops
+  with the reason, keeps the archive for `pnpm ship upload`, sorts out
+  its own leftover bump, commits the bump without the local gate,
+  rebases before pushing, takes an App Store Connect API key from
+  `.ship.env` so the upload never depends on Xcode's session.
 - Gates: jest `testTimeout` 20 s (a cold module graph beside an Xcode
   archive outran 5 s on the owner's Mac and failed a green test).
 

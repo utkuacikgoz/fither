@@ -11,3 +11,6 @@ coverage/
 dist/
 ios/Pods/
 node_modules/
+
+# Ship secrets (App Store Connect API key, Sentry token); see docs/release-builds.md
+.ship.env

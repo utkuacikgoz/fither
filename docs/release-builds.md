@@ -22,13 +22,32 @@ that exact commit. An EAS build is a separate gate: when one is triggered or
 required, confirm its final status with `eas build:list` and retain the build
 URL. Do not infer EAS success from GitHub CI or from a local Expo export.
 
-## Building and uploading with Xcode, no EAS (the path in use, 2026-09-08)
+## Shipping to TestFlight: `pnpm ship` (the path in use)
 
 The owner builds on the Mac and uploads straight to App Store Connect.
-Nothing here needs an Expo account.
+Nothing here needs an Expo account. The script is
+`scripts/ship-testflight.sh`; everything below is what it does and what
+to do when it stops.
 
-1. **Production keys.** Release builds read `app/.env.production` on top
-   of `app/.env` (both gitignored):
+### The commands
+
+```
+cd ~/fither
+pnpm ship             # ~20 min: pull, install, check, bump, prebuild, archive, upload, push
+pnpm ship upload      # retry only the upload of the archive on disk
+```
+
+That is the whole routine. The script pulls and installs itself, refuses
+a dirty tree (except its own leftover bump, which it sorts out), and
+prints one timestamped line per stage. Every stage's full output is in
+`~/fither-build/<stage>.log`; a failing stage prints its last forty lines.
+When it ends it prints the TestFlight URL; the build shows there in about
+ten minutes.
+
+### One-time setup (two minutes each)
+
+1. **Production keys** in `app/.env.production` (gitignored), read on top
+   of `app/.env`:
 
    ```
    EXPO_PUBLIC_REVENUECAT_IOS_KEY=appl_…
@@ -38,57 +57,53 @@ Nothing here needs an Expo account.
    EXPO_PUBLIC_FEEDBACK_URL=https://…
    ```
 
-   A missing key ships that port's dev adapter: no analytics, no
-   crash reports, no feedback, or the fake store. Run `pnpm production:check`
-   before archiving; it validates these values without printing them and
-   verifies the live home, legal, recipient, and universal-link routes.
-   `pnpm ship` runs this check automatically. `SENTRY_AUTH_TOKEN` (an org token
-   with `project:releases` and `org:read`) exported in the shell lets the
-   build upload source maps; without it, run the archive with
-   `SENTRY_ALLOW_FAILURE=true` and crashes arrive unsymbolicated.
+   A missing key ships that port's dev adapter. `pnpm production:check`
+   validates the values by shape without printing them and verifies the
+   live routes; the script runs it before touching anything, and after
+   the archive it reads the bundle to confirm the `appl_` key is inside.
 
-2. **Native project.** Regenerate after any change to `app.json` or a
-   native dependency, and before every archive to be safe:
+2. **App Store Connect API key** in `.ship.env` at the repo root
+   (gitignored; `.ship.env.example` is the template). App Store Connect →
+   Users and Access → Integrations → App Store Connect API → Team Keys →
+   **+**, name `ship`, access **App Manager**. Download the `.p8` once
+   (Apple never offers it again) to
+   `~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8` and write the
+   three values. With the key, the upload never depends on Xcode's
+   signed-in Apple ID, whose session expired silently on 2026-09-14 and
+   cost three builds. Without it the script still works and says so.
 
-   ```
-   cd app && npx expo prebuild --platform ios --clean
-   ```
+3. Optional: `SENTRY_AUTH_TOKEN` (an org token with `project:releases`
+   and `org:read`) in the same file uploads source maps; without it
+   crashes arrive unsymbolicated.
 
-3. **Archive** (team `9D78WTZAD8`, bundle `com.fitherfitness.app`; the
-   device-registration flag needs an iPhone on USB the first time):
+### When it stops
 
-   ```
-   cd app/ios && xcodebuild -workspace FITHER.xcworkspace -scheme FITHER \
-     -configuration Release -destination 'generic/platform=iOS' \
-     -archivePath ~/fither-build/FITHER.xcarchive \
-     -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
-     DEVELOPMENT_TEAM=9D78WTZAD8 CODE_SIGN_STYLE=Automatic archive
-   ```
+| The script says | What happened | What to do |
+|---|---|---|
+| `commit or stash your changes first` | Real uncommitted work | Commit or stash, run again |
+| `build N was uploaded but never committed` | A previous run died after the upload | Nothing; it commits N and builds N+1 |
+| `build N was bumped but never uploaded` | A previous run died before the upload | Nothing; it reuses N |
+| `production-check FAILED` | A key missing or a route not 200 | Fix `app/.env.production` or the site, run again |
+| `prebuild FAILED` / `archive FAILED` | Native build error; the log tail is on screen | Fix, run again (a new number is used only after an upload) |
+| `STOP: the bundle carries a RevenueCat test_ key` | Wrong key in `.env.production` | Put the `appl_` key in, run again |
+| `upload FAILED … Failed to Use Accounts` | Xcode's Apple ID session expired | Add the API key (above), or Xcode → Settings → Accounts, sign out and in; then `pnpm ship upload` |
+| `upload FAILED` (anything else) | Read `~/fither-build/export.log` | Fix, then `pnpm ship upload` |
+| Push rejected at the very end | Main moved and the rebase conflicted | `git pull --rebase origin main && git push origin main` |
 
-4. **Upload** with an export options plist (`method`
-   `app-store-connect`, `destination` `upload`, `teamID`):
+Never bump `ios.buildNumber` by hand; the script owns it and commits it
+only after Apple has the build. `ITSAppUsesNonExemptEncryption` is false
+in `app.json`, so there is no compliance question per build.
 
-   ```
-   xcodebuild -exportArchive -archivePath ~/fither-build/FITHER.xcarchive \
-     -exportOptionsPlist ~/fither-build/ExportOptions.plist \
-     -exportPath ~/fither-build/export -allowProvisioningUpdates
-   ```
+### What the script does, for the record
 
-   The build appears under TestFlight in about ten minutes.
-   `ITSAppUsesNonExemptEncryption` is set false in `app.json`, so no
-   compliance question per build.
-
-   **When `pnpm ship` says the upload failed**: the archive is kept, so
-   run this step by hand (the command above, or `open` the archive in
-   Xcode → Organizer → Distribute App) and read the error; the script's
-   log is `~/fither-build/export.log`. A successful export ends with
-   `** EXPORT SUCCEEDED **` and writes `DistributionSummary.plist` into
-   `~/fither-build/export`; anything else, and TestFlight never gets the
-   build, whatever the number in `app.json` says (builds 3 to 5 were lost
-   this way on 2026-09-14 before the script checked).
-
-5. **Every later build**: bump `ios.buildNumber` in `app/app.json`
-   (same version, new number), commit, repeat 2 to 4.
+Pull and `pnpm install --frozen-lockfile`; `pnpm production:check`; bump
+`ios.buildNumber`; `expo prebuild --platform ios --clean`; `xcodebuild
+… archive` (team `9D78WTZAD8`, bundle `com.fitherfitness.app`, automatic
+signing); read the archived `main.jsbundle` for the store key;
+`xcodebuild -exportArchive` with `method app-store-connect`,
+`destination upload` and the API key when configured, verdict read from
+the log; commit `Build N` with `--no-verify` (one line, code already
+gated in CI at that commit), rebase, push.
 
 ## One-time account setup
 
@@ -119,15 +134,9 @@ eas build --platform ios --profile preview
 eas build --platform ios --profile production
 ```
 
-Before the first production upload, replace the default Expo icon/splash with
-the approved Brief 6 identity assets. Do not ship placeholder identity. The
-production build also remains blocked on Sentry verification (the SDK is
-wired behind the monitoring port, ADR-0016; the owner sets the DSN and the
-`SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` build variables per
-docs/sentry-setup.md), real RevenueCat entitlements (ADR-0014; owner's
-products and key), a Google sign-in adapter or the button staying hidden
-(Apple is wired, ADR-0011), the coach review, and Reality Gates 2 and 3.
+The EAS profiles above are kept for a future CI-driven build; the
+shipping path today is `pnpm ship`.
 
-The app version is `1.0.0`. EAS owns the store build number remotely and the
-production profile increments it for every build, preventing duplicate App
-Store build numbers across machines.
+The app version is `1.0.0`. The store build number lives in
+`app/app.json` (`ios.buildNumber`) and `pnpm ship` owns it; under EAS the
+production profile would increment it remotely instead.
