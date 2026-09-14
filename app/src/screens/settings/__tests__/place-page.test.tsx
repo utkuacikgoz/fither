@@ -27,10 +27,9 @@ beforeEach(async () => {
 });
 
 describe("Settings → Where I train", () => {
-  it("shows the title, the lead, the two places with home checked, home's presets and the note", () => {
+  it("shows the title, the two places with home checked and home's presets, and nothing that explains the page", () => {
     const screen = render(<PlacePage />);
     expect(screen.getByText(strings.place.title)).toBeTruthy();
-    expect(screen.getByText(strings.place.lead)).toBeTruthy();
     expect(screen.getByText(strings.place.sectionPlace)).toBeTruthy();
     expect(screen.getByText(strings.place.home)).toBeTruthy();
     expect(screen.getByText(strings.place.hotel)).toBeTruthy();
@@ -41,7 +40,8 @@ describe("Settings → Where I train", () => {
       strings.settings.rows.equipmentValue.chair,
     );
     expect(screen.getByTestId("place-quiet-value")).toHaveTextContent(strings.place.quietAsk);
-    expect(screen.getByTestId("place-note")).toHaveTextContent(strings.place.note);
+    // Copy cut (2026-09-14): no lead above, no footnote below.
+    expect(screen.queryByTestId("place-note")).toBeNull();
   });
 
   it("switching to the hotel checks it, brings its equipment, and shows its presets", () => {

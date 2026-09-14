@@ -1,8 +1,13 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { router } from "expo-router";
+
 import { strings } from "../../../copy/strings";
 import { useCareNoteStore } from "../../../state/care-note-store";
+import { useSessionStore } from "../../../state/session-store";
+import { fixturePlayerBlocks, fixtureSession } from "../../../test-utils/fixtures";
+import { createPlayer, reduce } from "../../../session/player-machine";
 import { collectStringValues, renderedTextLeaves } from "../../../test-utils/copy-audit";
 import { formatNoteDate } from "../care-journal";
 import { NotesPage } from "../pages/notes-page";
@@ -10,6 +15,10 @@ import { resetSettingsStores } from "./settings-test-setup";
 
 // The care journal on its own page (ADR-0012 §4): notes as tiles, newest
 // first, edit in place, one calm confirmed delete, the privacy fact last.
+
+// The fixture session is dated 2026-08-31; the page must see that day
+// as today for it to count as built.
+jest.mock("../../../lib/use-today", () => ({ useTodayIso: () => "2026-08-31" }));
 
 beforeEach(async () => {
   await resetSettingsStores();
@@ -22,6 +31,31 @@ describe("Settings → Your notes", () => {
     expect(screen.getByTestId("care-journal-empty")).toBeTruthy();
     expect(screen.getByText(strings.settings.careNotes.empty)).toBeTruthy();
     expect(screen.getByText(strings.care.notePrivacy)).toBeTruthy();
+  });
+
+  it("with no notes, offers the day: the four questions when nothing is built", () => {
+    const screen = render(<NotesPage />);
+    fireEvent.press(screen.getByTestId("care-journal-start"));
+    expect(router.push).toHaveBeenCalledWith("/prompt");
+  });
+
+  it("the offer goes where Home's would: a built session to its preview, a begun one back to the player", () => {
+    useSessionStore.setState({ session: fixtureSession, player: createPlayer(fixturePlayerBlocks) });
+    const built = render(<NotesPage />);
+    fireEvent.press(built.getByTestId("care-journal-start"));
+    expect(router.push).toHaveBeenLastCalledWith("/preview");
+    built.unmount();
+
+    useSessionStore.setState({ player: reduce(createPlayer(fixturePlayerBlocks), { type: "begin" }) });
+    const begun = render(<NotesPage />);
+    fireEvent.press(begun.getByTestId("care-journal-start"));
+    expect(router.push).toHaveBeenLastCalledWith("/session");
+  });
+
+  it("with notes, the day is not offered here", () => {
+    useCareNoteStore.setState({ entries: [{ id: "a", date: "2026-09-01", text: "a note" }] });
+    const screen = render(<NotesPage />);
+    expect(screen.queryByTestId("care-journal-start")).toBeNull();
   });
 
   it("lists her notes newest first as tiles, dated, full text unclipped, privacy line last", () => {
