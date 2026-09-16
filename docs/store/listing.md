@@ -169,7 +169,44 @@ There is one subscription, offered yearly or monthly, each with a 7-day introduc
 Sign out and "Erase everything on this phone" are under Settings > Account.
 
 Notifications are optional. The app asks once, after the first completed session; Settings can turn them off.
+
+In-App Purchases, step by step: on first launch choose Floor, choose 10 minutes, answer the two remaining questions, start the session, then tap Done on the first set and Finish here. After the finish screen and the weekly choice, the subscription screen appears with FITHER Yearly (7 days free) and FITHER Monthly, Restore purchase, Terms of Use and Privacy Policy. Tapping Not now returns to Today; the same screen is shown there whenever a new session is requested. Purchases are configured for the Apple sandbox.
+
+The app does not track users. It collects analytics and crash reports under an anonymous identifier for its own use only, shares nothing with data brokers and serves no advertising, so it does not use App Tracking Transparency.
+
+The app has no widgets, no App Clip, no watch app and no Siri intents.
 ```
+
+### Reply to the 2026-09-16 rejection (5.1.2(i), 2.1(b), 2.1)
+
+Metadata only, no build. Three parts: fix the App Privacy answers,
+reply in App Store Connect, resubmit build 5.
+
+1. **App Privacy** (Account Holder or Admin): App Store Connect → the
+   app → App Privacy → Edit. The question "Do you or your third-party
+   partners use data from this app to track users?" must be **No**. For
+   every data type listed (Product Interaction, Device ID, User ID,
+   Crash Data, Performance Data, Other Diagnostic Data, Purchase
+   History) open it and make sure "Used to track you" is **off**; the
+   purposes stay (Analytics / App Functionality). Publish.
+2. **Paid Apps Agreement**: Business → Agreements → the Paid Apps
+   agreement must be Active, with banking and tax complete. Without it
+   the sandbox returns no products and the reviewer sees an empty
+   subscription screen.
+3. **Reply** in the submission thread:
+
+```
+Thank you for the review.
+
+5.1.2(i): FITHER does not track users. It collects a small set of usage events and crash reports under an anonymous identifier for our own product use, shares nothing with data brokers or advertising networks, and serves no ads, so App Tracking Transparency is not used. The App Privacy answers have been corrected to say that no data is used for tracking.
+
+2.1(b): the In-App Purchases are reached after the first session. Steps: on first launch choose Floor, choose 10 minutes, answer the two remaining questions, start the session, tap Done on the first set, then Finish here. After the finish screen and the weekly choice, the subscription screen appears with FITHER Yearly (7-day free trial) and FITHER Monthly, plus Restore purchase. Tapping Not now returns to Today, where requesting another session shows the same screen. The products are configured for the sandbox. These steps are also in the Review Notes.
+
+2.1: the app has no widgets, no App Clip, no watch app and no Siri intents. This is now stated in the Review Notes.
+```
+
+4. Paste the updated §8 notes into App Review Information → Notes, then
+   Submit for Review again with build 5.
 
 ### TestFlight beta review (Guideline 2.1(a), build 1 rejected 2026-09-09)
 
@@ -206,6 +243,12 @@ Not for pasting. A working sheet for the App Privacy questionnaire in App
 Store Connect. Answers are per build: declare each row only in the first
 build that actually ships that SDK with its key set. Facts from
 `docs/posthog-setup.md`, ADR-0011, ADR-0014 and `docs/feature-set.md`.
+
+**Tracking: No.** The questionnaire's first question ("Do you or your
+third-party partners use data from this app to track users?") is No,
+and "Used to track you" is off on every data type below. Answering Yes
+there triggered a 5.1.2(i) rejection on 2026-09-16 (no App Tracking
+Transparency prompt exists, because there is nothing to prompt for).
 
 | Apple data type | Category | Collected via | Linked to identity | Used for tracking | Purpose | Notes |
 |---|---|---|---|---|---|---|
