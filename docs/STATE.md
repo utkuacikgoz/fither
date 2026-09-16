@@ -84,6 +84,11 @@ that cannot write Watchman's LaunchAgent.
   rungs from the engine's own lookup, hers marked Now, milestones marked
   Skill, the distance to the next skill when it is on that ladder;
   `ladder_view` reports which ladders get opened.
+- fither.pro carries a waitlist (2026-09-16, ADR-0031, owner pick W1):
+  one field in the hero, `/api/waitlist` on the site's own origin into
+  Upstash Redis, CSV export behind an admin key, no-JavaScript fallback,
+  privacy policy updated. Two owner steps in Vercel (Storage → Upstash,
+  `WAITLIST_ADMIN_KEY`) before it stores anything.
 - `pnpm ship` hardened after the 2026-09-14 losses (docs/release-builds.md):
   installs after the pull, reads the upload verdict from its log, stops
   with the reason, keeps the archive for `pnpm ship upload`, sorts out
