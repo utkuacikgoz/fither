@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
+import { router } from "expo-router";
 
 import { strings } from "../../../copy/strings";
 import { useDevReceiptStore } from "../../../monetization/dev-billing";
@@ -59,12 +60,32 @@ describe("Settings → Subscription", () => {
     expect(trial.getByTestId("plan-row-plan-value")).toHaveTextContent(strings.settings.plan.trial);
   });
 
+  it("before any purchase, the page is the door to the subscription: Start my free week opens the paywall, and there is nothing to manage yet", () => {
+    const screen = render(<PlanPage />);
+    expect(screen.getByText(strings.settings.plan.introNone)).toBeTruthy();
+    expect(screen.queryByText(strings.settings.plan.intro)).toBeNull();
+    expect(screen.queryByTestId("settings-manage-subscription")).toBeNull();
+    fireEvent.press(screen.getByTestId("settings-subscribe"));
+    expect(router.push).toHaveBeenCalledWith("/settings/subscribe");
+    // Restore stays: a reinstall with a receipt is the other way in.
+    expect(screen.getByTestId("plan-restore")).toBeTruthy();
+  });
+
+  it("with a purchase, the door is gone and Manage subscription is back", () => {
+    useEntitlementStore.setState({ purchase: { plan: "annual", date: "2026-09-05" } });
+    const screen = render(<PlanPage />);
+    expect(screen.queryByTestId("settings-subscribe")).toBeNull();
+    expect(screen.getByTestId("settings-manage-subscription")).toBeTruthy();
+    expect(screen.getByText(strings.settings.plan.intro)).toBeTruthy();
+  });
+
   it("offers 'Manage subscription' — never a dead end — through the manage port", async () => {
     const { manageSubscription } = jest.requireActual<
       typeof import("../../../monetization/manage-subscription")
     >("../../../monetization/manage-subscription");
     const Linking = jest.requireActual<typeof import("react-native")>("react-native").Linking;
     const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    useEntitlementStore.setState({ purchase: { plan: "annual", date: "2026-09-05" } });
     const screen = render(<PlanPage />);
     fireEvent.press(screen.getByTestId("settings-manage-subscription"));
     // Without the store key the button opens Apple's own subscriptions page.

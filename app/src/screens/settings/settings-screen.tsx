@@ -62,6 +62,7 @@ export const SETTINGS_ROUTES = {
   intention: "/settings/intention",
   recap: "/recap?source=settings",
   plan: "/settings/plan",
+  subscribe: "/settings/subscribe",
   feedback: "/settings/feedback",
 } as const;
 
