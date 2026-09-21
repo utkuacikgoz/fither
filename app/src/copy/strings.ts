@@ -1410,6 +1410,10 @@ export const strings = {
     // the lifetime plan, it has no renewal (see paywall.plans.lifetime).
     plan: {
       intro: "Managed through the App Store. Change or cancel there anytime.",
+      // COPY-WRITER (2026-09-21, owner): the same page before any
+      // purchase. One fact about what is free and what the week covers;
+      // the button under it is paywall.cta, the same words as the offer.
+      introNone: "Your first session is free. The free week covers every session after it.",
       renews: "Renews",
       price: "Price",
       none: "None yet",

@@ -170,16 +170,19 @@ Sign out and "Erase everything on this phone" are under Settings > Account.
 
 Notifications are optional. The app asks once, after the first completed session; Settings can turn them off.
 
-In-App Purchases, step by step: on first launch choose Floor, choose 10 minutes, answer the two remaining questions, start the session, then tap Done on the first set and Finish here. After the finish screen and the weekly choice, the subscription screen appears with FITHER Yearly (7 days free) and FITHER Monthly, Restore purchase, Terms of Use and Privacy Policy. Tapping Not now returns to Today; the same screen is shown there whenever a new session is requested. Purchases are configured for the Apple sandbox.
+In-App Purchases: open the Settings tab, tap Subscription, then Start my free week. The subscription screen shows FITHER Yearly (7 days free) and FITHER Monthly, Restore purchase, Terms of Use and Privacy Policy. The same screen also appears on its own after the first completed session; those steps, in case they are useful: on first launch choose Floor, choose 10 minutes, answer the two remaining questions, start the session, then tap Done on the first set and Finish here. After the finish screen and the weekly choice, the subscription screen appears with FITHER Yearly (7 days free) and FITHER Monthly, Restore purchase, Terms of Use and Privacy Policy. Tapping Not now returns to Today; the same screen is shown there whenever a new session is requested. Purchases are configured for the Apple sandbox.
 
 The app does not track users. It collects analytics and crash reports under an anonymous identifier for its own use only, shares nothing with data brokers and serves no advertising, so it does not use App Tracking Transparency.
 
 The app has no widgets, no App Clip, no watch app and no Siri intents.
 ```
 
-### Reply to the 2026-09-16 rejection (5.1.2(i), 2.1(b), 2.1)
+### Reply to the 2026-09-16 and 2026-09-21 rejections (5.1.2(i), 2.1(b), 2.1)
 
-Metadata only, no build. Three parts: fix the App Privacy answers,
+The 2.1(b) answer needs build 6: before it, the only way to the purchase
+was a first session with a completed block, and a reviewer who skips
+through never got there (docs/STATE.md, 2026-09-21). Build 6 adds
+Settings > Subscription > Start my free week. Three parts: fix the App Privacy answers,
 reply in App Store Connect, resubmit build 5.
 
 1. **App Privacy** (Account Holder or Admin): App Store Connect → the
@@ -200,7 +203,7 @@ Thank you for the review.
 
 5.1.2(i): FITHER does not track users. It collects a small set of usage events and crash reports under an anonymous identifier for our own product use, shares nothing with data brokers or advertising networks, and serves no ads, so App Tracking Transparency is not used. The App Privacy answers have been corrected to say that no data is used for tracking.
 
-2.1(b): the In-App Purchases are reached after the first session. Steps: on first launch choose Floor, choose 10 minutes, answer the two remaining questions, start the session, tap Done on the first set, then Finish here. After the finish screen and the weekly choice, the subscription screen appears with FITHER Yearly (7-day free trial) and FITHER Monthly, plus Restore purchase. Tapping Not now returns to Today, where requesting another session shows the same screen. The products are configured for the sandbox. These steps are also in the Review Notes.
+2.1(b): the In-App Purchases are now reachable directly: Settings tab > Subscription > Start my free week opens the subscription screen with FITHER Yearly (7-day free trial), FITHER Monthly and Restore purchase. They also appear after the first session. Steps for that path: on first launch choose Floor, choose 10 minutes, answer the two remaining questions, start the session, tap Done on the first set, then Finish here. After the finish screen and the weekly choice, the subscription screen appears with FITHER Yearly (7-day free trial) and FITHER Monthly, plus Restore purchase. Tapping Not now returns to Today, where requesting another session shows the same screen. The products are configured for the sandbox. These steps are also in the Review Notes.
 
 2.1: the app has no widgets, no App Clip, no watch app and no Siri intents. This is now stated in the Review Notes.
 ```

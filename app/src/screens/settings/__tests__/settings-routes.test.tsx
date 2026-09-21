@@ -10,6 +10,7 @@ import InvitationRoute from "../../../../app/settings/invitation";
 import NotesRoute from "../../../../app/settings/notes";
 import PlaceRoute from "../../../../app/settings/place";
 import PlanRoute from "../../../../app/settings/plan";
+import SubscribeRoute from "../../../../app/settings/subscribe";
 import VoiceRoute from "../../../../app/settings/voice";
 import { strings } from "../../../copy/strings";
 import { resetSettingsStores } from "./settings-test-setup";
@@ -31,6 +32,7 @@ it.each([
   ["/settings/intention", IntentionRoute, strings.intention.question],
   ["/settings/notes", NotesRoute, strings.settings.careNotes.title],
   ["/settings/plan", PlanRoute, strings.settings.restore.title],
+  ["/settings/subscribe", SubscribeRoute, strings.paywall.headline],
   ["/settings/feedback", FeedbackRoute, strings.feedback.title],
 ])("%s renders its page — always a valid destination", (_path, Route, title) => {
   const screen = render(<Route />);
