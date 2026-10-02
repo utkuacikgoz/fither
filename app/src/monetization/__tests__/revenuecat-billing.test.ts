@@ -3,6 +3,7 @@ import Purchases, { PACKAGE_TYPE, PURCHASES_ERROR_CODE } from "react-native-purc
 import {
   ENTITLEMENT_ID,
   LIFETIME_OFFER_TRIAL_DAY,
+  planForProductId,
   revenueCatBilling,
   storeError,
 } from "../revenuecat-billing";
@@ -156,5 +157,26 @@ describe("store failures reach the crash reporter", () => {
   it("storeError falls back to its label when the store says nothing", () => {
     expect(storeError(undefined, "getOfferings failed").message).toBe("getOfferings failed");
     expect(storeError({}, "x").message).toBe("x");
+  });
+});
+
+it("product ids match without regard to case: App Store Connect's yearly product is \"Yearly\"", () => {
+  expect(planForProductId("Yearly")).toBe("annual");
+  expect(planForProductId("yearly")).toBe("annual");
+  expect(planForProductId("MONTHLY")).toBe("monthly");
+  expect(planForProductId("lifetime")).toBe("lifetime");
+  expect(planForProductId("something-else")).toBeNull();
+});
+
+it("a purchase of the \"Yearly\" product maps back to the yearly plan", async () => {
+  mocked.getOfferings.mockResolvedValue({
+    current: { identifier: "default", availablePackages: [pkg("Yearly", "CUSTOM", "$59.99"), pkg("monthly", PACKAGE_TYPE.MONTHLY, "$12.99")] },
+  });
+  mocked.purchasePackage.mockResolvedValue({
+    customerInfo: info({ productIdentifier: "Yearly", latestPurchaseDate: `${todayIso()}T09:00:00Z`, periodType: "TRIAL" }),
+  });
+  expect(await revenueCatBilling.purchase("annual")).toEqual({
+    ok: true,
+    purchase: { plan: "annual", date: todayIso(), trial: true },
   });
 });

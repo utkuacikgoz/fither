@@ -37,12 +37,22 @@ import type {
 /** The RevenueCat entitlement identifier. One entitlement covers everything. */
 export const ENTITLEMENT_ID = "fither_pro";
 
-/** The App Store product identifiers, per plan (owner's dashboard). */
+/**
+ * The App Store product identifiers, per plan (owner's dashboard). Matched
+ * without regard to case: the yearly product was created in App Store
+ * Connect as "Yearly" (2026-10-02), and an id can never be renamed there.
+ */
 export const PRODUCT_IDS: Record<PlanId, string> = {
   annual: "yearly",
   monthly: "monthly",
   lifetime: "lifetime",
 };
+
+/** The plan a store product id names, ignoring case; null for none. */
+export function planForProductId(productId: string): PlanId | null {
+  const id = productId.toLowerCase();
+  return (Object.keys(PRODUCT_IDS) as PlanId[]).find((plan) => PRODUCT_IDS[plan] === id) ?? null;
+}
 
 /** Public (client) API key for iOS; undefined means "use the dev adapter". */
 const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
@@ -77,9 +87,7 @@ function ensureConfigured(): void {
 }
 
 function planOf(pkg: PurchasesPackage): PlanId | null {
-  const byProduct = (Object.keys(PRODUCT_IDS) as PlanId[]).find(
-    (plan) => PRODUCT_IDS[plan] === pkg.product.identifier,
-  );
+  const byProduct = planForProductId(pkg.product.identifier);
   if (byProduct) return byProduct;
   switch (pkg.packageType) {
     case PACKAGE_TYPE.ANNUAL:
@@ -148,10 +156,7 @@ async function loadOfferings(): Promise<void> {
 function recordOf(info: CustomerInfo): PurchaseRecord | null {
   const entitlement = info.entitlements.active[ENTITLEMENT_ID];
   if (!entitlement) return null;
-  const plan =
-    (Object.keys(PRODUCT_IDS) as PlanId[]).find(
-      (candidate) => PRODUCT_IDS[candidate] === entitlement.productIdentifier,
-    ) ?? null;
+  const plan = planForProductId(entitlement.productIdentifier);
   const record: PurchaseRecord = {
     // A product we cannot map still entitles her — the entitlement is
     // the store's word; the plan label is ours.
