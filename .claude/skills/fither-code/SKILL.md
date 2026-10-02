@@ -77,7 +77,9 @@ possible; one sneaky dependency breaks the whole validation story.
   `@sentry/react-native` sits behind `app/src/monitoring/monitoring.ts`;
   call sites use `captureError(error, context)` with a fixed context
   label and never import the SDK. Selected by `EXPO_PUBLIC_SENTRY_DSN`;
-  crash/error data only, no `setUser`, `beforeSend` scrubs. Verified
+  crash/error data plus masked session replay (ADR-0032: 10% of
+  sessions and every errored one, all text, images and figures masked),
+  no `setUser`, `beforeSend` scrubs. Verified
   with the deliberate test crash (Settings → Developer tools) BEFORE the
   first TestFlight build; source maps via the `SENTRY_*` build variables.
 - **Analytics: PostHog, behind a port (ADR-0015, ADR-0024, drop-off

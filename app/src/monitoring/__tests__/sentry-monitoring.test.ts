@@ -48,6 +48,25 @@ describe("Sentry adapter", () => {
     });
   });
 
+  it("records replays as wireframes: one session in ten, every errored one, everything on screen masked (ADR-0032)", () => {
+    jest.isolateModules(() => {
+      const mod = loadWithDsn();
+      mod.sentryMonitoring.init();
+      expect(init).toHaveBeenCalledWith(
+        expect.objectContaining({ replaysSessionSampleRate: 0.1, replaysOnErrorSampleRate: 1.0 }),
+      );
+      // Her notes, answers and sore areas never leave the phone as pixels.
+      expect(Sentry.mobileReplayIntegration).toHaveBeenCalledWith({
+        maskAllText: true,
+        maskAllImages: true,
+        maskAllVectors: true,
+      });
+      expect(init.mock.calls[0]?.[0]?.integrations).toEqual([
+        expect.objectContaining({ name: "MobileReplay" }),
+      ]);
+    });
+  });
+
   it("reports handled errors with the context tag, starting the SDK if needed", () => {
     jest.isolateModules(() => {
       const mod = loadWithDsn();

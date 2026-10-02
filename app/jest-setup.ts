@@ -238,6 +238,7 @@ jest.mock("expo-linking", () => ({
 // own unit test drives this mock directly.
 jest.mock("@sentry/react-native", () => ({
   init: jest.fn(),
+  mobileReplayIntegration: jest.fn((options: unknown) => ({ name: "MobileReplay", options })),
   captureException: jest.fn(),
   nativeCrash: jest.fn(),
 }));
