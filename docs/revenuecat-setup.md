@@ -15,7 +15,7 @@ test uses the dev adapter. Nothing else in the app changes.
 | ↳ product | **monthly** | $12.99 / 1 month, **introductory offer: 7 days free** (so "Start my free week" is true for either plan) |
 | App Store Connect → In-App Purchases | **lifetime** | non-consumable, $99 |
 | RevenueCat → Project → Apps | iOS app | bundle id above; paste the App Store Connect API key (or shared secret) so RC can validate receipts |
-| RevenueCat → Products | import | the three products above appear with ids `yearly`, `monthly`, `lifetime` |
+| RevenueCat → Products | import | the three products above appear with ids `Yearly` (capital Y, as created in App Store Connect; ids are case-sensitive and permanent), `monthly`, `lifetime`. The Annual and Monthly packages in the current offering must be of type Annual and Monthly |
 | RevenueCat → Entitlements | **fither_pro** | attach all three products |
 | RevenueCat → Offerings | `default` (current) | three packages, one per product. Package identifiers can be anything (the adapter matches by product id, then by package type) |
 | RevenueCat → API keys | iOS public key | `appl_…` for the real store; `test_…` for the Test Store |
