@@ -308,27 +308,20 @@ ones.
 
 ## Next, in order
 
-1. **`pnpm ship` → build (6), then resubmit.** Rejected twice under
-   2.1(b) "cannot locate the In-App Purchases" (2026-09-16, 09-21): the
-   trial offer appears only after a first session with a completed block,
-   and nothing else led to the purchase, so a reviewer who skipped through
-   never saw it. Build 6 adds Settings > Subscription > Start my free
-   week (the same paywall, `settings/subscribe`). Reply text and notes in
-   docs/store/listing.md §8. The Paid Apps Agreement must be Active first.
-2. **Wait for App Review** (up to 48 h). On approval: release, then flip
-   the landing page from "Coming to the App Store" to the store link
-   (`web/src/content.mjs` holds the one App Store URL; the "Coming" line
-   is what the production preflight forbids on the shared pages).
-   On rejection: read the reason against docs/store/listing.md §8 before
-   changing anything.
-3. **Owner: walk build 6 on the phone** while review runs: skip mid-cue
-   (no overlap, a thump, the toast), Progress → a ladder, Voice → Spoken
-   speaks a cue, sandbox yearly purchase unlocks with the success thump,
-   Settings footer reads 1.0.0 (5).
-4. **Backend (ADR-0022, decided 2026-09-07): Supabase, first update.**
-   Not before launch. Order: schema and RLS, auth adapter and account
-   deletion, append-only sync behind the ports, feedback onto the same
-   project, owner dashboard. The engine never moves server-side.
+1. **Resubmit build 7** (2026-10-02). Rejected under 2.1(b) because the
+   purchase failed: the RevenueCat offering held only Test Store products,
+   so the real store returned nothing. Fixed in the dashboard (App Store
+   products imported, attached to `fither_pro`, added to every package of
+   the current offering); the owner bought the yearly trial in sandbox on
+   build 7 and it unlocked. No new build needed. docs/revenuecat-setup.md
+   records the trap.
+2. **Wait for App Review.** On approval: release, then switch fither.pro
+   from the waitlist to the App Store button.
+3. **Build 8 after approval**: the store-failure reporting to Sentry,
+   case-insensitive product ids, masked session replay (ADR-0032).
+4. **Owner, any time**: fither.pro waitlist storage in Vercel (Upstash +
+   `WAITLIST_ADMIN_KEY`); legal pages name Türkiye, not the US.
+5. **Backend (ADR-0022): Supabase, first update.** Not before launch.
 
 ## Deferred, recorded
 
