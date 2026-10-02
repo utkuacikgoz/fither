@@ -16,14 +16,38 @@ test uses the dev adapter. Nothing else in the app changes.
 | App Store Connect → In-App Purchases | **lifetime** | non-consumable, $99 |
 | RevenueCat → Project → Apps | iOS app | bundle id above; paste the App Store Connect API key (or shared secret) so RC can validate receipts |
 | RevenueCat → Products | import | the three products above appear with ids `Yearly` (capital Y, as created in App Store Connect; ids are case-sensitive and permanent), `monthly`, `lifetime`. The Annual and Monthly packages in the current offering must be of type Annual and Monthly |
-| RevenueCat → Entitlements | **fither_pro** | attach all three products |
-| RevenueCat → Offerings | `default` (current) | three packages, one per product. Package identifiers can be anything (the adapter matches by product id, then by package type) |
+| RevenueCat → Entitlements | **fither_pro** | attach all three **App Store** products (the Apple icon), not only the Test Store ones |
+| RevenueCat → Offerings | `default` (current) | three packages, one per product, each holding the **App Store** product as well as the Test Store one. Package identifiers can be anything (the adapter matches by product id, then by package type) |
 | RevenueCat → API keys | iOS public key | `appl_…` for the real store; `test_…` for the Test Store |
 
 Sandbox: App Store Connect → Users and Access → Sandbox Testers, one
 tester Apple ID; sign into it on the device under Settings → App Store →
 Sandbox Account. The `test_` key skips Apple entirely (RevenueCat's Test
 Store) and is what the app is configured with today.
+
+## The trap that cost two review rounds (2026-10-02)
+
+A new RevenueCat project starts with a **Test Store** app, and the
+products, entitlement and offering it seeds belong to it (the **RC**
+icon). The `appl_` key reads only the **App Store** app's products (the
+**Apple** icon). With an offering that held Test Store products alone,
+the store returned nothing to every real build: the paywall fell back to
+its reference prices ("$59.99/year" with the "$5.00 a month" line, never
+a store price) and the purchase button failed before Apple's sheet
+opened. App Review rejected it under 2.1(b).
+
+Two signs, both in a TestFlight build on a real phone:
+
+- **Store is answering**: the price is the store's own string in the
+  device's currency (₺ on a Turkish account), and the "$5.00 a month"
+  line is gone.
+- **Store is silent**: "$59.99/year" with the note. Check the App Store
+  products exist, are attached to `fither_pro`, sit in the current
+  offering, App Store Connect lists each as at least Ready to Submit, and
+  the Paid Apps Agreement is Active.
+
+Since build 8 every one of these failures also reaches Sentry with
+RevenueCat's own code (`billing.offerings`, `billing.purchase`).
 
 ## The key, in the app
 
