@@ -44,6 +44,20 @@ function ensureInit(): void {
     enableNativeNagger: false,
     maxBreadcrumbs: 30,
     beforeSend: (event) => scrubEvent(event),
+    // Session replay (ADR-0032, owner 2026-10-02): one session in ten, and
+    // every session that hits an error, recorded as a wireframe. Every
+    // text, image and drawn figure is masked: a replay shows where she
+    // tapped and which screen she was on, never a word she wrote or read
+    // (her notes, her answers, her sore areas stay hers).
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    integrations: [
+      Sentry.mobileReplayIntegration({
+        maskAllText: true,
+        maskAllImages: true,
+        maskAllVectors: true,
+      }),
+    ],
   });
   initialised = true;
 }
