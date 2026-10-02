@@ -8,6 +8,7 @@ import Purchases, {
 
 import { alias } from "../analytics/analytics";
 import { strings } from "../copy/strings";
+import { captureError } from "../monitoring/monitoring";
 import { todayIso } from "../lib/dates";
 import type {
   BillingPort,
@@ -112,11 +113,24 @@ async function loadOfferings(): Promise<void> {
   ensureConfigured();
   try {
     const { current } = await Purchases.getOfferings();
-    if (!current) return;
+    if (!current) {
+      captureError(new Error("no current offering"), "billing.offerings");
+      return;
+    }
     const next: Partial<Record<PlanId, PurchasesPackage>> = {};
     for (const pkg of current.availablePackages) {
       const plan = planOf(pkg);
       if (plan) next[plan] = pkg;
+    }
+    if (!next.annual || !next.monthly) {
+      captureError(
+        new Error(
+          `offering ${current.identifier} lacks a plan; packages: ${current.availablePackages
+            .map((pkg) => `${pkg.packageType}/${pkg.product.identifier}`)
+            .join(", ") || "none"}`,
+        ),
+        "billing.offerings",
+      );
     }
     packages = next;
     const paywall: Offering[] = [];
@@ -124,8 +138,9 @@ async function loadOfferings(): Promise<void> {
     if (next.monthly) paywall.push(offeringOf(next.monthly, "monthly"));
     offeringsCache = paywall;
     lifetimeCache = next.lifetime ? offeringOf(next.lifetime, "lifetime") : null;
-  } catch {
+  } catch (error) {
     // Offline or store unreachable: the reference strings stand in.
+    captureError(storeError(error, "getOfferings failed"), "billing.offerings");
   }
 }
 
@@ -144,6 +159,26 @@ function recordOf(info: CustomerInfo): PurchaseRecord | null {
     date: entitlement.latestPurchaseDate.slice(0, 10) || todayIso(),
   };
   return entitlement.periodType === "TRIAL" ? { ...record, trial: true } : record;
+}
+
+/**
+ * The store's own words for a failure, for the crash reporter: the
+ * RevenueCat code, its readable name and StoreKit's underlying message.
+ * A swallowed store error once cost a review round (2026-10-02: the
+ * store returned no products and the button failed with no trace).
+ * Never shown to her; the screen keeps its one calm line.
+ */
+export function storeError(error: unknown, fallback: string): Error {
+  const e = (error ?? {}) as {
+    code?: unknown;
+    readableErrorCode?: unknown;
+    message?: unknown;
+    underlyingErrorMessage?: unknown;
+  };
+  const parts = [e.code, e.readableErrorCode, e.message, e.underlyingErrorMessage]
+    .filter((part) => part !== undefined && part !== null && String(part).length > 0)
+    .map(String);
+  return new Error(parts.length > 0 ? parts.join(" | ") : fallback);
 }
 
 /** Whole days from an ISO instant to today, local. */
@@ -202,17 +237,27 @@ export const revenueCatBilling: BillingPort = {
   async purchase(plan: PlanId): Promise<PurchaseOutcome> {
     await loadOfferings();
     const pkg = packages[plan];
-    if (!pkg) return { ok: false, reason: "failed" };
+    if (!pkg) {
+      captureError(new Error(`no ${plan} package from the store`), "billing.purchase");
+      return { ok: false, reason: "failed" };
+    }
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       lastInfo = customerInfo;
       const purchase = recordOf(customerInfo);
+      if (!purchase) {
+        captureError(
+          new Error(`purchase of ${plan} granted no ${ENTITLEMENT_ID} entitlement`),
+          "billing.purchase",
+        );
+      }
       return purchase ? { ok: true, purchase } : { ok: false, reason: "failed" };
     } catch (error) {
       const code = (error as { code?: unknown } | null)?.code;
       if (code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
         return { ok: false, reason: "cancelled" };
       }
+      captureError(storeError(error, "purchasePackage failed"), "billing.purchase");
       return { ok: false, reason: "failed" };
     }
   },
