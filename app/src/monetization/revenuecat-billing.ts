@@ -1,4 +1,5 @@
 import Purchases, {
+  INTRO_ELIGIBILITY_STATUS,
   LOG_LEVEL,
   PACKAGE_TYPE,
   PURCHASES_ERROR_CODE,
@@ -10,6 +11,7 @@ import { alias } from "../analytics/analytics";
 import { strings } from "../copy/strings";
 import { captureError } from "../monitoring/monitoring";
 import { todayIso } from "../lib/dates";
+import { FREE_TRIAL_DAYS } from "./dev-billing";
 import type {
   BillingPort,
   Offering,
@@ -32,7 +34,8 @@ import type {
 //   offering     the CURRENT offering, one package per product
 // A package is matched by its product id first, then by its package
 // type, so the owner's package identifiers can be anything. The 7-day
-// free trial is the yearly product's introductory offer.
+// free trial is each subscription's introductory offer; the paywall
+// shows it only when the store has one and Apple says she can take it.
 
 /** The RevenueCat entitlement identifier. One entitlement covers everything. */
 export const ENTITLEMENT_ID = "fither_pro";
@@ -101,23 +104,80 @@ function planOf(pkg: PurchasesPackage): PlanId | null {
   }
 }
 
-function offeringOf(pkg: PurchasesPackage, plan: PlanId): Offering {
-  // The store's localised price leads; the annual note is our own plain
-  // arithmetic and only true for the USD reference price, so it is
-  // shown only when the store's label matches that reference.
+/**
+ * Days of a free introductory offer on a store product: the offer must
+ * cost nothing and run in days or weeks (the paywall says "7 days
+ * free"; a month-long offer would need other words, so it is not
+ * claimed). Null for none.
+ */
+export function freeIntroDays(pkg: PurchasesPackage): number | null {
+  const intro = pkg.product.introPrice;
+  if (!intro || intro.price !== 0) return null;
+  const units = intro.periodNumberOfUnits * Math.max(1, intro.cycles);
+  if (intro.periodUnit === "DAY") return units;
+  if (intro.periodUnit === "WEEK") return units * 7;
+  return null;
+}
+
+function offeringOf(pkg: PurchasesPackage, plan: PlanId, eligible: boolean): Offering {
+  // The store's localised price leads, with its period ("$59.99/year").
+  // The annual note is our own plain arithmetic and only true for the
+  // USD reference price, so it is shown only when the store's label
+  // matches that reference; the lifetime note is a fact, always true.
   const reference = strings.paywall.plans[plan];
-  const localised = pkg.product.priceString;
+  const priceLabel = `${pkg.product.priceString}${reference.per}`;
   const note =
-    "note" in reference && localised === reference.price ? reference.note : undefined;
-  return note ? { plan, priceLabel: localised, noteLabel: note } : { plan, priceLabel: localised };
+    plan === "lifetime" || (plan === "annual" && priceLabel === reference.price)
+      ? "note" in reference
+        ? reference.note
+        : undefined
+      : undefined;
+  const days = eligible ? freeIntroDays(pkg) : null;
+  return {
+    plan,
+    priceLabel,
+    ...(note ? { noteLabel: note } : {}),
+    ...(days ? { freeTrialDays: days } : {}),
+  };
+}
+
+/**
+ * Which products' introductory offers she can still take. Apple gives an
+ * intro offer once per subscription group, so someone who subscribed
+ * before is told the plain price, never a week the sheet will not give.
+ * Unknown or a failed check reads as not eligible (RevenueCat's advice:
+ * never show a misleading intro price).
+ */
+async function introEligible(productIds: readonly string[]): Promise<ReadonlySet<string>> {
+  if (productIds.length === 0) return new Set();
+  try {
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility([...productIds]);
+    return new Set(
+      productIds.filter(
+        (id) => result[id]?.status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE,
+      ),
+    );
+  } catch (error) {
+    captureError(storeError(error, "intro eligibility check failed"), "billing.offerings");
+    return new Set();
+  }
 }
 
 let packages: Partial<Record<PlanId, PurchasesPackage>> = {};
 let offeringsCache: readonly Offering[] = [];
 let lifetimeCache: Offering | null = null;
 
-/** Fetch the current offering once per process; failures leave the fallbacks. */
-async function loadOfferings(): Promise<void> {
+let loading: Promise<void> | null = null;
+
+/** Fetch the current offering; concurrent callers share one fetch. Failures leave the fallbacks. */
+function loadOfferings(): Promise<void> {
+  loading ??= fetchCurrentOffering().finally(() => {
+    loading = null;
+  });
+  return loading;
+}
+
+async function fetchCurrentOffering(): Promise<void> {
   ensureConfigured();
   try {
     const { current } = await Purchases.getOfferings();
@@ -141,11 +201,16 @@ async function loadOfferings(): Promise<void> {
       );
     }
     packages = next;
+    const subscriptions = [next.annual, next.monthly].filter(
+      (pkg): pkg is PurchasesPackage => pkg !== undefined && freeIntroDays(pkg) !== null,
+    );
+    const eligible = await introEligible(subscriptions.map((pkg) => pkg.product.identifier));
+    const isEligible = (pkg: PurchasesPackage) => eligible.has(pkg.product.identifier);
     const paywall: Offering[] = [];
-    if (next.annual) paywall.push(offeringOf(next.annual, "annual"));
-    if (next.monthly) paywall.push(offeringOf(next.monthly, "monthly"));
+    if (next.annual) paywall.push(offeringOf(next.annual, "annual", isEligible(next.annual)));
+    if (next.monthly) paywall.push(offeringOf(next.monthly, "monthly", isEligible(next.monthly)));
     offeringsCache = paywall;
-    lifetimeCache = next.lifetime ? offeringOf(next.lifetime, "lifetime") : null;
+    lifetimeCache = next.lifetime ? offeringOf(next.lifetime, "lifetime", false) : null;
   } catch (error) {
     // Offline or store unreachable: the reference strings stand in.
     captureError(storeError(error, "getOfferings failed"), "billing.offerings");
@@ -197,8 +262,9 @@ const fallbackOfferings: readonly Offering[] = [
     plan: "annual",
     priceLabel: strings.paywall.plans.annual.price,
     noteLabel: strings.paywall.plans.annual.note,
+    freeTrialDays: FREE_TRIAL_DAYS,
   },
-  { plan: "monthly", priceLabel: strings.paywall.plans.monthly.price },
+  { plan: "monthly", priceLabel: strings.paywall.plans.monthly.price, freeTrialDays: FREE_TRIAL_DAYS },
 ];
 
 export const revenueCatBilling: BillingPort = {
@@ -221,6 +287,11 @@ export const revenueCatBilling: BillingPort = {
   },
   getOfferings(): readonly Offering[] {
     void loadOfferings();
+    return offeringsCache.length > 0 ? offeringsCache : fallbackOfferings;
+  },
+
+  async fetchOfferings(): Promise<readonly Offering[]> {
+    await loadOfferings();
     return offeringsCache.length > 0 ? offeringsCache : fallbackOfferings;
   },
 

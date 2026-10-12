@@ -106,9 +106,11 @@ describe("PaywallScreen", () => {
     expect(screen.getByText(strings.paywall.trialLine)).toBeTruthy();
     expect(screen.getByText(strings.paywall.plans.annual.label)).toBeTruthy();
     expect(screen.getByText(strings.paywall.plans.annual.price)).toBeTruthy();
-    expect(screen.getByText(strings.paywall.plans.annual.note)).toBeTruthy();
+    // The free week on the cards themselves, from the store's offer.
+    expect(screen.getByText(strings.paywall.planTrialNote(7, strings.paywall.plans.annual.note))).toBeTruthy();
     expect(screen.getByText(strings.paywall.plans.monthly.label)).toBeTruthy();
     expect(screen.getByText(strings.paywall.plans.monthly.price)).toBeTruthy();
+    expect(screen.getByText(strings.paywall.planTrialNote(7, strings.paywall.plans.monthly.price))).toBeTruthy();
     expect(screen.getByText(strings.paywall.cta)).toBeTruthy();
     expect(screen.getByText(strings.paywall.restore)).toBeTruthy();
     expect(screen.getByText(strings.paywall.legal.autoRenew)).toBeTruthy();
@@ -268,6 +270,8 @@ describe("PaywallScreen", () => {
     allowed.add(
       strings.paywall.expired.afterTrialNote(strings.paywall.plans.monthly.price),
     );
+    allowed.add(strings.paywall.planTrialNote(7, strings.paywall.plans.annual.note));
+    allowed.add(strings.paywall.planTrialNote(7, strings.paywall.plans.monthly.price));
     allowed.add(DEV_RESET_LABEL); // __DEV__-only, never shipped to users
     allowed.add(WORDMARK); // the brand mark, owned by the design layer
     allowed.add(glyph.check); // the selection checkmark is a glyph token, not copy
@@ -284,6 +288,27 @@ describe("PaywallScreen", () => {
       expect(allowed.has(leaf)).toBe(true);
     }
   });
+});
+
+it("without a free week from the store, nothing promises one: plain price, billing today", async () => {
+  const billing = jest.requireActual<typeof import("../../../monetization/billing")>(
+    "../../../monetization/billing",
+  ).getBilling();
+  const plain = [
+    { plan: "annual" as const, priceLabel: "$59.99/year", noteLabel: strings.paywall.plans.annual.note },
+    { plan: "monthly" as const, priceLabel: "$12.99/month" },
+  ];
+  const fetch = jest.spyOn(billing, "fetchOfferings").mockResolvedValue(plain);
+  const screen = render(<PaywallScreen />);
+  await waitFor(() => expect(screen.getByText(strings.paywall.expired.trialLine)).toBeTruthy());
+  expect(screen.queryByText(strings.paywall.trialLine)).toBeNull();
+  expect(screen.queryByText(strings.paywall.planTrialNote(7, strings.paywall.plans.annual.note))).toBeNull();
+  expect(screen.getByText(strings.paywall.plans.annual.note)).toBeTruthy();
+  expect(screen.getByText(strings.paywall.expired.cta)).toBeTruthy();
+  expect(screen.getByTestId("paywall-selected-price").props.children).toBe(
+    strings.paywall.expired.afterTrialNote("$59.99/year"),
+  );
+  fetch.mockRestore();
 });
 
 it("closing the store sheet says nothing — only a process failure gets the retry line", async () => {

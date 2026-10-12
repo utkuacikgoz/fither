@@ -67,12 +67,28 @@ export function PaywallScreen({
 
   const colors = useTheme();
   const reduceMotion = useReducedMotion();
-  const offerings = getBilling().getOfferings();
+  // The cached plans first, then the store's answer: its prices, and
+  // whether Apple will give her the free week (once per Apple ID).
+  const [offerings, setOfferings] = useState(() => getBilling().getOfferings());
+  useEffect(() => {
+    let live = true;
+    const cached = offerings;
+    void getBilling()
+      .fetchOfferings()
+      .then((fetched) => {
+        if (live && fetched !== cached) setOfferings(fetched);
+      });
+    return () => {
+      live = false;
+    };
+    // Once per visit: the store's answer replaces the cached plans.
+  }, []);
   const [selected, setSelected] = useState<PlanId>("annual");
   const [busy, setBusy] = useState(false);
   const [busyAction, setBusyAction] = useState<"purchase" | "restore">("purchase");
   const [notice, setNotice] = useState<Notice>("none");
-  const selectedPrice = offerings.find((offering) => offering.plan === selected)?.priceLabel ?? "";
+  const selectedOffering = offerings.find((offering) => offering.plan === selected);
+  const selectedPrice = selectedOffering?.priceLabel ?? "";
 
   // The expired gate state, from the same policy the launch gate uses.
   const expired =
@@ -98,6 +114,9 @@ export function PaywallScreen({
   // Only the first close carries a lead: it names the rhythm she chose.
   // Everywhere else the headline, the ladder and the price say it all
   // (copy cut 2026-09-14, owner).
+  // No free week from the store (she took it before, or the plan has
+  // none): the subscribe-today lines, under the screen's own headline.
+  const noFreeWeek = expired || selectedOffering?.freeTrialDays === undefined;
   const copy: { headline: string; lead?: string; trialLine: string; cta: string } = expired
     ? {
         headline: strings.paywall.expired.headline,
@@ -108,13 +127,11 @@ export function PaywallScreen({
       ? {
           headline: strings.paywall.firstClose.headline,
           lead: strings.paywall.firstClose.lead(intention),
-          trialLine: strings.paywall.trialLine,
-          cta: strings.paywall.cta,
+          ...trialCopy(noFreeWeek),
         }
       : {
           headline: strings.paywall.headline,
-          trialLine: strings.paywall.trialLine,
-          cta: strings.paywall.cta,
+          ...trialCopy(noFreeWeek),
         };
   // The engine supplies the milestone and tier.
   const profile = useProfileStore((s) => s.profile);
@@ -199,7 +216,14 @@ export function PaywallScreen({
               key={offering.plan}
               plan={offering.plan}
               priceLabel={offering.priceLabel}
-              noteLabel={offering.noteLabel}
+              noteLabel={
+                !expired && offering.freeTrialDays !== undefined
+                  ? strings.paywall.planTrialNote(
+                      offering.freeTrialDays,
+                      offering.noteLabel ?? offering.priceLabel,
+                    )
+                  : offering.noteLabel
+              }
               selected={selected === offering.plan}
               reduceMotion={reduceMotion}
               disabled={busy}
@@ -280,7 +304,7 @@ export function PaywallScreen({
       </ScrollView>
       <PaywallActions
         reduceMotion={reduceMotion}
-        disclosure={expired ? strings.paywall.expired.afterTrialNote(selectedPrice) : strings.paywall.afterTrialNote(selectedPrice)}
+        disclosure={noFreeWeek ? strings.paywall.expired.afterTrialNote(selectedPrice) : strings.paywall.afterTrialNote(selectedPrice)}
         label={busy ? busyAction === "purchase" ? strings.paywall.purchasing : strings.paywall.restoring : copy.cta}
         busy={busy}
         purchaseFailed={notice === "purchaseFailed"}
@@ -292,6 +316,13 @@ export function PaywallScreen({
       />
     </Screen>
   );
+}
+
+/** The trial line and action: the free week when the store gives it, else billing today. */
+function trialCopy(noFreeWeek: boolean): { trialLine: string; cta: string } {
+  return noFreeWeek
+    ? { trialLine: strings.paywall.expired.trialLine, cta: strings.paywall.expired.cta }
+    : { trialLine: strings.paywall.trialLine, cta: strings.paywall.cta };
 }
 
 interface PlanRowForProps {

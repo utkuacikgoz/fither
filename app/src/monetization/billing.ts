@@ -28,6 +28,13 @@ export interface Offering {
   priceLabel: string;
   /** Plain arithmetic on the real price (annual only) — never a discount theatric. */
   noteLabel?: string;
+  /**
+   * Days of the store's free introductory offer she is eligible for
+   * (Apple decides: once per subscription group). Absent when the store
+   * says she has none, so the paywall never promises a week Apple's
+   * sheet will not give.
+   */
+  freeTrialDays?: number;
 }
 
 /** A granted purchase, as the app records it. Date is local ISO yyyy-mm-dd. */
@@ -60,6 +67,8 @@ export interface BillingPort {
   clearUser(): Promise<void>;
   /** The paywall's plans: annual first (annual led), then monthly. Never lifetime. */
   getOfferings(): readonly Offering[];
+  /** The same plans once the store has answered (prices, free week, eligibility). */
+  fetchOfferings(): Promise<readonly Offering[]>;
   /** The one-time plan, for the day-3 offer only; null if the store has none. */
   getLifetimeOffering(): Offering | null;
   /**

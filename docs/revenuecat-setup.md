@@ -81,7 +81,12 @@ broken store.
 The store trial is the trial. "Start my free week" on the paywall
 purchases the plan she picked with its 7 free days; the app gates new
 sessions after her first completed session until `fither_pro` is active;
-a lapsed trial shows the expired letter. The launch surface asks the
+a lapsed trial shows the expired letter. The paywall cards show the free
+week only when the store's product carries a free intro offer (days or
+weeks) and `checkTrialOrIntroductoryPriceEligibility` says ELIGIBLE;
+otherwise she sees the plain price and the billing-today lines, so the
+app never promises a week Apple's sheet will not give (3.1.2(c),
+2026-10-12). The launch surface asks the
 store once per launch and adopts its word. The lifetime offer fires for
 real: trial, auto-renew off, day 3.
 
