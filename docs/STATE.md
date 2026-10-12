@@ -308,17 +308,21 @@ ones.
 
 ## Next, in order
 
-1. **Resubmit build 7** (2026-10-02). Rejected under 2.1(b) because the
-   purchase failed: the RevenueCat offering held only Test Store products,
-   so the real store returned nothing. Fixed in the dashboard (App Store
-   products imported, attached to `fither_pro`, added to every package of
-   the current offering); the owner bought the yearly trial in sandbox on
-   build 7 and it unlocked. No new build needed. docs/revenuecat-setup.md
-   records the trap.
-2. **Wait for App Review.** On approval: release, then switch fither.pro
+1. **Build 8 now** (`pnpm ship`), then resubmit. Rejected under 3.1.2(c):
+   the app promised a free week the subscriptions did not have. The intro
+   offer "Free for the first week" is now on Yearly and must be on Monthly
+   too. Build 8 shows each card's price with its period ("$59.99/year")
+   and "7 days free, then …" on the card itself, read from the store's
+   intro offer and Apple's eligibility check; someone who already took
+   the week sees the plain price and billing-today lines instead. Also
+   in build 8: store-failure reporting to Sentry, case-insensitive
+   product ids, masked session replay (ADR-0032).
+2. **Seeing the free week on a test device** needs a sandbox Apple ID
+   that never subscribed (App Store Connect > Users and Access > Sandbox),
+   or Settings > App Store > Sandbox Account > Manage > Clear Purchase
+   History on the existing one. Apple gives the week once per Apple ID.
+3. **Wait for App Review.** On approval: release, then switch fither.pro
    from the waitlist to the App Store button.
-3. **Build 8 after approval**: the store-failure reporting to Sentry,
-   case-insensitive product ids, masked session replay (ADR-0032).
 4. **Owner, any time**: fither.pro waitlist storage in Vercel (Upstash +
    `WAITLIST_ADMIN_KEY`); legal pages name Türkiye, not the US.
 5. **Backend (ADR-0022): Supabase, first update.** Not before launch.

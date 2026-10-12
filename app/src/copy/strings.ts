@@ -946,6 +946,10 @@ export const strings = {
       simple: "No gym. No equipment. No ads.",
     },
     trialLine: "7 days free. Cancel before the week ends and pay nothing.",
+    // A plan card while the store offers her its free week: the days
+    // come from the store's introductory offer, `then` is the card's own
+    // price line ("$59.99/year", or the annual arithmetic note).
+    planTrialNote: (days: number, then: string) => `${days} days free, then ${then}`,
     plans: {
       annual: {
         label: "Yearly",
@@ -954,11 +958,14 @@ export const strings = {
         // the display source; these are the fallback strings it carries.
         // The note is plain arithmetic on the real price: 59.99 / 12.
         price: "$59.99/year",
+        // What follows the store's localised price ("$59.99" + per).
+        per: "/year",
         note: "$5.00 a month, billed once a year",
       },
       monthly: {
         label: "Monthly",
         price: "$12.99/month",
+        per: "/month",
       },
       // COPY-WRITER (2026-09-05, owner decision): the one-time purchase.
       // NOT a row on the main paywall — it is offered once, on day 3 of
@@ -973,6 +980,7 @@ export const strings = {
       lifetime: {
         label: "Lifetime",
         price: "$99 once",
+        per: " once",
         note: "One payment. It never renews.",
       },
     },

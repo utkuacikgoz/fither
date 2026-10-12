@@ -1,4 +1,8 @@
-import Purchases, { PACKAGE_TYPE, PURCHASES_ERROR_CODE } from "react-native-purchases";
+import Purchases, {
+  INTRO_ELIGIBILITY_STATUS,
+  PACKAGE_TYPE,
+  PURCHASES_ERROR_CODE,
+} from "react-native-purchases";
 
 import {
   ENTITLEMENT_ID,
@@ -21,11 +25,20 @@ const mocked = Purchases as unknown as {
   purchasePackage: jest.Mock;
   restorePurchases: jest.Mock;
   getCustomerInfo: jest.Mock;
+  checkTrialOrIntroductoryPriceEligibility: jest.Mock;
 };
 
-function pkg(productId: string, packageType: string, priceString: string) {
-  return { identifier: `$rc_${productId}`, packageType, product: { identifier: productId, priceString } };
+const FREE_WEEK = { price: 0, priceString: "$0.00", cycles: 1, period: "P1W", periodUnit: "WEEK", periodNumberOfUnits: 1 };
+
+function pkg(productId: string, packageType: string, priceString: string, introPrice: unknown = null) {
+  return {
+    identifier: `$rc_${productId}`,
+    packageType,
+    product: { identifier: productId, priceString, introPrice },
+  };
 }
+
+const status = (value: number) => ({ status: value, description: "" });
 
 function info(entitlement: Record<string, unknown> | null) {
   return { entitlements: { active: entitlement ? { [ENTITLEMENT_ID]: entitlement } : {} } };
@@ -42,11 +55,15 @@ beforeEach(() => {
     current: {
       identifier: "default",
       availablePackages: [
-        pkg("yearly", PACKAGE_TYPE.ANNUAL, "$59.99"),
-        pkg("monthly", PACKAGE_TYPE.MONTHLY, "$12.99"),
+        pkg("Yearly", PACKAGE_TYPE.ANNUAL, "$59.99", FREE_WEEK),
+        pkg("monthly", PACKAGE_TYPE.MONTHLY, "$12.99", FREE_WEEK),
         pkg("lifetime", PACKAGE_TYPE.LIFETIME, "$99.00"),
       ],
     },
+  });
+  mocked.checkTrialOrIntroductoryPriceEligibility.mockResolvedValue({
+    Yearly: status(INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE),
+    monthly: status(INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE),
   });
 });
 
@@ -54,8 +71,51 @@ it("maps the owner's products by id: yearly and monthly on the paywall, lifetime
   await revenueCatBilling.purchase("annual").catch(() => undefined);
   const offerings = revenueCatBilling.getOfferings();
   expect(offerings.map((o) => o.plan)).toEqual(["annual", "monthly"]);
-  expect(offerings[0]?.priceLabel).toBe("$59.99");
+  expect(offerings[0]?.priceLabel).toBe("$59.99/year");
+  expect(offerings[1]?.priceLabel).toBe("$12.99/month");
   expect(revenueCatBilling.getLifetimeOffering()?.plan).toBe("lifetime");
+});
+
+it("shows the store's price with its period, and the free week Apple will give her", async () => {
+  expect(await revenueCatBilling.fetchOfferings()).toEqual([
+    { plan: "annual", priceLabel: "$59.99/year", noteLabel: "$5.00 a month, billed once a year", freeTrialDays: 7 },
+    { plan: "monthly", priceLabel: "$12.99/month", freeTrialDays: 7 },
+  ]);
+  expect(mocked.checkTrialOrIntroductoryPriceEligibility).toHaveBeenCalledWith(["Yearly", "monthly"]);
+  expect(revenueCatBilling.getLifetimeOffering()).toEqual({
+    plan: "lifetime",
+    priceLabel: "$99.00 once",
+    noteLabel: "One payment. It never renews.",
+  });
+});
+
+it("promises no free week she already took, or one the check cannot confirm", async () => {
+  mocked.checkTrialOrIntroductoryPriceEligibility.mockResolvedValueOnce({
+    Yearly: status(INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_INELIGIBLE),
+    monthly: status(INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_UNKNOWN),
+  });
+  const offerings = await revenueCatBilling.fetchOfferings();
+  expect(offerings.map((o) => o.freeTrialDays)).toEqual([undefined, undefined]);
+  mocked.checkTrialOrIntroductoryPriceEligibility.mockRejectedValueOnce(new Error("offline"));
+  expect((await revenueCatBilling.fetchOfferings()).map((o) => o.freeTrialDays)).toEqual([undefined, undefined]);
+});
+
+it("a paid or month-long intro offer is not a free week", async () => {
+  mocked.getOfferings.mockResolvedValueOnce({
+    current: {
+      identifier: "default",
+      availablePackages: [
+        pkg("yearly", PACKAGE_TYPE.ANNUAL, "€59.99", { ...FREE_WEEK, price: 1, priceString: "€1.00" }),
+        pkg("monthly", PACKAGE_TYPE.MONTHLY, "€12.99", { ...FREE_WEEK, periodUnit: "MONTH" }),
+      ],
+    },
+  });
+  expect(await revenueCatBilling.fetchOfferings()).toEqual([
+    // Not the USD reference price, so no arithmetic note.
+    { plan: "annual", priceLabel: "€59.99/year" },
+    { plan: "monthly", priceLabel: "€12.99/month" },
+  ]);
+  expect(mocked.checkTrialOrIntroductoryPriceEligibility).not.toHaveBeenCalled();
 });
 
 it("a purchase grants the app-side record from the store's entitlement", async () => {

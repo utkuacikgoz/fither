@@ -184,6 +184,12 @@ jest.mock("react-native-purchases", () => {
   const PACKAGE_TYPE = { ANNUAL: "ANNUAL", MONTHLY: "MONTHLY", LIFETIME: "LIFETIME", CUSTOM: "CUSTOM" };
   const PURCHASES_ERROR_CODE = { PURCHASE_CANCELLED_ERROR: "1" };
   const LOG_LEVEL = { DEBUG: "DEBUG" };
+  const INTRO_ELIGIBILITY_STATUS = {
+    INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
+    INTRO_ELIGIBILITY_STATUS_INELIGIBLE: 1,
+    INTRO_ELIGIBILITY_STATUS_ELIGIBLE: 2,
+    INTRO_ELIGIBILITY_STATUS_NO_INTRO_OFFER_EXIST: 3,
+  };
   const Purchases = {
     configure: jest.fn(),
     setLogLevel: jest.fn(),
@@ -192,11 +198,19 @@ jest.mock("react-native-purchases", () => {
     purchasePackage: jest.fn(),
     restorePurchases: jest.fn(),
     getCustomerInfo: jest.fn(),
+    checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
     getAppUserID: jest.fn(async () => "$RCAnonymousID:test"),
     logIn: jest.fn(async () => ({ created: false, customerInfo: {} })),
     logOut: jest.fn(async () => ({})),
   };
-  return { __esModule: true, default: Purchases, PACKAGE_TYPE, PURCHASES_ERROR_CODE, LOG_LEVEL };
+  return {
+    __esModule: true,
+    default: Purchases,
+    PACKAGE_TYPE,
+    PURCHASES_ERROR_CODE,
+    LOG_LEVEL,
+    INTRO_ELIGIBILITY_STATUS,
+  };
 });
 jest.mock("react-native-purchases-ui", () => ({
   __esModule: true,

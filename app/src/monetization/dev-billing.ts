@@ -83,6 +83,9 @@ function receiptReady(): Promise<void> {
   });
 }
 
+/** The free week the store's subscriptions carry (ADR-0014 §6). */
+export const FREE_TRIAL_DAYS = 7;
+
 // Offerings as data: the two paywall plans (ADR-0014), annual first
 // (annual led). Display strings are the USD reference fallbacks from
 // strings.ts — the store adapter substitutes localised price labels.
@@ -97,10 +100,12 @@ const offerings: readonly Offering[] = [
     plan: "annual",
     priceLabel: strings.paywall.plans.annual.price,
     noteLabel: strings.paywall.plans.annual.note,
+    freeTrialDays: FREE_TRIAL_DAYS,
   },
   {
     plan: "monthly",
     priceLabel: strings.paywall.plans.monthly.price,
+    freeTrialDays: FREE_TRIAL_DAYS,
   },
 ];
 
@@ -112,6 +117,9 @@ export const devBilling: BillingPort = {
     // Nothing to forget.
   },
   getOfferings(): readonly Offering[] {
+    return offerings;
+  },
+  async fetchOfferings(): Promise<readonly Offering[]> {
     return offerings;
   },
 
